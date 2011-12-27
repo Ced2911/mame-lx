@@ -254,7 +254,9 @@ resource_pool::resource_pool(int hash_size)
 	  m_ordered_head(NULL),
 	  m_ordered_tail(NULL)
 {
-	memset(m_hash, 0, hash_size * sizeof(m_hash[0]));
+    printf("resource_pool hash_size: 0x%x\r\n",hash_size);
+    TR;
+    memset(m_hash, 0, hash_size * sizeof(m_hash[0]));
 }
 
 
@@ -287,6 +289,7 @@ void resource_pool::add(resource_pool_item &item)
         
 	// insert into hash table
 	int hashval = reinterpret_cast<FPTR>(item.m_ptr) % m_hash_size;
+        printf("hashval %08x\r\n",hashval);
         TR;
 	item.m_next = m_hash[hashval];
         TR;
