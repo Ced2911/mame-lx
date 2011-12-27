@@ -38,7 +38,6 @@
 ###########################################################################
 
 
-
 TOOLSSRC = $(SRC)/tools
 TOOLSOBJ = $(OBJ)/tools
 
@@ -74,7 +73,7 @@ ROMCMPOBJS = \
 
 romcmp$(EXE): $(ROMCMPOBJS) $(LIBUTIL) $(ZLIB) $(EXPAT) $(LIBOCORE)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -87,7 +86,7 @@ CHDMANOBJS = \
 
 chdman$(EXE): $(VERSIONOBJ) $(CHDMANOBJS) $(LIBUTIL) $(ZLIB) $(EXPAT) $(LIBOCORE)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -100,7 +99,7 @@ JEDUTILOBJS = \
 
 jedutil$(EXE): $(JEDUTILOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -113,7 +112,7 @@ UNIDASMOBJS = \
 
 unidasm$(EXE): $(UNIDASMOBJS) $(LIBDASM) $(LIBEMU) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -126,7 +125,7 @@ LDRESAMPLEOBJS = \
 
 ldresample$(EXE): $(LDRESAMPLEOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -139,7 +138,7 @@ LDVERIFYOBJS = \
 
 ldverify$(EXE): $(LDVERIFYOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -152,7 +151,7 @@ REGREPOBJS = \
 
 regrep$(EXE): $(REGREPOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -165,7 +164,7 @@ SRCCLEANOBJS = \
 
 srcclean$(EXE): $(SRCCLEANOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -178,7 +177,7 @@ SRC2HTMLOBJS = \
 
 src2html$(EXE): $(SRC2HTMLOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 
@@ -191,4 +190,4 @@ SPLITOBJS = \
 
 split$(EXE): $(SPLITOBJS) $(LIBUTIL) $(LIBOCORE) $(ZLIB) $(EXPAT)
 	@echo Linking $@...
-	$(HOST_LD) $(HOST_LDFLAGS) $^ $(HOST_LIBS) -o $@
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@

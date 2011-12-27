@@ -45,15 +45,21 @@
 #include <ppc/timebase.h>
 #include <debug.h>
 
+static uint64_t start_time = 0;
+
 //============================================================
 //  osd_ticks
 //============================================================
 
-osd_ticks_t osd_ticks(void) {
-    //TR;
-    // use the standard library clock function
-    //return clock();
-    return mftb();
+osd_ticks_t osd_ticks(void)
+{
+	if(start_time==0)
+		start_time = mftb();
+		
+	return mftb()-start_time;
+		
+	// use the standard library clock function
+	//return clock();
 }
 
 
@@ -61,11 +67,10 @@ osd_ticks_t osd_ticks(void) {
 //  osd_ticks_per_second
 //============================================================
 
-osd_ticks_t osd_ticks_per_second(void) {
-    //TR;
-    //return CLOCKS_PER_SEC;
-    
-    return PPC_TIMEBASE_FREQ;
+osd_ticks_t osd_ticks_per_second(void)
+{
+	//return CLOCKS_PER_SEC;
+	return PPC_TIMEBASE_FREQ;
 }
 
 
@@ -73,9 +78,10 @@ osd_ticks_t osd_ticks_per_second(void) {
 //  osd_sleep
 //============================================================
 
-void osd_sleep(osd_ticks_t duration) {
-    // if there was a generic, cross-platform way to give up
-    // time, this is where we would do it
-    TR;
-    udelay(duration);
+void osd_sleep(osd_ticks_t duration)
+{
+	// if there was a generic, cross-platform way to give up
+	// time, this is where we would do it
+	TR;
+	delay(duration);
 }

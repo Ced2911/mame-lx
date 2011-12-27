@@ -41,7 +41,7 @@
 #include <ctype.h>
 
 
-
+#include <debug.h>
 //**************************************************************************
 //  DRIVER LIST
 //**************************************************************************
@@ -162,6 +162,7 @@ driver_enumerator::driver_enumerator(emu_options &options)
 	  m_included(global_alloc_array(UINT8, s_driver_count)),
 	  m_config(global_alloc_array_clear(machine_config *, s_driver_count))
 {
+    TR;
 	include_all();
 }
 
@@ -172,7 +173,13 @@ driver_enumerator::driver_enumerator(emu_options &options, const char *string)
 	  m_options(options),
 	  m_included(global_alloc_array(UINT8, s_driver_count)),
 	  m_config(global_alloc_array_clear(machine_config *, s_driver_count))
+/*
+	: m_current(-1),
+	  m_filtered_count(0),
+	  m_options(options)
+*/
 {
+    TR;
 	filter(string);
 }
 
@@ -184,6 +191,7 @@ driver_enumerator::driver_enumerator(emu_options &options, const game_driver &dr
 	  m_included(global_alloc_array(UINT8, s_driver_count)),
 	  m_config(global_alloc_array_clear(machine_config *, s_driver_count))
 {
+    TR;
 	filter(driver);
 }
 
@@ -236,12 +244,12 @@ machine_config &driver_enumerator::config(int index) const
 //  filter - filter the driver list against the
 //  given string
 //-------------------------------------------------
-
 int driver_enumerator::filter(const char *filterstring)
 {
+    TR;
 	// reset the count
 	exclude_all();
-
+TR;
 	// match name against each driver in the list
 	for (int index = 0; index < s_driver_count; index++)
 		if (matches(filterstring, s_drivers_sorted[index]->name))
@@ -258,9 +266,10 @@ int driver_enumerator::filter(const char *filterstring)
 
 int driver_enumerator::filter(const game_driver &driver)
 {
+    TR;
 	// reset the count
 	exclude_all();
-
+TR;
 	// match name against each driver in the list
 	for (int index = 0; index < s_driver_count; index++)
 		if (s_drivers_sorted[index] == &driver)

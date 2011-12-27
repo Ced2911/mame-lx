@@ -13,11 +13,7 @@ floating-point and AltiVec save/restore */
 #include <stdint.h>
 #include <string.h>
 
-#define LIBCO_MPROTECT (defined(__unix__) && !defined(LIBCO_PPC_ASM)) || defined(SDLMAME_MACOSX)
-
-#ifdef XENON
-#undef LIBCO_MPROTECT
-#endif
+//#define LIBCO_MPROTECT (defined(__unix__) && !defined(LIBCO_PPC_ASM)) || defined(SDLMAME_MACOSX)
 
 #if LIBCO_MPROTECT
 	#include <unistd.h>

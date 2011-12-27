@@ -40,6 +40,7 @@
 #include "emucore.h"
 #include "coreutil.h"
 
+#include <debug.h>
 
 //**************************************************************************
 //  DEBUGGING
@@ -278,13 +279,20 @@ resource_pool::~resource_pool()
 
 void resource_pool::add(resource_pool_item &item)
 {
+    TR;
+    
 	osd_lock_acquire(m_listlock);
 
+        TR;
+        
 	// insert into hash table
 	int hashval = reinterpret_cast<FPTR>(item.m_ptr) % m_hash_size;
+        TR;
 	item.m_next = m_hash[hashval];
+        TR;
 	m_hash[hashval] = &item;
 
+        TR;
 	// fetch the ID of this item's pointer; some implementations put hidden data
 	// before, so if we don't find it, check 4 bytes ahead
 	memory_entry *entry = memory_entry::find(item.m_ptr);
@@ -294,13 +302,14 @@ void resource_pool::add(resource_pool_item &item)
 	item.m_id = entry->m_id;
 	if (LOG_ALLOCS)
 		fprintf(stderr, "#%06d, add %d bytes (%s:%d)\n", (UINT32)entry->m_id, static_cast<UINT32>(entry->m_size), entry->m_file, (int)entry->m_line);
-
+TR;
+        
 	// find the entry to insert after
 	resource_pool_item *insert_after;
 	for (insert_after = m_ordered_tail; insert_after != NULL; insert_after = insert_after->m_ordered_prev)
 		if (insert_after->m_id < item.m_id)
 			break;
-
+TR;
 	// insert into the appropriate spot
 	if (insert_after != NULL)
 	{
@@ -322,8 +331,9 @@ void resource_pool::add(resource_pool_item &item)
 		item.m_ordered_prev = NULL;
 		m_ordered_head = &item;
 	}
-
+TR;
 	osd_lock_release(m_listlock);
+        TR;
 }
 
 
@@ -334,6 +344,7 @@ void resource_pool::add(resource_pool_item &item)
 
 void resource_pool::remove(void *ptr)
 {
+    TR;
 	// ignore NULLs
 	if (ptr == NULL)
 		return;

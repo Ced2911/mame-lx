@@ -39,7 +39,7 @@
 
 #include "osdepend.h"
 
-
+#include <debug.h>
 //-------------------------------------------------
 //  osd_interface - constructor
 //-------------------------------------------------
@@ -96,6 +96,7 @@ void osd_interface::init(running_machine &machine)
 	//
 
 	m_machine = &machine;
+        TR;
 }
 
 
@@ -105,6 +106,7 @@ void osd_interface::init(running_machine &machine)
 
 void osd_interface::update(bool skip_redraw)
 {
+    TR;
 	//
 	// This method is called periodically to flush video updates to the
 	// screen, and also to allow the OSD a chance to update other systems
@@ -128,6 +130,7 @@ void osd_interface::init_debugger()
 	// is active. This gives any OSD debugger interface a chance to
 	// create all of its structures.
 	//
+    TR;
 }
 
 
@@ -144,6 +147,7 @@ void osd_interface::wait_for_debugger(device_t &device, bool firststop)
 	// called repeatedly until a command is issued that resumes
 	// execution.
 	//
+    TR;
 }
 
 
@@ -205,6 +209,7 @@ void osd_interface::customize_input_type_list(simple_list<input_type_entry> &typ
 
 osd_font osd_interface::font_open(const char *name, int &height)
 {
+    TR;
 	return NULL;
 }
 
@@ -216,6 +221,7 @@ osd_font osd_interface::font_open(const char *name, int &height)
 
 void osd_interface::font_close(osd_font font)
 {
+    TR;
 }
 
 
@@ -229,6 +235,7 @@ void osd_interface::font_close(osd_font font)
 
 bitmap_t *osd_interface::font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs)
 {
+    TR;
 	return NULL;
 }
 
@@ -238,5 +245,6 @@ bitmap_t *osd_interface::font_get_bitmap(osd_font font, unicode_char chnum, INT3
 //-------------------------------------------------
 void *osd_interface::get_slider_list()
 {
+    TR;
 	return NULL;
 }

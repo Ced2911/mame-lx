@@ -31,11 +31,15 @@ FORCE_DRC_C_BACKEND = 1
 
 SUBTARGET = tiny
 MACHDEP =  -DXENON -m32 -maltivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
-CCOMFLAGS = -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -g
+CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float
 LDSCRIPT := $(DEVKITXENON)/app.lds
 
-DEBUG = 1
-PROFILER = 1
+SYMBOLS = 1
+SYMLEVEL = 2
+MAP = 1
+
+DEBUG = 0
+PROFILER = 0
 
 OSD = osdmini
 HOST_AR = ar
@@ -765,7 +769,7 @@ $(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $
 $(EMULATOR): $(VERSIONOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 #$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
-	$(LD)  $(MACHDEP) -Wl,--gc-sections -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS) -lxenon -lm $(LIBS) $^ -n -T $(LDSCRIPT) -o $@
+	$(LD) -g $(MACHDEP) -Wl,--gc-sections -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS) -lxenon -lm $(LIBS) $^ -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32

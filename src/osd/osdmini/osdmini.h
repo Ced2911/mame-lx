@@ -91,7 +91,7 @@ extern int osd_num_processors;
 //============================================================
 
 // use if you want to print something with the verbose flag
-void mame_printf_verbose(const char *text, ...);
+void CLIB_DECL mame_printf_verbose(const char *text, ...) ATTR_PRINTF(1,2);
 
 // use this to ping the watchdog
 void winmain_watchdog_ping(void);
