@@ -93,12 +93,12 @@ int xenon_main();
 int main()
 {
 	xenon_main();
-	int argc = 1;
+	int argc = 2;
 	char * argv[]{
 //		"uda:/xenon.elf"
 		//"uda:/xenon.elf","-lx"
-		//"mame.elf","-showusage"
-                "mame.elf"
+		"mame.elf","topgunnr"
+                //"mame.elf"
 	};
 	TR;
 	// cli_frontend does the heavy lifting; if we have osd-specific options, we
@@ -194,7 +194,10 @@ void mini_osd_interface::update(bool skip_redraw)
 
 	// after 5 seconds, exit
 	if (machine().time() > attotime::from_seconds(5))
-		machine().schedule_exit();
+        {
+            //machine().schedule_exit();
+        }
+        TR;
 }
 
 

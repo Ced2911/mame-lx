@@ -50,7 +50,7 @@
 #include <ctype.h>
 
 
-
+#include <debug.h>
 //**************************************************************************
 //  DEBUG VIEW SOURCE
 //**************************************************************************
@@ -603,6 +603,7 @@ bool debug_view_expression::recompute()
 	// if dirty, re-evaluate
 	if (m_dirty)
 	{
+            TR;
 		astring oldstring(m_parsed.original_string());
 		try
 		{
@@ -612,11 +613,13 @@ bool debug_view_expression::recompute()
 		{
 			m_parsed.parse(oldstring);
 		}
+                TR;
 	}
 
 	// if we have a parsed expression, evalute it
 	if (!m_parsed.is_empty())
 	{
+            TR;
 		// recompute the value of the expression
 		try
 		{
@@ -630,6 +633,7 @@ bool debug_view_expression::recompute()
 		catch (expression_error &)
 		{
 		}
+                TR;
 	}
 
 	// expression no longer dirty by definition

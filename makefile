@@ -30,16 +30,17 @@ CROSS_BUILD = 1
 FORCE_DRC_C_BACKEND = 1
 
 SUBTARGET = tiny
-MACHDEP =  -DXENON -m32 -maltivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
-CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float
+MACHDEP =  -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
+CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -fomit-frame-pointer
+CPPONLYFLAGS = 
 LDSCRIPT := $(DEVKITXENON)/app.lds
 
 SYMBOLS = 1
 SYMLEVEL = 2
 MAP = 1
 
-DEBUG = 0
-PROFILER = 0
+#DEBUG = 0
+#PROFILER = 0
 
 OSD = osdmini
 HOST_AR = ar
@@ -457,7 +458,7 @@ endif
 #CCOMFLAGS =
 CONLYFLAGS =
 COBJFLAGS =
-CPPONLYFLAGS =
+#CPPONLYFLAGS =
 
 # CFLAGS is defined based on C or C++ targets
 # (remember, expansion only happens when used, so doing it here is ok)
@@ -769,7 +770,7 @@ $(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $
 $(EMULATOR): $(VERSIONOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 #$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
-	$(LD) -g $(MACHDEP) -Wl,--gc-sections -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS) -lxenon -lm $(LIBS) $^ -n -T $(LDSCRIPT) -o $@
+	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^   -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32

@@ -74,7 +74,7 @@
 #include "config.h"
 #include "xmlfile.h"
 
-
+#include <debug.h>
 
 //**************************************************************************
 //  CONSTANTS
@@ -1736,11 +1736,13 @@ bool render_target::load_layout_file(const char *dirname, const char *filename)
 		return false;
 	}
 
+        TR;
 	// parse and catch any errors
 	bool result = true;
 	try
 	{
 		m_filelist.append(*auto_alloc(m_manager.machine(), layout_file(m_manager.machine(), *rootnode, dirname)));
+                TR;
 	}
 	catch (emu_fatalerror &err)
 	{
@@ -1750,7 +1752,7 @@ bool render_target::load_layout_file(const char *dirname, const char *filename)
 			mame_printf_warning("Error in XML string: %s", err.string());
 		result = false;
 	}
-
+        TR;
 	// free the root node
 	xml_file_free(rootnode);
 	return result;

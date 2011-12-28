@@ -18,17 +18,46 @@
 #include "osdmini.h"
 
 //minimain.c
+/*
+class test
+{
+private:
+    int p;
 
-int xenon_main(){
-	TR;
-	// init xenon stuff	
-	xenos_init(VIDEO_MODE_AUTO);
-	//console_init();
-	usb_init();
-	usb_do_poll();
-	xenon_make_it_faster(XENON_SPEED_FULL);
-	TR;
-	return 0;
+public:
+    test() {
+        TR;
+        exit(0);
+    };
+
+    test(int size) {
+        TR;
+        printf("size:%d\r\n", size);
+        p = size;
+        exit(0);
+    }
+
+    void func() {
+        printf("...%d\r\n", p);
+    }
+};
+
+test tt(512);
+ */ 
+
+int xenon_main() {
+    //call_ctors();
+
+    //tt.func();
+    TR;
+    // init xenon stuff	
+    xenos_init(VIDEO_MODE_AUTO);
+    //console_init();
+    usb_init();
+    usb_do_poll();
+    xenon_make_it_faster(XENON_SPEED_FULL);
+    TR;
+    return 0;
 }
 
 int getrusage(int who, struct rusage *r_usage) {
@@ -44,4 +73,4 @@ void mame_printf_verbose(const char *text, ...){
     printf(buffer);
     va_end (args);
 }
-*/
+ */

@@ -14,7 +14,7 @@
 #include "softlist.h"
 
 #include <ctype.h>
-
+#include <debug.h>
 typedef tagmap_t<software_info *> softlist_map;
 
 /***************************************************************************
@@ -1541,6 +1541,7 @@ bool load_software_part(emu_options &options, device_image_interface *image, con
 
 	if ( software_part_ptr )
 	{
+            TR;
 		/* Load the software part */
 		try {
 			result = image->call_softlist_load((char *)swlist_name, (char *)software_info_ptr->shortname, software_part_ptr->romdata );

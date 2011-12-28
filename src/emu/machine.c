@@ -119,7 +119,7 @@
 
 #include <time.h>
 
-
+#include <debug.h>
 
 //**************************************************************************
 //  GLOBAL VARIABLES
@@ -373,6 +373,8 @@ int running_machine::run(bool firstrun)
 {
 	int error = MAMERR_NONE;
 
+        TR;
+        
 	// use try/catch for deep error recovery
 	try
 	{
@@ -431,6 +433,7 @@ int running_machine::run(bool firstrun)
 		nvram_save(*this);
 		config_save_settings(*this);
 	}
+        
 	catch (emu_fatalerror &fatal)
 	{
 		mame_printf_error("%s\n", fatal.string());
@@ -448,6 +451,7 @@ int running_machine::run(bool firstrun)
 		mame_printf_error("Out of memory!\n");
 		error = MAMERR_FATALERROR;
 	}
+        TR;
 
 	// call all exit callbacks registered
 	call_notifiers(MACHINE_NOTIFY_EXIT);

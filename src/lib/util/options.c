@@ -600,7 +600,6 @@ void core_options::reset() {
 //-------------------------------------------------
 
 void core_options::append_entry(core_options::entry &newentry) {
-    TR;
     // append to the list
     *m_entrylist_tailptr = &newentry;
     m_entrylist_tailptr = &newentry.m_next;
@@ -609,9 +608,7 @@ void core_options::append_entry(core_options::entry &newentry) {
     astring tempstr;
     for (int name = 0; name < ARRAY_LENGTH(newentry.m_name); name++){
         
-        if (newentry.m_name[name]) {
-            
-            printf("%s\r\n",newentry.m_name[name].cstr());
+        if (newentry.m_name[name]) {            
             m_entrymap.add(newentry.m_name[name], &newentry);
 
             // for boolean options add a "no" variant as well
