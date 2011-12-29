@@ -57,9 +57,6 @@ osd_ticks_t osd_ticks(void)
 		start_time = mftb();
 		
 	return mftb()-start_time;
-		
-	// use the standard library clock function
-	//return clock();
 }
 
 
@@ -84,4 +81,7 @@ void osd_sleep(osd_ticks_t duration)
 	// time, this is where we would do it
 	// TR;
 	//delay(duration);
+    // convert to milliseconds, rounding down
+    unsigned int msec = (unsigned int)(duration * 1000 / PPC_TIMEBASE_FREQ);
+    mdelay(msec);
 }
