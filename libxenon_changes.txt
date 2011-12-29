@@ -1,0 +1,24 @@
+// changes needed for c++ exeptions
+
+startup/xenon/ctr1.c
+
+add
+
+void c_register_frame(void){
+	extern char __eh_frame_start [];
+	extern void __register_frame( void * );
+	__register_frame(&__eh_frame_start);
+}
+
+in startup_from_xell.S
+
+b32:
+	bl c_register_frame
+	bl call_ctors
+	bl main
+
+	bl exit
+
+in app.lds
+
+.eh_frame ALIGN(0x4): { PROVIDE (__eh_frame_start = .); KEEP (*(.eh_frame)) LONG (0); }

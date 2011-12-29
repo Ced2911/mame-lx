@@ -40,8 +40,15 @@
 //============================================================
 
 #include "osdcore.h"
+#include <ppc/atomic.h>
 
+#include <debug.h>
 
+/*
+struct _osd_lock{
+    unsigned int __attribute__ ((aligned (128))) _lock;
+};
+*/
 //============================================================
 //  osd_lock_alloc
 //============================================================
@@ -51,6 +58,10 @@ osd_lock *osd_lock_alloc(void)
 	// the minimal implementation does not support threading
 	// just return a dummy value here
 	return (osd_lock *)1;
+    //_osd_lock * _lock = new _osd_lock;
+    //_lock->_lock = 0;
+   // return _lock;
+        //TR;
 }
 
 
@@ -58,10 +69,12 @@ osd_lock *osd_lock_alloc(void)
 //  osd_lock_acquire
 //============================================================
 
-void osd_lock_acquire(osd_lock *lock)
+void osd_lock_acquire(osd_lock *_lock)
 {
 	// the minimal implementation does not support threading
 	// the acquire always "succeeds"
+    //lock(&_lock->_lock);
+    //TR;
 }
 
 
@@ -69,8 +82,9 @@ void osd_lock_acquire(osd_lock *lock)
 //  osd_lock_try
 //============================================================
 
-int osd_lock_try(osd_lock *lock)
+int osd_lock_try(osd_lock *_lock)
 {
+    //TR;
 	// the minimal implementation does not support threading
 	// the acquire always "succeeds"
 	return TRUE;
@@ -81,10 +95,12 @@ int osd_lock_try(osd_lock *lock)
 //  osd_lock_release
 //============================================================
 
-void osd_lock_release(osd_lock *lock)
+void osd_lock_release(osd_lock *_lock)
 {
+    //TR;
 	// the minimal implementation does not support threading
 	// do nothing here
+    //unlock(&_lock->_lock);
 }
 
 
@@ -92,8 +108,13 @@ void osd_lock_release(osd_lock *lock)
 //  osd_lock_free
 //============================================================
 
-void osd_lock_free(osd_lock *lock)
+void osd_lock_free(osd_lock *_lock)
 {
+    //TR;
 	// the minimal implementation does not support threading
 	// do nothing here
+/*
+    _lock->_lock=0;
+    delete _lock;
+*/
 }

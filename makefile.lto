@@ -30,8 +30,11 @@ CROSS_BUILD = 1
 FORCE_DRC_C_BACKEND = 1
 
 SUBTARGET = xenon
+OPTIFLAGS =  -mno-altivec -Ofast -flto -fuse-linker-plugin -mcpu=cell -mtune=cell -fno-tree-vectorize -fno-tree-slp-vectorize -ftree-vectorizer-verbose=1 
+MACHDEP_LD =  $(OPTIFLAGS) -DXENON -m32 -fno-pic -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
+
 MACHDEP =  -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
-CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -fomit-frame-pointer
+CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -fomit-frame-pointer $(OPTIFLAGS)
 CPPONLYFLAGS = 
 LDSCRIPT := $(DEVKITXENON)/app.lds
 
@@ -39,8 +42,10 @@ SYMBOLS = 1
 SYMLEVEL = 2
 MAP = 1
 
-DEBUG = 1
-PROFILER = 1
+OPTIMIZE = fast
+
+#DEBUG = 0
+#PROFILER = 0
 
 OSD = osdmini
 HOST_AR = ar
@@ -770,7 +775,7 @@ $(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $
 $(EMULATOR): $(VERSIONOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 #$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
-	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^  -lxenon  -n -T $(LDSCRIPT) -o $@
+	$(LD) -g $(MACHDEP_LD) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^  -lxenon  -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32
