@@ -20,7 +20,7 @@
 #include "render.h"
 #include <ctype.h>
 
-#include <debug.h>
+
 
 /***************************************************************************
     CONSTANTS
@@ -533,7 +533,6 @@ int debug_command_parameter_cpu(running_machine &machine, const char *param, dev
 	if (*result != NULL)
 		return TRUE;
 
-        TR;
 	/* then evaluate as an expression; on an error assume it was a tag */
 	try
 	{
@@ -544,7 +543,6 @@ int debug_command_parameter_cpu(running_machine &machine, const char *param, dev
 		debug_console_printf(machine, "Unable to find CPU '%s'\n", param);
 		return FALSE;
 	}
-        TR;
 
 	/* if we got a valid one, return */
 	device_execute_interface *exec = NULL;
@@ -596,7 +594,7 @@ static int debug_command_parameter_expression(running_machine &machine, const ch
 	/* NULL parameter does nothing and returns no error */
 	if (param == NULL)
 		return TRUE;
-        TR;
+
 	/* parse the expression; success if no error */
 	try
 	{
@@ -611,7 +609,6 @@ static int debug_command_parameter_expression(running_machine &machine, const ch
 		debug_console_printf(machine, "%s\n", err.code_string());
 		return FALSE;
 	}
-        TR;
 }
 
 

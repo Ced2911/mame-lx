@@ -770,7 +770,7 @@ $(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $
 $(EMULATOR): $(VERSIONOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 #$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
-	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^   -n -T $(LDSCRIPT) -o $@
+	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^  -lxenon  -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32

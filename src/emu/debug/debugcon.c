@@ -19,7 +19,7 @@
 #include <ctype.h>
 
 
-#include <debug.h>
+
 /***************************************************************************
     CONSTANTS
 ***************************************************************************/
@@ -338,7 +338,6 @@ static CMDERR internal_parse_command(running_machine &machine, const char *origi
 		/* if it smells like an assignment expression, treat it as such */
 		if (isexpr && paramcount == 1)
 		{
-                    TR;
 			try
 			{
 				UINT64 expresult;
@@ -348,7 +347,6 @@ static CMDERR internal_parse_command(running_machine &machine, const char *origi
 			{
 				return MAKE_CMDERR_EXPRESSION_ERROR(err);
 			}
-                        TR;
 		}
 		else
 		{

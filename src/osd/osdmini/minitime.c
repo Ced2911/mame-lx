@@ -83,5 +83,5 @@ void osd_sleep(osd_ticks_t duration)
 	// if there was a generic, cross-platform way to give up
 	// time, this is where we would do it
 	TR;
-	delay(duration);
+	//delay(duration);
 }

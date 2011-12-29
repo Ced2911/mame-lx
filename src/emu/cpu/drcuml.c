@@ -185,7 +185,6 @@ drcuml_state::~drcuml_state()
 
 void drcuml_state::reset()
 {
-    TR;
 	// if we error here, we are screwed
 	try
 	{
@@ -214,7 +213,6 @@ void drcuml_state::reset()
 	{
 		fatalerror("Out of cache space in drcuml_state::reset");
 	}
-        TR;
 }
 
 

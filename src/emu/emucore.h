@@ -374,7 +374,6 @@ inline void fatalerror(const char *format, ...)
 {
 	va_list ap;
 	va_start(ap, format);
-        vprintf (format, ap);
 	throw emu_fatalerror(format, ap);
 	va_end(ap);
 }
@@ -383,8 +382,6 @@ inline void fatalerror_exitcode(running_machine &machine, int exitcode, const ch
 {
 	va_list ap;
 	va_start(ap, format);
-        vprintf (format, ap);
-        printf("fatalerror_exitcode =%d\r\n",exitcode);
 	throw emu_fatalerror(exitcode, format, ap);
 	va_end(ap);
 }

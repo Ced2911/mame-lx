@@ -54,7 +54,7 @@
 #if defined(SDLMAME_FREEBSD) || defined(SDLMAME_NETBSD) || defined(SDLMAME_OS2)
 # undef tolower
 #endif
-#include <debug.h>
+
 
 /***************************************************************************
     CONSTANTS
@@ -323,7 +323,7 @@ bool debug_comment_save(running_machine &machine)
 	xml_data_node *root = xml_file_create();
 	if (root == NULL)
 		return false;
-        TR;
+
 	// wrap in a try/catch to handle errors
 	try
 	{
@@ -370,7 +370,6 @@ bool debug_comment_save(running_machine &machine)
 		xml_file_free(root);
 		return false;
 	}
-        TR;
 
 	// free and get out of here
 	xml_file_free(root);
@@ -392,7 +391,7 @@ bool debug_comment_load(running_machine &machine)
 	// if an error, just return false
 	if (filerr != FILERR_NONE)
 		return false;
-        TR;
+
 	// wrap in a try/catch to handle errors
 	xml_data_node *root = xml_file_read(file, NULL);
 	try
@@ -433,7 +432,7 @@ bool debug_comment_load(running_machine &machine)
 			xml_file_free(root);
 		return false;
 	}
-        TR;
+
 	// free the parser
 	xml_file_free(root);
 	return true;
@@ -3222,7 +3221,7 @@ bool device_debug::watchpoint::hit(int type, offs_t address, int size)
 	// must match our address
 	if (address + size <= m_address || address >= m_address + m_length)
 		return false;
-        TR;
+
 	// must satisfy the condition
 	if (!m_condition.is_empty())
 	{
@@ -3235,7 +3234,6 @@ bool device_debug::watchpoint::hit(int type, offs_t address, int size)
 			return false;
 		}
 	}
-        TR;
 	return true;
 }
 

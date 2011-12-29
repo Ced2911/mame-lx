@@ -318,11 +318,11 @@ void mame_printf_info(const char *format, ...)
 void mame_printf_verbose(const char *format, ...)
 {
 	va_list argptr;
-#if 0
+
 	/* if we're not verbose, skip it */
 	if (!print_verbose)
 		return;
-#endif
+
 	/* by default, we go to stdout */
 	if (output_cb[OUTPUT_CHANNEL_VERBOSE] == NULL)
 	{

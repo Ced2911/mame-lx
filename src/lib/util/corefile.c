@@ -885,12 +885,11 @@ int CLIB_DECL core_fprintf(core_file *f, const char *fmt, ...)
 
 astring *core_filename_extract_base(astring *result, const char *name, int strip_extension)
 {
-    printf("core_filename_extract_base: %s\r\n",name);
 	/* find the start of the name */
 	const char *start = name + strlen(name);
 	while (start > name && !is_directory_separator(start[-1]))
 		start--;
-printf("core_filename_extract_base: %s\r\n",start);
+
 	/* copy the rest into an astring */
 	astring_cpyc(result, start);
 

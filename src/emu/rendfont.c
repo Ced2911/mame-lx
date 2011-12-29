@@ -45,7 +45,7 @@
 
 #include "uismall.fh"
 
-#include <debug.h>
+
 //**************************************************************************
 //  INLINE FUNCTIONS
 //**************************************************************************
@@ -670,7 +670,6 @@ bool render_font::load_cached(emu_file &file, UINT32 hash)
 
 bool render_font::save_cached(const char *filename, UINT32 hash)
 {
-    TR;
 	mame_printf_warning("Generating cached BDF font...\n");
 
 	// attempt to open the file
@@ -805,7 +804,6 @@ bool render_font::save_cached(const char *filename, UINT32 hash)
 		// all done
 		auto_free(m_manager.machine(), tempbuffer);
 		auto_free(m_manager.machine(), chartable);
-                TR;
 		return true;
 	}
 	catch (...)

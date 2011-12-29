@@ -111,7 +111,7 @@
 
 #include <ctype.h>
 
-#include <debug.h>
+
 
 //**************************************************************************
 //  PARAMETERS
@@ -435,7 +435,6 @@ cheat_script::script_entry::script_entry(cheat_manager &manager, symbol_table &s
 	  m_expression(&symbols),
 	  m_arglist(manager.machine().respool())
 {
-    TR;
 	const char *expression = NULL;
 	try
 	{
@@ -493,7 +492,6 @@ cheat_script::script_entry::script_entry(cheat_manager &manager, symbol_table &s
 	{
 		throw emu_fatalerror("%s.xml(%d): error parsing cheat expression \"%s\" (%s)\n", filename, entrynode.line, expression, err.code_string());
 	}
-        TR;
 }
 
 
@@ -503,7 +501,6 @@ cheat_script::script_entry::script_entry(cheat_manager &manager, symbol_table &s
 
 void cheat_script::script_entry::execute(cheat_manager &manager, UINT64 &argindex)
 {
-    TR;
 	// evaluate the condition
 	if (!m_condition.is_empty())
 	{
@@ -553,7 +550,6 @@ void cheat_script::script_entry::execute(cheat_manager &manager, UINT64 &arginde
 			(UINT32)params[24], (UINT32)params[25], (UINT32)params[26], (UINT32)params[27],
 			(UINT32)params[28], (UINT32)params[29], (UINT32)params[30], (UINT32)params[31]);
 	}
-    TR;
 }
 
 
@@ -656,7 +652,7 @@ cheat_script::script_entry::output_argument::output_argument(cheat_manager &mana
 	const char *expression = argnode.value;
 	if (expression == NULL || expression[0] == 0)
 		throw emu_fatalerror("%s.xml(%d): missing expression in argument tag\n", filename, argnode.line);
-        TR;
+
 	// parse it
 	try
 	{
@@ -666,7 +662,6 @@ cheat_script::script_entry::output_argument::output_argument(cheat_manager &mana
 	{
 		throw emu_fatalerror("%s.xml(%d): error parsing cheat expression \"%s\" (%s)\n", filename, argnode.line, expression, err.code_string());
 	}
-        TR;
 }
 
 
@@ -677,7 +672,6 @@ cheat_script::script_entry::output_argument::output_argument(cheat_manager &mana
 
 int cheat_script::script_entry::output_argument::values(UINT64 &argindex, UINT64 *result)
 {
-    TR;
 	for (argindex = 0; argindex < m_count; argindex++)
 	{
 		try
@@ -689,7 +683,6 @@ int cheat_script::script_entry::output_argument::values(UINT64 &argindex, UINT64
 			mame_printf_warning("Error executing argument expression \"%s\": %s\n", m_expression.original_string(), err.code_string());
 		}
 	}
-    TR;
 	return m_count;
 }
 
@@ -731,7 +724,6 @@ cheat_entry::cheat_entry(cheat_manager &manager, symbol_table &globaltable, cons
 	  m_numtemp(DEFAULT_TEMP_VARIABLES),
 	  m_argindex(0)
 {
-    TR;
 	// reset scripts
 	try
 	{
@@ -802,7 +794,6 @@ cheat_entry::cheat_entry(cheat_manager &manager, symbol_table &globaltable, cons
 		this->~cheat_entry();
 		throw;
 	}
-        TR;
 }
 
 
@@ -1230,7 +1221,7 @@ bool cheat_manager::save_all(const char *filename)
 	// if that failed, return nothing
 	if (filerr != FILERR_NONE)
 		return false;
-        TR;
+
 	// wrap the rest of catch errors
 	try
 	{
@@ -1254,7 +1245,6 @@ bool cheat_manager::save_all(const char *filename)
 		mame_printf_error("%s\n", err.string());
 		cheatfile.remove_on_close();
 	}
-        TR;
 	return false;
 }
 
