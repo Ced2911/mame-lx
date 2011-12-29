@@ -46,6 +46,8 @@
 #include "osdmini.h"
 #include "xenon.h"
 #include <debug.h>
+#include <usb/usbmain.h>
+#include <input/input.h>
 //============================================================
 //  CONSTANTS
 //============================================================
@@ -55,6 +57,7 @@
 enum {
     KEY_ESCAPE,
     KEY_P1_START,
+    KEY_P1_COIN,
     KEY_BUTTON_1,
     KEY_BUTTON_2,
     KEY_BUTTON_3,
@@ -167,6 +170,58 @@ void mini_osd_interface::init(running_machine &machine) {
 }
 
 
+
+void update_inpit(){
+    usb_do_poll();
+    struct controller_data_s ctrl;
+    
+    get_controller_data(&ctrl, 0);
+    
+    memset(keyboard_state,0,KEY_TOTAL);
+    
+    if (ctrl.s1_y > 13107)
+        keyboard_state[KEY_P1_START]=1;
+
+    if (ctrl.s1_y < -13107)
+       keyboard_state[KEY_P1_START]=1;
+
+    if (ctrl.s1_x > 13107)
+        keyboard_state[KEY_P1_START]=1;
+
+    if (ctrl.s1_x < -13107)
+        keyboard_state[KEY_P1_START]=1;
+
+    if (ctrl.up)
+        keyboard_state[KEY_JOYSTICK_U]=1;
+
+    if (ctrl.down)
+        keyboard_state[KEY_JOYSTICK_D]=1;
+
+    if (ctrl.left)
+        keyboard_state[KEY_JOYSTICK_L]=1;
+
+    if (ctrl.right)
+        keyboard_state[KEY_JOYSTICK_R]=1;
+
+    if (ctrl.a)
+        keyboard_state[KEY_BUTTON_1]=1;
+
+    if (ctrl.b)
+        keyboard_state[KEY_BUTTON_2]=1;
+
+    if (ctrl.x)
+        keyboard_state[KEY_BUTTON_3]=1;
+
+    if (ctrl.y)
+        keyboard_state[KEY_P1_START]=1;
+
+    if (ctrl.start)
+        keyboard_state[KEY_P1_START]=1;
+
+    if (ctrl.select)
+        keyboard_state[KEY_P1_START]=1;
+}
+
 //============================================================
 //  osd_update
 //============================================================
@@ -196,6 +251,8 @@ void mini_osd_interface::update(bool skip_redraw) {
     if (machine().time() > attotime::from_seconds(5)) {
         //machine().schedule_exit();
     }
+    
+    update_inpit();
 }
 
 

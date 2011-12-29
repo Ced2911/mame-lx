@@ -29,7 +29,7 @@ NOWERROR = 1
 CROSS_BUILD = 1
 FORCE_DRC_C_BACKEND = 1
 
-SUBTARGET = mame
+SUBTARGET = tiny
 MACHDEP =  -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
 CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -fomit-frame-pointer
 CPPONLYFLAGS = 
