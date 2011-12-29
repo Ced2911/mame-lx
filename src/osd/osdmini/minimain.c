@@ -178,6 +178,8 @@ void mini_osd_interface::update(bool skip_redraw) {
 
     // make that the size of our target
     our_target->set_bounds(minwidth, minheight);
+    
+    xenon_set_dim(minwidth, minheight);
 
     // get the list of primitives for the target at the current size
     render_primitive_list &primlist = our_target->get_primitives();
