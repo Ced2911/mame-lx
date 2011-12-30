@@ -44,6 +44,9 @@ CPUS += TMS9900
 CPUS += COP400
 # new
 CPUS += PIC16C5X
+CPUS += TMS340X0
+CPUS += TMS32031
+CPUS += ADSP21XX
 
 #-------------------------------------------------
 # Specify all the sound cores necessary for the
@@ -69,6 +72,8 @@ SOUNDS += YM2610B
 SOUNDS += YM2203
 SOUNDS += QSOUND
 SOUNDS += MSM5205
+#mk
+SOUNDS += DMADAC
 
 #-------------------------------------------------
 # This is the list of files that are necessary
@@ -103,10 +108,17 @@ DRVLIBS += \
 	$(DRIVERS)/cps2.o \
         $(MACHINE)/cps2crpt.o \
         $(MACHINE)/kabuki.o \
-# ??
+# mk
 DRVLIBS += \
         $(MACHINE)/nmk112.o \
-
+        $(DRIVERS)/midtunit.o $(MACHINE)/midtunit.o $(VIDEO)/midtunit.o \
+	$(DRIVERS)/midvunit.o $(VIDEO)/midvunit.o \
+	$(DRIVERS)/midwunit.o $(MACHINE)/midwunit.o \
+	$(DRIVERS)/midxunit.o $(MACHINE)/midxunit.o \
+	$(DRIVERS)/midyunit.o $(MACHINE)/midyunit.o $(VIDEO)/midyunit.o \
+        $(AUDIO)/dcs.o \
+        $(MACHINE)/midwayic.o \
+        $(AUDIO)/cage.o \
 
 #-------------------------------------------------
 # layout dependencies

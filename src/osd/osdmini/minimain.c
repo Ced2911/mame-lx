@@ -101,7 +101,7 @@ int main() {
     {
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
-        "mame.elf", "sfa3"
+        "mame.elf", "mk"
         //"mame.elf"
     };
     TR;

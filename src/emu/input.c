@@ -50,7 +50,7 @@
 #include "emuopts.h"
 #include "profiler.h"
 
-
+#include <debug.h>
 
 //**************************************************************************
 //  CONSTANTS
@@ -1498,9 +1498,11 @@ input_device_item *input_manager::item_from_code(input_code code) const
 
 void input_manager::reset_memory()
 {
+
 	// reset all entries in switch memory to invalid
 	for (int memnum = 0; memnum < ARRAY_LENGTH(m_switch_memory); memnum++)
 		m_switch_memory[memnum] = INPUT_CODE_INVALID;
+
 }
 
 

@@ -40,7 +40,7 @@
 #include "emu.h"
 #include "cothread/libco.h"
 
-
+#include <debug.h>
 //**************************************************************************
 //  GLOBAL VARIABLES
 //**************************************************************************
@@ -70,13 +70,17 @@ cothread::cothread(cothread_entry_delegate entry, size_t stack)
 	  m_creator_cothread(co_active()),
 	  m_entry(entry)
 {
+    TR;
 	// due to the lack of input parameter to the entry function,
 	// all cothread creation is explicitly serialized
 	osd_lock_acquire(s_create_lock);
 	s_create_cothread = this;
 	m_cothread = co_create(stack, &cothread_entry);
+       
 	co_switch(m_cothread);
 	osd_lock_release(s_create_lock);
+        
+        TR;
 }
 
 
@@ -86,10 +90,13 @@ cothread::cothread(cothread_entry_delegate entry, size_t stack)
 
 void cothread::cothread_entry()
 {
+    TR;
 	// on first call, retrieve the static pointer and return
 	cothread *thread = s_create_cothread;
 	co_switch(thread->m_creator_cothread);
 
+        
 	// when actually swapped in later, call the entry point
 	thread->m_entry();
+        TR;
 }

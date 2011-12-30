@@ -17,6 +17,7 @@
 
 
 #xenon cfg
+#PTR64 = 0
 BIGENDIAN = 1
 OSD = osdmini
 AR = xenon-ar
@@ -39,8 +40,8 @@ SYMBOLS = 1
 SYMLEVEL = 2
 MAP = 1
 
-DEBUG = 1
-PROFILER = 1
+#DEBUG = 1
+#PROFILER = 1
 
 HOST_AR = ar
 HOST_CC = gcc
