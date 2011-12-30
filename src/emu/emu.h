@@ -65,7 +65,7 @@
 #include "hash.h"
 #include "fileio.h" // remove me once NVRAM is implemented as device
 #include "delegate.h"
-#include "cothread.h"
+//#include "cothread.h"
 
 // memory and address spaces
 #include "memory.h"
@@ -113,6 +113,9 @@ typedef device_t * (*machine_config_constructor)(machine_config &config, device_
 // image-related
 #include "softlist.h"
 #include "image.h"
+
+// networking
+#include "network.h"
 
 // the running machine
 #include "machine.h"

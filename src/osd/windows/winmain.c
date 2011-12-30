@@ -548,7 +548,7 @@ static void winui_output_error(void *param, const char *format, va_list argptr)
 		winwindow_toggle_full_screen();
 
 	vsnprintf(buffer, ARRAY_LENGTH(buffer), format, argptr);
-	win_message_box_utf8(win_window_list ? win_window_list->hwnd : NULL, buffer, APPNAME, MB_OK);
+	win_message_box_utf8(win_window_list ? win_window_list->hwnd : NULL, buffer, emulator_info::get_appname(), MB_OK);
 }
 
 
@@ -708,6 +708,10 @@ void windows_osd_interface::osd_exit(running_machine &machine)
 
 	// cleanup sockets
 	win_cleanup_sockets();
+
+	#ifdef USE_NETWORK
+	winnetdev_deinit(machine);
+	#endif
 
 	// take down the watchdog thread if it exists
 	if (watchdog_thread != NULL)
@@ -1028,6 +1032,7 @@ static DWORD WINAPI watchdog_thread_entry(LPVOID lpParameter)
 		if (wait_result == WAIT_TIMEOUT)
 		{
 			fprintf(stderr, "Terminating due to watchdog timeout\n");
+			fflush(stderr);
 			TerminateProcess(GetCurrentProcess(), -1);
 		}
 	}

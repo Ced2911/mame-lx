@@ -20,6 +20,7 @@
 #include "ui.h"
 #include "uiinput.h"
 #include "uimenu.h"
+#include "uimain.h"
 #include "uigfx.h"
 #include <ctype.h>
 
@@ -241,7 +242,7 @@ int ui_init(running_machine &machine)
 	machine.add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(ui_exit), &machine));
 
 	/* initialize the other UI bits */
-	ui_menu_init(machine);
+	ui_menu::init(machine);
 	ui_gfx_init(machine);
 
 	/* reset globals */
@@ -273,7 +274,7 @@ static void ui_exit(running_machine &machine)
 
 int ui_display_startup_screens(running_machine &machine, int first_time, int show_disclaimer)
 {
-        const int maxstate = 3;
+	const int maxstate = 3;
 	int str = machine.options().seconds_to_run();
 	int show_gameinfo = !machine.options().skip_gameinfo();
 	int show_warnings = TRUE;
@@ -281,8 +282,7 @@ int ui_display_startup_screens(running_machine &machine, int first_time, int sho
 
 	/* disable everything if we are using -str for 300 or fewer seconds, or if we're the empty driver,
        or if we are debugging */
-	//if (!first_time || (str > 0 && str < 60*5) || &machine.system() == &GAME_NAME(___empty) || (machine.debug_flags & DEBUG_FLAG_ENABLED) != 0)
-        if (1)
+	if (!first_time || (str > 0 && str < 60*5) || &machine.system() == &GAME_NAME(___empty) || (machine.debug_flags & DEBUG_FLAG_ENABLED) != 0)
 		show_gameinfo = show_warnings = show_disclaimer = FALSE;
 
 	/* initialize the on-screen display system */
@@ -290,7 +290,7 @@ int ui_display_startup_screens(running_machine &machine, int first_time, int sho
 
 	/* loop over states */
 	ui_set_handler(handler_ingame, 0);
-	for (state = 0; state < maxstate && !machine.scheduled_event_pending() && !ui_menu_is_force_game_select(); state++)
+	for (state = 0; state < maxstate && !machine.scheduled_event_pending() && !ui_menu::stack_has_special_main_menu(); state++)
 	{
 		/* default to standard colors */
 		messagebox_backcolor = UI_BACKGROUND_COLOR;
@@ -325,7 +325,7 @@ int ui_display_startup_screens(running_machine &machine, int first_time, int sho
 		while (machine.input().poll_switches() != INPUT_CODE_INVALID) ;
 
 		/* loop while we have a handler */
-		while (ui_handler_callback != handler_ingame && !machine.scheduled_event_pending() && !ui_menu_is_force_game_select())
+		while (ui_handler_callback != handler_ingame && !machine.scheduled_event_pending() && !ui_menu::stack_has_special_main_menu())
 			machine.video().frame_update();
 
 		/* clear the handler and force an update */
@@ -334,8 +334,8 @@ int ui_display_startup_screens(running_machine &machine, int first_time, int sho
 	}
 
 	/* if we're the empty driver, force the menus on */
-	if (ui_menu_is_force_game_select())
-		ui_set_handler(ui_menu_ui_handler, 0);
+	if (ui_menu::stack_has_special_main_menu())
+		ui_set_handler(ui_menu::ui_handler, 0);
 
 	return 0;
 }
@@ -378,7 +378,7 @@ void ui_update_and_render(running_machine &machine, render_container *container)
 	if (machine.phase() >= MACHINE_PHASE_RESET && (single_step || machine.paused()))
 	{
 		int alpha = (1.0f - machine.options().pause_brightness()) * 255.0f;
-		if (ui_menu_is_force_game_select())
+		if (ui_menu::stack_has_special_main_menu())
 			alpha = 255;
 		if (alpha > 255)
 			alpha = 255;
@@ -857,7 +857,7 @@ int ui_get_show_profiler(void)
 
 void ui_show_menu(void)
 {
-	ui_set_handler(ui_menu_ui_handler, 0);
+	ui_set_handler(ui_menu::ui_handler, 0);
 }
 
 
@@ -868,7 +868,7 @@ void ui_show_menu(void)
 
 int ui_is_menu_active(void)
 {
-	return (ui_handler_callback == ui_menu_ui_handler);
+	return (ui_handler_callback == ui_menu::ui_handler);
 }
 
 
@@ -918,7 +918,9 @@ static astring &warnings_string(running_machine &machine, astring &string)
 	/* add a warning if any ROMs were loaded with warnings */
 	if (rom_load_warnings(machine) > 0)
 	{
-		string.cat("One or more ROMs/CHDs for this game are incorrect. The " GAMENOUN " may not run correctly.\n");
+		string.cat("One or more ROMs/CHDs for this game are incorrect. The ");
+		string.cat(emulator_info::get_gamenoun());
+		string.cat(" may not run correctly.\n");
 		if (machine.system().flags & WARNING_FLAGS)
 			string.cat("\n");
 	}
@@ -926,12 +928,16 @@ static astring &warnings_string(running_machine &machine, astring &string)
 	/* if we have at least one warning flag, print the general header */
 	if ((machine.system().flags & WARNING_FLAGS) || rom_load_knownbad(machine) > 0)
 	{
-		string.cat("There are known problems with this " GAMENOUN "\n\n");
+		string.cat("There are known problems with this ");
+		string.cat(emulator_info::get_gamenoun());
+		string.cat("\n\n");
 
 		/* add a warning if any ROMs are flagged BAD_DUMP/NO_DUMP */
-		if (rom_load_knownbad(machine) > 0)
-			string.cat("One or more ROMs/CHDs for this "  GAMENOUN " have not been correctly dumped.\n");
-
+		if (rom_load_knownbad(machine) > 0) {
+			string.cat("One or more ROMs/CHDs for this ");
+			string.cat(emulator_info::get_gamenoun());
+			string.cat(" have not been correctly dumped.\n");
+		}
 		/* add one line per warning flag */
 		if (input_machine_has_keyboard(machine))
 			string.cat("The keyboard emulation may not be 100% accurate.\n");
@@ -958,12 +964,20 @@ static astring &warnings_string(running_machine &machine, astring &string)
 			/* add the strings for these warnings */
 			if (machine.system().flags & GAME_UNEMULATED_PROTECTION)
 				string.cat("The game has protection which isn't fully emulated.\n");
-			if (machine.system().flags & GAME_NOT_WORKING)
-				string.cat("\nTHIS " CAPGAMENOUN " DOESN'T WORK. The emulation for this game is not yet complete. "
+			if (machine.system().flags & GAME_NOT_WORKING) {
+				string.cat("\nTHIS ");
+				string.cat(emulator_info::get_capgamenoun());
+				string.cat(" DOESN'T WORK. The emulation for this game is not yet complete. "
 					 "There is nothing you can do to fix this problem except wait for the developers to improve the emulation.\n");
-			if (machine.system().flags & GAME_MECHANICAL)
-				string.cat("\nCertain elements of this " GAMENOUN " cannot be emulated as it requires actual physical interaction or consists of mechanical devices. "
-					 "It is not possible to fully play this " GAMENOUN ".\n");
+			}
+			if (machine.system().flags & GAME_MECHANICAL) {
+				string.cat("\nCertain elements of this ");
+				string.cat(emulator_info::get_gamenoun());
+				string.cat(" cannot be emulated as it requires actual physical interaction or consists of mechanical devices. "
+					 "It is not possible to fully play this ");
+				string.cat(emulator_info::get_gamenoun());
+				string.cat(".\n");
+			}
 
 			/* find the parent of this driver */
 			driver_enumerator drivlist(machine.options());
@@ -1367,11 +1381,11 @@ static UINT32 handler_ingame(running_machine &machine, render_container *contain
 
 	/* turn on menus if requested */
 	if (ui_input_pressed(machine, IPT_UI_CONFIGURE))
-		return ui_set_handler(ui_menu_ui_handler, 0);
+		return ui_set_handler(ui_menu::ui_handler, 0);
 
 	/* if the on-screen display isn't up and the user has toggled it, turn it on */
 	if ((machine.debug_flags & DEBUG_FLAG_ENABLED) == 0 && ui_input_pressed(machine, IPT_UI_ON_SCREEN_DISPLAY))
-		return ui_set_handler(ui_slider_ui_handler, 1);
+		return ui_set_handler(ui_menu_sliders::ui_handler, 1);
 
 	/* handle a reset request */
 	if (ui_input_pressed(machine, IPT_UI_RESET_MACHINE))

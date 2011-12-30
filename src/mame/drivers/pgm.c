@@ -295,11 +295,11 @@ Notes:
 #include "cpu/z80/z80.h"
 #include "cpu/m68000/m68000.h"
 #include "cpu/arm7/arm7.h"
-#include "deprecat.h"
 #include "sound/ics2115.h"
 #include "cpu/arm7/arm7core.h"
 #include "machine/nvram.h"
 #include "includes/pgm.h"
+#include "machine/v3021.h"
 
 UINT16 *pgm_mainram;
 static void IGS022_reset(running_machine& machine);
@@ -495,83 +495,6 @@ static void sound_irq( device_t *device, int level )
 };*/
 
 
-/* Calendar Emulation */
-
-static UINT8 bcd( UINT8 data )
-{
-	return ((data / 10) << 4) | (data % 10);
-}
-
-static READ16_HANDLER( pgm_calendar_r )
-{
-	pgm_state *state = space->machine().driver_data<pgm_state>();
-	UINT8 calr = (state->m_cal_val & state->m_cal_mask) ? 1 : 0;
-
-	state->m_cal_mask <<= 1;
-	return calr;
-}
-
-static WRITE16_HANDLER( pgm_calendar_w )
-{
-	pgm_state *state = space->machine().driver_data<pgm_state>();
-
-	space->machine().base_datetime(state->m_systime);
-
-	state->m_cal_com <<= 1;
-	state->m_cal_com |= data & 1;
-	++state->m_cal_cnt;
-
-	if (state->m_cal_cnt == 4)
-	{
-		state->m_cal_mask = 1;
-		state->m_cal_val = 1;
-		state->m_cal_cnt = 0;
-
-		switch (state->m_cal_com & 0xf)
-		{
-			case 1: case 3: case 5: case 7: case 9: case 0xb: case 0xd:
-				state->m_cal_val++;
-				break;
-
-			case 0:
-				state->m_cal_val = bcd(state->m_systime.local_time.weekday); //??
-				break;
-
-			case 2:  //Hours
-				state->m_cal_val = bcd(state->m_systime.local_time.hour);
-				break;
-
-			case 4:  //Seconds
-				state->m_cal_val = bcd(state->m_systime.local_time.second);
-				break;
-
-			case 6:  //Month
-				state->m_cal_val = bcd(state->m_systime.local_time.month + 1); //?? not bcd in MVS
-				break;
-
-			case 8:
-				state->m_cal_val = 0; //Controls blinking speed, maybe milliseconds
-				break;
-
-			case 0xa: //Day
-				state->m_cal_val = bcd(state->m_systime.local_time.mday);
-				break;
-
-			case 0xc: //Minute
-				state->m_cal_val = bcd(state->m_systime.local_time.minute);
-				break;
-
-			case 0xe:  //Year
-				state->m_cal_val = bcd(state->m_systime.local_time.year % 100);
-				break;
-
-			case 0xf:  //Load Date
-				space->machine().base_datetime(state->m_systime);
-				break;
-		}
-	}
-}
-
 /*** Memory Maps *************************************************************/
 
 static ADDRESS_MAP_START( pgm_mem, AS_PROGRAM, 16)
@@ -591,7 +514,7 @@ static ADDRESS_MAP_START( pgm_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -622,7 +545,7 @@ static ADDRESS_MAP_START( killbld_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -653,7 +576,7 @@ static ADDRESS_MAP_START( olds_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -683,7 +606,7 @@ static ADDRESS_MAP_START( kov2_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -712,7 +635,7 @@ static ADDRESS_MAP_START( cavepgm_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -844,7 +767,7 @@ static ADDRESS_MAP_START( kovsh_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -959,7 +882,7 @@ static ADDRESS_MAP_START( svg_68k_mem, AS_PROGRAM, 16)
 
 	AM_RANGE(0xc00002, 0xc00003) AM_READWRITE(soundlatch_word_r, m68k_l1_w)
 	AM_RANGE(0xc00004, 0xc00005) AM_READWRITE(soundlatch2_word_r, soundlatch2_word_w)
-	AM_RANGE(0xc00006, 0xc00007) AM_READWRITE(pgm_calendar_r, pgm_calendar_w)
+	AM_RANGE(0xc00006, 0xc00007) AM_DEVREADWRITE8_MODERN("rtc", v3021_device, read, write, 0x00ff)
 	AM_RANGE(0xc00008, 0xc00009) AM_WRITE(z80_reset_w)
 	AM_RANGE(0xc0000a, 0xc0000b) AM_WRITE(z80_ctrl_w)
 	AM_RANGE(0xc0000c, 0xc0000d) AM_READWRITE(soundlatch3_word_r, soundlatch3_word_w)
@@ -1344,43 +1267,45 @@ GFXDECODE_END
 
 /* only dragon world 2 NEEDs irq4, Puzzli 2 explicitly doesn't want it, what
    is the source? maybe the protection device? */
-static INTERRUPT_GEN( drgw_interrupt )
+static TIMER_DEVICE_CALLBACK( drgw_interrupt )
 {
-	if (cpu_getiloops(device) == 0)
-	{
-		//printf("vbl\n");
-		device_set_input_line(device, 6, HOLD_LINE);
-	}
-	else
-		device_set_input_line(device, 4, HOLD_LINE);
+	pgm_state *state = timer.machine().driver_data<pgm_state>();
+	int scanline = param;
+
+	if(scanline == 224)
+		device_set_input_line(state->m_maincpu, 6, HOLD_LINE);
+
+	if(scanline == 0)
+		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
 }
 
 static MACHINE_START( pgm )
 {
 	pgm_state *state = machine.driver_data<pgm_state>();
 
-	machine.base_datetime(state->m_systime);
+//  machine.base_datetime(state->m_systime);
 
+	state->m_maincpu = machine.device<cpu_device>("maincpu");
 	state->m_soundcpu = machine.device<cpu_device>("soundcpu");
 	state->m_prot = machine.device<cpu_device>("prot");
 	state->m_ics = machine.device("ics");
 
-	state->save_item(NAME(state->m_cal_val));
-	state->save_item(NAME(state->m_cal_mask));
-	state->save_item(NAME(state->m_cal_com));
-	state->save_item(NAME(state->m_cal_cnt));
+//  state->save_item(NAME(state->m_cal_val));
+//  state->save_item(NAME(state->m_cal_mask));
+//  state->save_item(NAME(state->m_cal_com));
+//  state->save_item(NAME(state->m_cal_cnt));
 }
 
 static MACHINE_RESET( pgm )
 {
-	pgm_state *state = machine.driver_data<pgm_state>();
+//  pgm_state *state = machine.driver_data<pgm_state>();
 
 	cputag_set_input_line(machine, "soundcpu", INPUT_LINE_HALT, ASSERT_LINE);
 
-	state->m_cal_val = 0;
-	state->m_cal_mask = 0;
-	state->m_cal_com = 0;
-	state->m_cal_cnt = 0;
+//  state->m_cal_val = 0;
+//  state->m_cal_mask = 0;
+//  state->m_cal_com = 0;
+//  state->m_cal_cnt = 0;
 }
 
 
@@ -1397,6 +1322,8 @@ MACHINE_CONFIG_FRAGMENT( pgmbase )
 	MCFG_MACHINE_START( pgm )
 	MCFG_MACHINE_RESET( pgm )
 	MCFG_NVRAM_ADD_0FILL("sram")
+
+	MCFG_V3021_ADD("rtc")
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -1423,11 +1350,14 @@ static MACHINE_CONFIG_START( pgm, pgm_state )
 	MCFG_FRAGMENT_ADD(pgmbase)
 MACHINE_CONFIG_END
 
+// needs an extra IRQ, puzzli2 doesn't want this irq!
+
 
 static MACHINE_CONFIG_DERIVED( drgw2, pgm )
-
-	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_VBLANK_INT_HACK(drgw_interrupt,2) // needs an extra IRQ, puzzli2 doesn't want this irq!
+	MCFG_DEVICE_REMOVE("maincpu")
+	MCFG_CPU_ADD("maincpu", M68000, 20000000)
+	MCFG_CPU_PROGRAM_MAP(pgm_mem)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", drgw_interrupt, "screen", 0, 1)
 MACHINE_CONFIG_END
 
 static MACHINE_RESET( killbld );
@@ -1445,9 +1375,11 @@ static MACHINE_RESET( dw3 );
 
 static MACHINE_CONFIG_DERIVED( dw3, pgm )
 
-	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_PROGRAM_MAP(killbld_mem)
-	MCFG_CPU_VBLANK_INT_HACK(drgw_interrupt,2) // needs an extra IRQ, puzzli2 doesn't want this irq!
+		MCFG_DEVICE_REMOVE("maincpu")
+		MCFG_CPU_ADD("maincpu", M68000, 20000000)
+		MCFG_CPU_PROGRAM_MAP(killbld_mem)
+		MCFG_TIMER_ADD_SCANLINE("scantimer", drgw_interrupt, "screen", 0, 1)
+
 
 	MCFG_MACHINE_RESET(dw3)
 
@@ -1476,9 +1408,11 @@ MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( kov_disabled_arm, pgm )
 
-	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_PROGRAM_MAP(kovsh_mem)
-	MCFG_CPU_VBLANK_INT_HACK(drgw_interrupt,2) // needs an extra IRQ, puzzli2 doesn't want this irq!
+		MCFG_DEVICE_REMOVE("maincpu")
+		MCFG_CPU_ADD("maincpu", M68000, 20000000)
+		MCFG_CPU_PROGRAM_MAP(pgm_mem)
+		MCFG_TIMER_ADD_SCANLINE("scantimer", drgw_interrupt, "screen", 0, 1)
+
 
 	/* protection CPU */
 	MCFG_CPU_ADD("prot", ARM7, 20000000)	// 55857E/F/G
@@ -1499,9 +1433,10 @@ MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( svg, pgm )
 
-	MCFG_CPU_MODIFY("maincpu")
+	MCFG_DEVICE_REMOVE("maincpu")
+	MCFG_CPU_ADD("maincpu", M68000, 20000000)
 	MCFG_CPU_PROGRAM_MAP(svg_68k_mem)
-	MCFG_CPU_VBLANK_INT_HACK(drgw_interrupt,2) // needs an extra IRQ, puzzli2 doesn't want this irq!
+	MCFG_TIMER_ADD_SCANLINE("scantimer", drgw_interrupt, "screen", 0, 1)
 
 	/* protection CPU */
 	MCFG_CPU_ADD("prot", ARM7, 20000000)	// 55857G
@@ -1509,11 +1444,14 @@ static MACHINE_CONFIG_DERIVED( svg, pgm )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( oldsplus, oldsplus_state )
+static MACHINE_CONFIG_START( oldsplus, pgm_state )
 	MCFG_FRAGMENT_ADD(pgmbase)
 
-	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_VBLANK_INT_HACK(drgw_interrupt,2) // needs an extra IRQ, puzzli2 doesn't want this irq!
+		MCFG_DEVICE_REMOVE("maincpu")
+		MCFG_CPU_ADD("maincpu", M68000, 20000000)
+		MCFG_CPU_PROGRAM_MAP(pgm_mem)
+		MCFG_TIMER_ADD_SCANLINE("scantimer", drgw_interrupt, "screen", 0, 1)
+
 
 //  Simulated for now
 //  MCFG_CPU_ADD("prot", ARM7, 20000000)
@@ -1557,9 +1495,8 @@ static MACHINE_CONFIG_START( cavepgm, cavepgm_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 20000000)
-
 	MCFG_CPU_PROGRAM_MAP(cavepgm_mem)
-	MCFG_CPU_VBLANK_INT_HACK(drgw_interrupt,2)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", drgw_interrupt, "screen", 0, 1)
 
 	MCFG_CPU_ADD("soundcpu", Z80, 33868800/4)
 	MCFG_CPU_PROGRAM_MAP(z80_mem)
@@ -1568,6 +1505,8 @@ static MACHINE_CONFIG_START( cavepgm, cavepgm_state )
 	MCFG_MACHINE_START( cavepgm )
 	MCFG_MACHINE_RESET( pgm )
 	MCFG_NVRAM_ADD_0FILL("sram")
+
+	MCFG_V3021_ADD("rtc")
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)

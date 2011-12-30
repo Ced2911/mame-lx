@@ -392,6 +392,8 @@ void floppy_image_device::write_flux(attotime start, attotime end, int transitio
 		index = find_index(start_pos, buf, cells);
 	else {
 		index = 0;
+		image->set_track_size(cyl, ss, 1);
+		buf = image->get_buffer(cyl, ss);
 		buf[cells++] = floppy_image::MG_N | 200000000;
 	}
 
@@ -405,6 +407,8 @@ void floppy_image_device::write_flux(attotime start, attotime end, int transitio
 	UINT32 pos = start_pos;
 	int ti = 0;
 	while(pos != end_pos) {
+		if(image->get_track_size(cyl, ss) < cells+10)
+			image->set_track_size(cyl, ss, cells+200);
 		UINT32 next_pos;
 		if(ti != transition_count)
 			next_pos = trans_pos[ti++];
@@ -559,7 +563,7 @@ void floppy_35_hd::setup_limits()
 
 
 floppy_525_dd::floppy_525_dd(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock) :
-	floppy_image_device(mconfig, FLOPPY_525_DD, "3.5\" high density floppy drive", tag, owner, clock)
+	floppy_image_device(mconfig, FLOPPY_525_DD, "5.25\" double density floppy drive", tag, owner, clock)
 {
 }
 

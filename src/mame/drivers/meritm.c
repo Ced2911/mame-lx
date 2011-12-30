@@ -95,12 +95,11 @@ Not all regional versions are available for each Megatouch series
   - clean up V9938 interrupt implementation
   - finish inputs, dsw, outputs (lamps)
   - problem with registering touches on the bottom of the screen (currently hacked to work)
-  - megat5: has jmp $0000 in the initialization code causing infinite loop, rom U38 is dumped at half size / bad dump
+  - megat5a: has jmp $0000 in the initialization code causing infinite loop, rom U38 is dumped at half size / bad dump
   - for pbst30 only roms were found, it appears that two roms with graphics data were missing, using pitbossm roms for now
  */
 
 #include "emu.h"
-#include "deprecat.h"
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "sound/ay8910.h"
@@ -317,15 +316,21 @@ static int meritm_touch_coord_transform(running_machine &machine, int *touch_x, 
  *************************************/
 
 
-static INTERRUPT_GEN( meritm_interrupt )
+static TIMER_DEVICE_CALLBACK( meritm_interrupt )
 {
-	v9938_set_sprite_limit(0, 0);
-	v9938_set_resolution(0, RENDER_HIGH);
-	v9938_interrupt(device->machine(), 0);
+	//meritm_state *state = timer.machine().driver_data<meritm_state>();
+	int scanline = param;
 
-	v9938_set_sprite_limit(1, 0);
-	v9938_set_resolution(1, RENDER_HIGH);
-	v9938_interrupt(device->machine(), 1);
+	if((scanline % 2) == 0)
+	{
+		v9938_set_sprite_limit(0, 0);
+		v9938_set_resolution(0, RENDER_HIGH);
+		v9938_interrupt(timer.machine(), 0);
+
+		v9938_set_sprite_limit(1, 0);
+		v9938_set_resolution(1, RENDER_HIGH);
+		v9938_interrupt(timer.machine(), 1);
+	}
 }
 
 static void meritm_vdp0_interrupt(running_machine &machine, int i)
@@ -1071,7 +1076,7 @@ static MACHINE_CONFIG_START( meritm_crt250, meritm_state )
 	MCFG_CPU_PROGRAM_MAP(meritm_crt250_map)
 	MCFG_CPU_IO_MAP(meritm_crt250_io_map)
 	MCFG_CPU_CONFIG(meritm_daisy_chain)
-	MCFG_CPU_VBLANK_INT_HACK(meritm_interrupt,262)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", meritm_interrupt, "screen", 0, 1)
 
 	MCFG_MACHINE_START(meritm_crt250)
 
@@ -1092,7 +1097,7 @@ static MACHINE_CONFIG_START( meritm_crt250, meritm_state )
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MCFG_SCREEN_SIZE(MSX2_TOTAL_XRES_PIXELS, MSX2_TOTAL_YRES_PIXELS)
+	MCFG_SCREEN_SIZE(MSX2_TOTAL_XRES_PIXELS, 262*2)
 	MCFG_SCREEN_VISIBLE_AREA(MSX2_XBORDER_PIXELS - MSX2_VISIBLE_XBORDER_PIXELS, MSX2_TOTAL_XRES_PIXELS - MSX2_XBORDER_PIXELS + MSX2_VISIBLE_XBORDER_PIXELS - 1, MSX2_YBORDER_PIXELS - MSX2_VISIBLE_YBORDER_PIXELS, MSX2_TOTAL_YRES_PIXELS - MSX2_YBORDER_PIXELS + MSX2_VISIBLE_YBORDER_PIXELS - 1)
 	MCFG_SCREEN_UPDATE(meritm)
 	MCFG_PALETTE_LENGTH(512)

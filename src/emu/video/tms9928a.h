@@ -27,10 +27,10 @@
 #define __TMS9928A_H__
 
 #include "emu.h"
-#include "machine//devhelpr.h"
+#include "machine/devhelpr.h"
 
 
-#define TMS9928A_PALETTE_SIZE           16
+#define TMS9928A_PALETTE_SIZE				16
 
 
 /* Some defines used in defining the screens */
@@ -118,6 +118,8 @@ protected:
 
 private:
 	void change_register(UINT8 reg, UINT8 val);
+	void check_interrupt();
+	void update_backdrop();
 
 	static const device_timer_id TIMER_LINE = 0;
 
@@ -151,7 +153,6 @@ private:
 	UINT8		m_mode;
 
 	/* emulation settings */
-	int			m_LimitSprites; /* max 4 sprites on a row, like original TMS9918A */
 	int			m_top_border;
 };
 
@@ -176,7 +177,7 @@ class tms9118_device : public tms9928a_device
 {
 public:
 	tms9118_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
-		: tms9928a_device( mconfig, TMS9118, "tms9118", tag, owner, clock, false, false ) { }
+		: tms9928a_device( mconfig, TMS9118, "tms9118", tag, owner, clock, false, true ) { }
 };
 
 
@@ -184,7 +185,7 @@ class tms9128_device : public tms9928a_device
 {
 public:
 	tms9128_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
-		: tms9928a_device( mconfig, TMS9128, "tms9128", tag, owner, clock, false, false ) { }
+		: tms9928a_device( mconfig, TMS9128, "tms9128", tag, owner, clock, false, true ) { }
 };
 
 
@@ -208,7 +209,7 @@ class tms9129_device : public tms9928a_device
 {
 public:
 	tms9129_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
-		: tms9928a_device( mconfig, TMS9129, "tms9129", tag, owner, clock, true, false ) { }
+		: tms9928a_device( mconfig, TMS9129, "tms9129", tag, owner, clock, true, true ) { }
 };
 
 

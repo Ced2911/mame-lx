@@ -1304,7 +1304,6 @@ Note: on screen copyright is (c)1998 Coinmaster.
 #include "cpu/z80/z80.h"
 #include "cpu/m68000/m68000.h"
 #include "cpu/m6502/m6502.h"
-#include "deprecat.h"
 #include "includes/seta.h"
 #include "machine/6821pia.h"
 #include "machine/6850acia.h"
@@ -2901,7 +2900,7 @@ static ADDRESS_MAP_START( inttoote_map, AS_PROGRAM, 16 )
 
 	AM_RANGE(0x700000, 0x700101) AM_RAM_READ(inttoote_700000_r) AM_BASE_MEMBER(seta_state, m_inttoote_700000)
 
-	AM_RANGE(0x800000, 0x80001f) AM_DEVREADWRITE8("rtc", msm6242_r, msm6242_w, 0x00ff)   // 6242RTC
+	AM_RANGE(0x800000, 0x80001f) AM_DEVREADWRITE8_MODERN("rtc", msm6242_device, read, write, 0x00ff)
 
 	AM_RANGE(0x900000, 0x903fff) AM_DEVREADWRITE( "x1snd", seta_sound_word_r, seta_sound_word_w		)	// Sound
 
@@ -2967,7 +2966,7 @@ static ADDRESS_MAP_START( jockeyc_map, AS_PROGRAM, 16 )
 	AM_RANGE(0x500000, 0x500003) AM_READ(inttoote_dsw_r)	// DSW x 3
 	AM_RANGE(0x600000, 0x600003) AM_READ(unk_r)
 
-	AM_RANGE(0x800000, 0x80001f) AM_DEVREADWRITE8("rtc", msm6242_r, msm6242_w, 0x00ff)   // 6242RTC
+	AM_RANGE(0x800000, 0x80001f) AM_DEVREADWRITE8_MODERN("rtc", msm6242_device, read, write, 0x00ff)
 
 	AM_RANGE(0x900000, 0x903fff) AM_DEVREADWRITE( "x1snd", seta_sound_word_r, seta_sound_word_w)	// Sound
 
@@ -7260,36 +7259,41 @@ GFXDECODE_END
 
 ***************************************************************************/
 
-#define SETA_INTERRUPTS_NUM 2
-
-static INTERRUPT_GEN( seta_interrupt_1_and_2 )
+static TIMER_DEVICE_CALLBACK( seta_interrupt_1_and_2 )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:		device_set_input_line(device, 1, HOLD_LINE);	break;
-		case 1:		device_set_input_line(device, 2, HOLD_LINE);	break;
-	}
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if(scanline == 240)
+		device_set_input_line(state->m_maincpu, 1, HOLD_LINE);
+
+	if(scanline == 112)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
 }
 
-static INTERRUPT_GEN( seta_interrupt_2_and_4 )
+static TIMER_DEVICE_CALLBACK( seta_interrupt_2_and_4 )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:		device_set_input_line(device, 2, HOLD_LINE);	break;
-		case 1:		device_set_input_line(device, 4, HOLD_LINE);	break;
-	}
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if(scanline == 240)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
+
+	if(scanline == 112)
+		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
 }
 
 
-#define SETA_SUB_INTERRUPTS_NUM 2
-
-static INTERRUPT_GEN( seta_sub_interrupt )
+static TIMER_DEVICE_CALLBACK( seta_sub_interrupt )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:		device_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);	break;
-		case 1:		device_set_input_line(device, 0, HOLD_LINE);				break;
-	}
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if(scanline == 240)
+		device_set_input_line(state->m_subcpu, INPUT_LINE_NMI, PULSE_LINE);
+
+	if(scanline == 112)
+		device_set_input_line(state->m_subcpu, 0, HOLD_LINE);
 }
 
 
@@ -7311,13 +7315,16 @@ static const ym2203_interface tndrcade_ym2203_interface =
 };
 
 
-#define TNDRCADE_SUB_INTERRUPTS_NUM	32	/* 16 IRQ, 1 NMI */
-static INTERRUPT_GEN( tndrcade_sub_interrupt )
+static TIMER_DEVICE_CALLBACK( tndrcade_sub_interrupt )
 {
-	if (cpu_getiloops(device) & 1)
-		device_set_input_line(device, 0, HOLD_LINE);
-	else if (cpu_getiloops(device) == 0)
-		device_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if(scanline == 240)
+		device_set_input_line(state->m_subcpu, INPUT_LINE_NMI, PULSE_LINE);
+
+	if((scanline % 16) == 0)
+		device_set_input_line(state->m_subcpu, 0, HOLD_LINE);
 }
 
 static MACHINE_CONFIG_START( tndrcade, seta_state )
@@ -7329,7 +7336,7 @@ static MACHINE_CONFIG_START( tndrcade, seta_state )
 
 	MCFG_CPU_ADD("sub", M65C02, 16000000/8)	/* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(tndrcade_sub_map)
-	MCFG_CPU_VBLANK_INT_HACK(tndrcade_sub_interrupt,TNDRCADE_SUB_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", tndrcade_sub_interrupt, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7380,7 +7387,7 @@ static MACHINE_CONFIG_START( twineagl, seta_state )
 
 	MCFG_CPU_ADD("sub", M65C02, 16000000/8)	/* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(twineagl_sub_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_sub_interrupt,SETA_SUB_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("s_scantimer", seta_sub_interrupt, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7419,11 +7426,11 @@ static MACHINE_CONFIG_START( downtown, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(downtown_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("m_scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_CPU_ADD("sub", M65C02, XTAL_16MHz/8) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(downtown_sub_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_sub_interrupt,SETA_SUB_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("s_scantimer", seta_sub_interrupt, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7459,17 +7466,16 @@ MACHINE_CONFIG_END
     5 ints per frame
 */
 
-#define calibr50_INTERRUPTS_NUM (4+1)
-static INTERRUPT_GEN( calibr50_interrupt )
+static TIMER_DEVICE_CALLBACK( calibr50_interrupt )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:
-		case 1:
-		case 2:
-		case 3:		device_set_input_line(device, 4, HOLD_LINE);	break;
-		case 4:		device_set_input_line(device, 2, HOLD_LINE);	break;
-	}
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if((scanline % 64) == 0)
+		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
+
+	if(scanline == 248)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
 }
 
 
@@ -7478,7 +7484,7 @@ static MACHINE_CONFIG_START( usclssic, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000/2)	/* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(usclssic_map)
-	MCFG_CPU_VBLANK_INT_HACK(calibr50_interrupt,calibr50_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", calibr50_interrupt, "screen", 0, 1)
 
 	MCFG_CPU_ADD("sub", M65C02, 16000000/8)	/* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(calibr50_sub_map)
@@ -7493,7 +7499,7 @@ static MACHINE_CONFIG_START( usclssic, seta_state )
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_SIZE(64*8, 33*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
 	MCFG_SCREEN_UPDATE(usclssic)
 
@@ -7527,7 +7533,7 @@ static MACHINE_CONFIG_START( calibr50, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(calibr50_map)
-	MCFG_CPU_VBLANK_INT_HACK(calibr50_interrupt,calibr50_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", calibr50_interrupt, "screen", 0, 1)
 
 	MCFG_CPU_ADD("sub", M65C02, XTAL_16MHz/8) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(calibr50_sub_map)
@@ -7575,7 +7581,7 @@ static MACHINE_CONFIG_START( metafox, seta_state )
 
 	MCFG_CPU_ADD("sub", M65C02, 16000000/8)	/* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(metafox_sub_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_sub_interrupt,SETA_SUB_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("s_scantimer", seta_sub_interrupt, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7612,7 +7618,7 @@ static MACHINE_CONFIG_START( atehate, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(atehate_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7655,7 +7661,7 @@ static MACHINE_CONFIG_START( blandia, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(blandia_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_2_and_4,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_2_and_4, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7689,7 +7695,7 @@ static MACHINE_CONFIG_START( blandiap, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(blandiap_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_2_and_4,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_2_and_4, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7765,7 +7771,7 @@ static MACHINE_CONFIG_START( daioh, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(daioh_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7807,7 +7813,7 @@ static MACHINE_CONFIG_START( drgnunit, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000/2)	/* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(drgnunit_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7843,7 +7849,7 @@ static MACHINE_CONFIG_START( qzkklgy2, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(drgnunit_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7875,14 +7881,16 @@ MACHINE_CONFIG_END
                                 Seta Roulette
 ***************************************************************************/
 
-#define SETAROUL_INTERRUPTS_NUM (2)
-static INTERRUPT_GEN( setaroul_interrupt )
+static TIMER_DEVICE_CALLBACK( setaroul_interrupt )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:		device_set_input_line(device, 4, HOLD_LINE);	break;
-		case 1:		device_set_input_line(device, 2, HOLD_LINE);	break;
-	}
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if(scanline == 248)
+		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
+
+	if(scanline == 112)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
 }
 
 
@@ -7891,7 +7899,7 @@ static MACHINE_CONFIG_START( setaroul, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000/2)	/* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(setaroul_map)
-	MCFG_CPU_VBLANK_INT_HACK(setaroul_interrupt,SETAROUL_INTERRUPTS_NUM) // and 6?
+	MCFG_TIMER_ADD_SCANLINE("scantimer", setaroul_interrupt, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7932,7 +7940,7 @@ static MACHINE_CONFIG_START( eightfrc, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(wrofaero_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -7974,7 +7982,7 @@ static MACHINE_CONFIG_START( extdwnhl, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(extdwnhl_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8029,10 +8037,9 @@ static MACHINE_CONFIG_START( gundhara, seta_state )
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(wrofaero_map)
 #if	__uPD71054_TIMER
-//  MCFG_CPU_VBLANK_INT("screen", wrofaero_interrupt)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 #else
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_2_and_4,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_2_and_4, "screen", 0, 1)
 #endif	// __uPD71054_TIMER
 
 #if	__uPD71054_TIMER
@@ -8079,7 +8086,7 @@ static MACHINE_CONFIG_START( jjsquawk, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(wrofaero_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8112,7 +8119,7 @@ static MACHINE_CONFIG_START( jjsquawb, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(jjsquawb_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8192,7 +8199,7 @@ static MACHINE_CONFIG_START( orbs, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 14318180/2)	/* 7.143 MHz */
 	MCFG_CPU_PROGRAM_MAP(orbs_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8229,7 +8236,7 @@ static MACHINE_CONFIG_START( keroppi, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 14318180/2)	/* 7.143 MHz */
 	MCFG_CPU_PROGRAM_MAP(keroppi_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_MACHINE_START(keroppi)
 
@@ -8268,7 +8275,7 @@ static MACHINE_CONFIG_START( krzybowl, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(krzybowl_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8353,7 +8360,7 @@ static MACHINE_CONFIG_START( msgundam, seta_state )
 #if	__uPD71054_TIMER
 	MCFG_CPU_VBLANK_INT("screen", wrofaero_interrupt)
 #else
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_2_and_4,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_2_and_4, "screen", 0, 1)
 #endif	// __uPD71054_TIMER
 
 #if	__uPD71054_TIMER
@@ -8397,7 +8404,7 @@ static MACHINE_CONFIG_START( oisipuzl, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(oisipuzl_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8511,7 +8518,7 @@ static MACHINE_CONFIG_START( rezon, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(wrofaero_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8732,7 +8739,7 @@ static MACHINE_CONFIG_START( utoukond, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(utoukond_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_CPU_ADD("audiocpu", Z80, 16000000/4)	/* 4 MHz */
 	MCFG_CPU_PROGRAM_MAP(utoukond_sound_map)
@@ -8781,7 +8788,7 @@ static MACHINE_CONFIG_START( wrofaero, seta_state )
 #if	__uPD71054_TIMER
 	MCFG_CPU_VBLANK_INT("screen", wrofaero_interrupt)
 #else
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_2_and_4,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_2_and_4, "screen", 0, 1)
 #endif	// __uPD71054_TIMER
 
 #if	__uPD71054_TIMER
@@ -8862,9 +8869,11 @@ MACHINE_CONFIG_END
 static MACHINE_CONFIG_DERIVED( zingzipbl, zingzip )
 	MCFG_GFXDECODE(zingzipbl)
 
-	MCFG_CPU_MODIFY("maincpu")
+	MCFG_DEVICE_REMOVE("maincpu")
+
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(zingzipbl_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM) // irq3 isn't valid on the bootleg
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1) // irq3 isn't valid on the bootleg
 
 	MCFG_DEVICE_REMOVE("x1snd")
 
@@ -8882,7 +8891,7 @@ static MACHINE_CONFIG_START( pairlove, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000/2)	/* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(pairlove_map)
-	MCFG_CPU_VBLANK_INT_HACK(seta_interrupt_1_and_2,SETA_INTERRUPTS_NUM)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", seta_interrupt_1_and_2, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8914,13 +8923,16 @@ MACHINE_CONFIG_END
                                 Crazy Fight
 ***************************************************************************/
 
-static INTERRUPT_GEN( crazyfgt_interrupt )
+static TIMER_DEVICE_CALLBACK( crazyfgt_interrupt )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:		device_set_input_line(device, 1, HOLD_LINE);	break;
-		default:	device_set_input_line(device, 2, HOLD_LINE);	break;	// should this be triggered by the 3812?
-	}
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
+
+	if((scanline % 48) == 0)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE); // should this be triggered by the 3812?
+
+	if(scanline == 240)
+		device_set_input_line(state->m_maincpu, 1, HOLD_LINE);
 }
 
 static MACHINE_CONFIG_START( crazyfgt, seta_state )
@@ -8928,7 +8940,7 @@ static MACHINE_CONFIG_START( crazyfgt, seta_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(crazyfgt_map)
-	MCFG_CPU_VBLANK_INT_HACK(crazyfgt_interrupt,1+5)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", crazyfgt_interrupt, "screen", 0, 1)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 
@@ -8938,7 +8950,7 @@ static MACHINE_CONFIG_START( crazyfgt, seta_state )
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
-	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8-4, 30*8-1-4)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
 	MCFG_SCREEN_UPDATE(seta)
 
 	MCFG_GFXDECODE(crazyfgt)
@@ -8961,26 +8973,24 @@ MACHINE_CONFIG_END
                              International Toote
 ***************************************************************************/
 
-// Test mode shows a 16ms and 2ms counters
-static INTERRUPT_GEN( inttoote_interrupt )
+// Test mode shows a 16ms and 2ms counters, then there's vblank and presumably ACIA irqs ...
+static TIMER_DEVICE_CALLBACK( inttoote_interrupt )
 {
-	switch (cpu_getiloops(device))
-	{
-		case 0:
-		case 1:
-		case 2:
-		case 3:
-		case 4:
-		case 5:
-		case 6:
-		case 7:		device_set_input_line(device, 6, HOLD_LINE);	break;
+	seta_state *state = timer.machine().driver_data<seta_state>();
+	int scanline = param;
 
-		case 8:		device_set_input_line(device, 2, HOLD_LINE);	break;
+	/* ACIA irq */
+	if(scanline == 15)
+		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
 
-		case 9:		device_set_input_line(device, 1, HOLD_LINE);	break;
+	if(scanline == 38)
+		device_set_input_line(state->m_maincpu, 1, HOLD_LINE);
 
-		case 10:	device_set_input_line(device, 4, HOLD_LINE);	break;
-	}
+	if(scanline == 61)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
+
+	if(scanline >= 85 && (scanline % 23) == 0)
+		device_set_input_line(state->m_maincpu, 6, HOLD_LINE);
 }
 
 static const pia6821_interface inttoote_pia0_intf =
@@ -9015,12 +9025,17 @@ static const pia6821_interface inttoote_pia1_intf =
 	DEVCB_NULL		/* IRQB */
 };
 
+static MSM6242_INTERFACE( rtc_intf )
+{
+	DEVCB_NULL
+};
+
 static MACHINE_CONFIG_START( inttoote, seta_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)
 	MCFG_CPU_PROGRAM_MAP(inttoote_map)
-	MCFG_CPU_VBLANK_INT_HACK(inttoote_interrupt,8+1+1+1)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", inttoote_interrupt, "screen", 0, 1)
 
 	MCFG_PIA6821_ADD("pia0", inttoote_pia0_intf)
 	MCFG_PIA6821_ADD("pia1", inttoote_pia1_intf)
@@ -9051,7 +9066,7 @@ static MACHINE_CONFIG_START( inttoote, seta_state )
 	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
 	/* devices */
-	MCFG_MSM6242_ADD("rtc")
+	MCFG_MSM6242_ADD("rtc", rtc_intf)
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( jockeyc, inttoote )
@@ -9983,9 +9998,31 @@ ROM_START( jjsquawkb )
 	ROM_COPY( "gfxtemp", 0x100000, 0x000000, 0x100000 )
 	ROM_COPY( "gfxtemp", 0x300000, 0x100000, 0x100000 )
 
-
 	ROM_REGION( 0x100000, "x1snd", 0 )	/* Samples */
 	ROM_LOAD( "1", 0x000000, 0x100000, CRC(181a55b8) SHA1(6fa404f85bad93cc15e80feb61d19bed84602b82) ) /* jj-rom5.040 + jj-rom6.040 from jjsquawk */
+ROM_END
+
+ROM_START( jjsquawkb2 ) /* PCB was P0-078A, which was a Blandia board converted to JJ Squawkers. No labels on any of the ROMs */
+	ROM_REGION( 0x200000, "maincpu", 0 )		/* 68000 Code */
+	ROM_LOAD16_BYTE( "u3.3a", 0x000000, 0x040000, CRC(f94c913b) SHA1(de6e422c514c787897f8f41d7cd98acb0135c763) ) // 99.999619%
+	ROM_CONTINUE   (                0x100000, 0x040000  )
+	ROM_LOAD16_BYTE( "u4.4a", 0x000001, 0x040000, CRC(0227a2be) SHA1(8ee0c39f84110865778564f803b4db11bfdfbad7) ) // 99.999809%
+	ROM_CONTINUE   (                0x100001, 0x040000  )
+
+	ROM_REGION( 0x200000, "gfx1", 0 )	/* Sprites */
+	ROM_LOAD( "u64.3l",  0x000000, 0x100000, CRC(11d8713a) SHA1(8e3359f605913625191ac0a09222ec465b5fea71) ) /* jj-rom9 + jj-rom10 from jjsquawk */
+	ROM_LOAD( "u63.2l",  0x100000, 0x100000, CRC(7a385ef0) SHA1(d38e2242532074b58707783608a6ddce42c55a77) ) /* jj-rom7 + jj-rom8  from jjsquawk */
+
+	ROM_REGION( 0x200000, "gfx2", 0 )	/* Layer 1 */
+	ROM_LOAD       ( "u66.5l", 0x000000, 0x100000, CRC(bbaf40c5) SHA1(aecd48176adbe79e76c8febca1d9bb95ff0d6912) ) /* jj-rom11 + jj-rom12 from jjsquawk */
+	ROM_LOAD16_BYTE( "u65.4l", 0x100000, 0x080000, CRC(a5a35caf) SHA1(da4bdb7f0b319f8ff972a552d0134a73e5ac1b87) ) /* jj-rom3.040         from jjsquawk */
+
+	ROM_REGION( 0x200000, "gfx3", 0 )	/* Layer 2 */
+	ROM_LOAD       ( "u68.7l", 0x000000, 0x100000, CRC(ae9ae01f) SHA1(1a828d5b8848c5b5d8e5f279f1fde26b972a6332) ) /* jj-rom14 + jj-rom13 from jjsquawk */
+	ROM_LOAD16_BYTE( "u67.6l", 0x100000, 0x080000, CRC(a235488e) SHA1(a45d02a4451defbef7fbdab15671955fab8ed76b) ) /* jj-rom4.040         from jjsquawk */
+
+	ROM_REGION( 0x100000, "x1snd", 0 )	/* Samples */
+	ROM_LOAD( "u70.10l", 0x000000, 0x100000, CRC(181a55b8) SHA1(6fa404f85bad93cc15e80feb61d19bed84602b82) ) /* jj-rom5.040 + jj-rom6.040 from jjsquawk */
 ROM_END
 
 ROM_START( kamenrid )
@@ -10760,6 +10797,7 @@ GAME( 1993, atehate,  0,        atehate,  atehate,  0,        ROT0,   "Athena", 
 GAME( 1993, daioh,    0,        daioh,    daioh,    0,        ROT270, "Athena",                 "Daioh", 0 )
 GAME( 1993, jjsquawk, 0,        jjsquawk, jjsquawk, 0,        ROT0,   "Athena / Able",          "J. J. Squawkers", GAME_IMPERFECT_SOUND )
 GAME( 1993, jjsquawkb,jjsquawk, jjsquawb, jjsquawk, 0,        ROT0,   "bootleg",                "J. J. Squawkers (bootleg)", GAME_IMPERFECT_SOUND )
+GAME( 1993, jjsquawkb2,jjsquawk,jjsquawk, jjsquawk, 0,        ROT0,   "bootleg",		"J. J. Squawkers (bootleg, Blandia Conversion)", GAME_IMPERFECT_SOUND )
 GAME( 1993, kamenrid, 0,        kamenrid, kamenrid, 0,        ROT0,   "Banpresto / Toei",       "Masked Riders Club Battle Race", 0 )
 GAME( 1993, madshark, 0,        madshark, madshark, 0,        ROT270, "Allumer",                "Mad Shark", 0 )
 GAME( 1993, msgundam, 0,        msgundam, msgundam, 0,        ROT0,   "Banpresto",              "Mobile Suit Gundam", 0 )

@@ -270,7 +270,6 @@ GFX:                Custom 145     ( 80 pin PQFP)
 */
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
-#include "deprecat.h"
 #include "includes/namconb1.h"
 #include "includes/namcos2.h"
 #include "includes/namcoic.h"
@@ -348,21 +347,29 @@ static INTERRUPT_GEN( namconb1_interrupt )
 	}
 } /* namconb1_interrupt */
 
-static INTERRUPT_GEN( mcu_interrupt )
+#if 0
+static TIMER_DEVICE_CALLBACK( mcu_irq0_cb )
 {
-	if (cpu_getiloops(device) == 0)
-	{
-		device_set_input_line(device, M37710_LINE_IRQ0, HOLD_LINE);
-	}
-	else if (cpu_getiloops(device) == 1)
-	{
-		device_set_input_line(device, M37710_LINE_IRQ2, HOLD_LINE);
-	}
-	else
-	{
-		device_set_input_line(device, M37710_LINE_ADC, HOLD_LINE);
-	}
+	namconb1_state *state = timer.machine().driver_data<namconb1_state>();
+
+	device_set_input_line(state->m_mcu, M37710_LINE_IRQ0, HOLD_LINE);
 }
+
+static TIMER_DEVICE_CALLBACK( mcu_irq2_cb )
+{
+	namconb1_state *state = timer.machine().driver_data<namconb1_state>();
+
+	device_set_input_line(state->m_mcu, M37710_LINE_IRQ2, HOLD_LINE);
+}
+
+static TIMER_DEVICE_CALLBACK( mcu_adc_cb )
+{
+	namconb1_state *state = timer.machine().driver_data<namconb1_state>();
+
+	device_set_input_line(state->m_mcu, M37710_LINE_ADC, HOLD_LINE);
+}
+#endif
+
 
 static TIMER_CALLBACK( namconb2_TriggerPOSIRQ )
 {
@@ -405,6 +412,8 @@ static INTERRUPT_GEN( namconb2_interrupt )
      * f0001f 0x01
      */
 	int scanline = (device->machine().generic.paletteram.u32[0x1808/4]&0xffff)-32;
+
+	printf("%d\n",scanline);
 
 	if((!state->m_vblank_irq_active) && state->m_namconb_cpureg[0x00]) {
 		device_set_input_line(device, state->m_namconb_cpureg[0x00], ASSERT_LINE);
@@ -1019,6 +1028,20 @@ ADDRESS_MAP_END
 
 #define MASTER_CLOCK_HZ 48384000
 
+static TIMER_DEVICE_CALLBACK( mcu_irq )
+{
+	//namcos22_state *state = timer.machine().driver_data<namcos22_state>();
+	int scanline = param;
+
+	/* TODO: real sources of these */
+	if(scanline == 480/2)
+		cputag_set_input_line(timer.machine(), "mcu", M37710_LINE_IRQ0, HOLD_LINE);
+	else if(scanline == 500/2)
+		cputag_set_input_line(timer.machine(), "mcu", M37710_LINE_ADC, HOLD_LINE);
+	else if(scanline == 0)
+		cputag_set_input_line(timer.machine(), "mcu", M37710_LINE_IRQ2, HOLD_LINE);
+}
+
 static MACHINE_CONFIG_START( namconb1, namconb1_state )
 	MCFG_CPU_ADD("maincpu", M68EC020,MASTER_CLOCK_HZ/2)
 	MCFG_CPU_PROGRAM_MAP(namconb1_am)
@@ -1027,7 +1050,12 @@ static MACHINE_CONFIG_START( namconb1, namconb1_state )
 	MCFG_CPU_ADD("mcu", M37702, MASTER_CLOCK_HZ/3)
 	MCFG_CPU_PROGRAM_MAP(namcoc75_am)
 	MCFG_CPU_IO_MAP(namcoc75_io)
-	MCFG_CPU_VBLANK_INT_HACK(mcu_interrupt, 3)
+	/* TODO: irq generation for these */
+	MCFG_TIMER_ADD_SCANLINE("mcu_st", mcu_irq, "screen", 0, 1)
+
+//  MCFG_TIMER_ADD_PERIODIC("mcu_irq0", mcu_irq0_cb, attotime::from_hz(60))
+//  MCFG_TIMER_ADD_PERIODIC("mcu_irq2", mcu_irq2_cb, attotime::from_hz(60))
+//  MCFG_TIMER_ADD_PERIODIC("mcu_adc",  mcu_adc_cb, attotime::from_hz(60))
 
 	MCFG_NVRAM_HANDLER(namconb1)
 	MCFG_MACHINE_START(namconb)
@@ -1060,7 +1088,11 @@ static MACHINE_CONFIG_START( namconb2, namconb1_state )
 	MCFG_CPU_ADD("mcu", M37702, MASTER_CLOCK_HZ/3)
 	MCFG_CPU_PROGRAM_MAP(namcoc75_am)
 	MCFG_CPU_IO_MAP(namcoc75_io)
-	MCFG_CPU_VBLANK_INT_HACK(mcu_interrupt, 3)
+	/* TODO: irq generation for these */
+	MCFG_TIMER_ADD_SCANLINE("mcu_st", mcu_irq, "screen", 0, 1)
+//  MCFG_TIMER_ADD_PERIODIC("mcu_irq0", mcu_irq0_cb, attotime::from_hz(60))
+//  MCFG_TIMER_ADD_PERIODIC("mcu_irq2", mcu_irq2_cb, attotime::from_hz(60))
+//  MCFG_TIMER_ADD_PERIODIC("mcu_adc",  mcu_adc_cb, attotime::from_hz(60))
 
 	MCFG_NVRAM_HANDLER(namconb1)
 	MCFG_MACHINE_START(namconb)

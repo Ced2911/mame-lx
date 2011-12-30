@@ -42,8 +42,8 @@ CPUS += M6809
 CPUS += M680X0
 CPUS += TMS9900
 CPUS += COP400
-# new
-CPUS += PIC16C5X
+
+
 
 #-------------------------------------------------
 # Specify all the sound cores necessary for the
@@ -61,14 +61,8 @@ SOUNDS += OKIM6295
 SOUNDS += HC55516
 SOUNDS += YM3812
 SOUNDS += CEM3394
-#new
-SOUNDS += YMZ280B
-SOUNDS += YM2608
-SOUNDS += YM2610
-SOUNDS += YM2610B
-SOUNDS += YM2203
-SOUNDS += QSOUND
-SOUNDS += MSM5205
+
+
 
 #-------------------------------------------------
 # This is the list of files that are necessary
@@ -96,16 +90,7 @@ DRVLIBS = \
 	$(DRIVERS)/wrally.o $(MACHINE)/wrally.o $(VIDEO)/wrally.o \
 	$(DRIVERS)/looping.o \
 	$(DRIVERS)/supertnk.o \
-#new
-DRVLIBS += \
-        $(DRIVERS)/cave.o $(VIDEO)/cave.o \
-        $(DRIVERS)/cps1.o $(VIDEO)/cps1.o \
-	$(DRIVERS)/cps2.o \
-        $(MACHINE)/cps2crpt.o \
-        $(MACHINE)/kabuki.o \
-# ??
-DRVLIBS += \
-        $(MACHINE)/nmk112.o \
+
 
 
 #-------------------------------------------------

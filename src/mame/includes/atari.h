@@ -22,6 +22,8 @@ extern const pia6821_interface atarixl_pia_interface;
 READ8_DEVICE_HANDLER(atari_pia_pa_r);
 READ8_DEVICE_HANDLER(atari_pia_pb_r);
 WRITE8_DEVICE_HANDLER(a600xl_pia_pb_w);
+WRITE_LINE_DEVICE_HANDLER(atari_pia_cb2_w);
+
 
 /* This is needed in MESS as well for Atari 8bit drivers */
 void atari_machine_start(running_machine &machine);
@@ -588,16 +590,12 @@ extern int atari_frame_counter;
 extern VIDEO_START( atari );
 extern SCREEN_UPDATE( atari );
 
-INTERRUPT_GEN( a400_interrupt );
-INTERRUPT_GEN( a800_interrupt );
-INTERRUPT_GEN( a800xl_interrupt );
-INTERRUPT_GEN( a5200_interrupt );
+TIMER_DEVICE_CALLBACK( a400_interrupt );
+TIMER_DEVICE_CALLBACK( a800_interrupt );
+TIMER_DEVICE_CALLBACK( a800xl_interrupt );
+TIMER_DEVICE_CALLBACK( a5200_interrupt );
 
 extern PALETTE_INIT( atari );
-
-/*----------- defined in drivers/maxaflex.c -----------*/
-
-int atari_input_disabled(running_machine &machine);
 
 #endif /* ATARI_H */
 

@@ -113,7 +113,8 @@ static ADDRESS_MAP_START( pcat_map, AS_PROGRAM, 32 )
 	AM_RANGE(0x000a0000, 0x000bffff) AM_RAM
 	AM_RANGE(0x000c0000, 0x000c7fff) AM_ROM AM_REGION("video_bios", 0)
 	AM_RANGE(0x000f0000, 0x000fffff) AM_ROM AM_REGION("bios", 0 )
-	AM_RANGE(0x00100000, 0x001fffff) AM_RAM
+	AM_RANGE(0x00100000, 0x00ffffff) AM_NOP
+	AM_RANGE(0x01000000, 0xfffeffff) AM_NOP
 	AM_RANGE(0xffff0000, 0xffffffff) AM_ROM AM_REGION("bios", 0 )
 ADDRESS_MAP_END
 
@@ -161,10 +162,15 @@ static void pangofun_set_keyb_int(running_machine &machine, int state)
 	pic8259_ir1_w(machine.device("pic8259_1"), state);
 }
 
-static const struct pc_vga_interface vga_interface ={
+static READ8_HANDLER( vga_setting ) { return 0xff; } // hard-code to color
+
+static const struct pc_vga_interface vga_interface =
+{
 	NULL,
 	NULL,
-	NULL,
+	vga_setting,
+	AS_PROGRAM,
+	0xa0000,
 	AS_IO,
 	0x0000
 };
@@ -186,7 +192,7 @@ static int pcat_dyn_get_out2(running_machine &machine) {
 
 static const struct kbdc8042_interface at8042 =
 {
-	KBDC8042_AT386, set_gate_a20, keyboard_interrupt, pcat_dyn_get_out2
+	KBDC8042_AT386, set_gate_a20, keyboard_interrupt, NULL, pcat_dyn_get_out2
 };
 
 static MACHINE_START( pangofun )
@@ -199,7 +205,7 @@ static MACHINE_START( pangofun )
 
 static MACHINE_CONFIG_START( pangofun, pangofun_state )
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I486, 40000000 )	/* I486 ?? Mhz */
+	MCFG_CPU_ADD("maincpu", I486, 25000000 )	/* I486 ?? Mhz (25 according to POST) */
 	MCFG_CPU_PROGRAM_MAP(pcat_map)
 	MCFG_CPU_IO_MAP(pcat_io)
 

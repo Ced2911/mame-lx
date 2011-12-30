@@ -28,6 +28,8 @@ public:
 	UINT8 m_flipscreen;
 	UINT8 m_bgpriority;
 	int m_xoffsethack;
+	UINT8 m_inv_spr;
+	UINT8 m_irq_mask;
 };
 
 
@@ -66,6 +68,8 @@ WRITE8_HANDLER( jrpacman_charbank_w );
 WRITE8_HANDLER( jrpacman_spritebank_w );
 WRITE8_HANDLER( jrpacman_scroll_w );
 WRITE8_HANDLER( jrpacman_bgpriority_w );
+
+VIDEO_START( birdiy );
 
 
 /*----------- defined in machine/pacplus.c -----------*/

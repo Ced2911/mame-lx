@@ -111,6 +111,7 @@
 #include "cheat.h"
 #include "ui.h"
 #include "uimenu.h"
+#include "uimain.h"
 #include "uiinput.h"
 #include "crsshair.h"
 #include "validity.h"
@@ -307,6 +308,7 @@ void running_machine::start()
 	image_init(*this);
 	tilemap_init(*this);
 	crosshair_init(*this);
+	network_init(*this);
 
 	// initialize the debugger
 	if ((debug_flags & DEBUG_FLAG_ENABLED) != 0)
@@ -952,7 +954,10 @@ running_machine::logerror_callback_item::logerror_callback_item(logerror_callbac
 driver_device::driver_device(const machine_config &mconfig, device_type type, const char *tag)
 	: device_t(mconfig, type, "Driver Device", tag, NULL, 0),
 	  m_system(NULL),
-	  m_palette_init(NULL)
+	  m_palette_init(NULL),
+	  m_generic_paletteram(*this, "paletteram"),
+	  m_generic_paletteram16(*this, "paletteram"),
+	  m_generic_paletteram2(*this, "paletteram2")
 {
 	memset(m_callbacks, 0, sizeof(m_callbacks));
 }

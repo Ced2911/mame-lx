@@ -10,9 +10,6 @@ CPU_DISASSEMBLE( i960  );
 #define logb _logb
 #endif
 
-#ifdef XENON
-extern "C" double logb(double x);
-#endif
 
 // Warning, IP = Instruction Pointer, called PC outside of Intel
 //          PC = Process Control

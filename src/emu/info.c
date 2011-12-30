@@ -38,6 +38,7 @@
 ***************************************************************************/
 
 #include "emu.h"
+#include "emuopts.h"
 #include "machine/ram.h"
 #include "sound/samples.h"
 #include "info.h"
@@ -53,21 +54,21 @@
 
 // DTD string describing the data
 const char info_xml_creator::s_dtd_string[] =
-"<!DOCTYPE " XML_ROOT " [\n"
-"<!ELEMENT " XML_ROOT " (" XML_TOP "+)>\n"
-"\t<!ATTLIST " XML_ROOT " build CDATA #IMPLIED>\n"
-"\t<!ATTLIST " XML_ROOT " debug (yes|no) \"no\">\n"
-"\t<!ATTLIST " XML_ROOT " mameconfig CDATA #REQUIRED>\n"
-"\t<!ELEMENT " XML_TOP " (description, year?, manufacturer?, biosset*, rom*, disk*, device_ref*, sample*, chip*, display*, sound?, input?, dipswitch*, configuration*, adjuster*, driver?, device*, slot*, softwarelist*, ramoption*)>\n"
-"\t\t<!ATTLIST " XML_TOP " name CDATA #REQUIRED>\n"
-"\t\t<!ATTLIST " XML_TOP " sourcefile CDATA #IMPLIED>\n"
-"\t\t<!ATTLIST " XML_TOP " isbios (yes|no) \"no\">\n"
-"\t\t<!ATTLIST " XML_TOP " isdevice (yes|no) \"no\">\n"
-"\t\t<!ATTLIST " XML_TOP " ismechanical (yes|no) \"no\">\n"
-"\t\t<!ATTLIST " XML_TOP " runnable (yes|no) \"yes\">\n"
-"\t\t<!ATTLIST " XML_TOP " cloneof CDATA #IMPLIED>\n"
-"\t\t<!ATTLIST " XML_TOP " romof CDATA #IMPLIED>\n"
-"\t\t<!ATTLIST " XML_TOP " sampleof CDATA #IMPLIED>\n"
+"<!DOCTYPE __XML_ROOT__ [\n"
+"<!ELEMENT __XML_ROOT__ (__XML_TOP__+)>\n"
+"\t<!ATTLIST __XML_ROOT__ build CDATA #IMPLIED>\n"
+"\t<!ATTLIST __XML_ROOT__ debug (yes|no) \"no\">\n"
+"\t<!ATTLIST __XML_ROOT__ mameconfig CDATA #REQUIRED>\n"
+"\t<!ELEMENT __XML_TOP__ (description, year?, manufacturer?, biosset*, rom*, disk*, device_ref*, sample*, chip*, display*, sound?, input?, dipswitch*, configuration*, adjuster*, driver?, device*, slot*, softwarelist*, ramoption*)>\n"
+"\t\t<!ATTLIST __XML_TOP__ name CDATA #REQUIRED>\n"
+"\t\t<!ATTLIST __XML_TOP__ sourcefile CDATA #IMPLIED>\n"
+"\t\t<!ATTLIST __XML_TOP__ isbios (yes|no) \"no\">\n"
+"\t\t<!ATTLIST __XML_TOP__ isdevice (yes|no) \"no\">\n"
+"\t\t<!ATTLIST __XML_TOP__ ismechanical (yes|no) \"no\">\n"
+"\t\t<!ATTLIST __XML_TOP__ runnable (yes|no) \"yes\">\n"
+"\t\t<!ATTLIST __XML_TOP__ cloneof CDATA #IMPLIED>\n"
+"\t\t<!ATTLIST __XML_TOP__ romof CDATA #IMPLIED>\n"
+"\t\t<!ATTLIST __XML_TOP__ sampleof CDATA #IMPLIED>\n"
 "\t\t<!ELEMENT description (#PCDATA)>\n"
 "\t\t<!ELEMENT year (#PCDATA)>\n"
 "\t\t<!ELEMENT manufacturer (#PCDATA)>\n"
@@ -180,6 +181,7 @@ const char info_xml_creator::s_dtd_string[] =
 "\t\t<!ELEMENT softwarelist EMPTY>\n"
 "\t\t\t<!ATTLIST softwarelist name CDATA #REQUIRED>\n"
 "\t\t\t<!ATTLIST softwarelist status (original|compatible) #REQUIRED>\n"
+"\t\t\t<!ATTLIST softwarelist filter CDATA #IMPLIED>\n"
 "\t\t<!ELEMENT ramoption (#PCDATA)>\n"
 "\t\t\t<!ATTLIST ramoption default CDATA #IMPLIED>\n"
 "]>";
@@ -198,8 +200,10 @@ extern int m_device_count;
 
 info_xml_creator::info_xml_creator(driver_enumerator &drivlist)
 	: m_output(NULL),
-	  m_drivlist(drivlist)
+	  m_drivlist(drivlist),
+	  m_lookup_options(m_drivlist.options())
 {
+	m_lookup_options.remove_device_options();
 }
 
 
@@ -214,16 +218,21 @@ void info_xml_creator::output(FILE *out)
 
 	// output the DTD
 	fprintf(m_output, "<?xml version=\"1.0\"?>\n");
-	fprintf(m_output, "%s\n\n", s_dtd_string);
+	astring dtd(s_dtd_string);
+	dtd.replace(0,"__XML_ROOT__", emulator_info::get_xml_root());
+	dtd.replace(0,"__XML_TOP__", emulator_info::get_xml_top());
+
+	fprintf(m_output, "%s\n\n", dtd.cstr());
 
 	// top-level tag
-	fprintf(m_output, "<" XML_ROOT " build=\"%s\" debug=\""
+	fprintf(m_output, "<%s build=\"%s\" debug=\""
 #ifdef MAME_DEBUG
 		"yes"
 #else
 		"no"
 #endif
 		"\" mameconfig=\"%d\">\n",
+		emulator_info::get_xml_root(),
 		xml_normalize_string(build_version),
 		CONFIG_VERSION
 	);
@@ -240,7 +249,7 @@ void info_xml_creator::output(FILE *out)
 	global_free(m_device_used);
 
 	// close the top level tag
-	fprintf(m_output, "</" XML_ROOT ">\n");
+	fprintf(m_output, "</%s>\n",emulator_info::get_xml_root());
 }
 
 
@@ -264,7 +273,7 @@ void info_xml_creator::output_devices()
 			dev->config_complete();
 
 			// print the header and the game name
-			fprintf(m_output, "\t<" XML_TOP);
+			fprintf(m_output, "\t<%s",emulator_info::get_xml_top());
 			fprintf(m_output, " name=\"%s\"", xml_normalize_string(dev->shortname()));
 			fprintf(m_output, " isdevice=\"yes\"");
 			fprintf(m_output, " runnable=\"no\"");
@@ -277,7 +286,7 @@ void info_xml_creator::output_devices()
 			output_rom(dev);
 
 			// close the topmost tag
-			fprintf(m_output, "\t</" XML_TOP ">\n");
+			fprintf(m_output, "\t</%s>\n",emulator_info::get_xml_top());
 			global_free(dev);
 		}
 	}
@@ -303,7 +312,7 @@ void info_xml_creator::output_one()
 		input_port_list_init(*device, portlist, errors);
 
 	// print the header and the game name
-	fprintf(m_output, "\t<" XML_TOP);
+	fprintf(m_output, "\t<%s",emulator_info::get_xml_top());
 	fprintf(m_output, " name=\"%s\"", xml_normalize_string(driver.name));
 
 	// strip away any path information from the source_file and output it
@@ -364,7 +373,7 @@ void info_xml_creator::output_one()
 	output_ramoptions();
 
 	// close the topmost tag
-	fprintf(m_output, "\t</" XML_TOP ">\n");
+	fprintf(m_output, "\t</%s>\n",emulator_info::get_xml_top());
 }
 
 //------------------------------------------------
@@ -1077,7 +1086,7 @@ void info_xml_creator::output_driver()
 	/* some minor issues, games marked as status=preliminary */
 	/* don't work or have major emulation problems. */
 
-	if (m_drivlist.driver().flags & (GAME_NOT_WORKING | GAME_UNEMULATED_PROTECTION | GAME_NO_SOUND | GAME_WRONG_COLORS))
+	if (m_drivlist.driver().flags & (GAME_NOT_WORKING | GAME_UNEMULATED_PROTECTION | GAME_NO_SOUND | GAME_WRONG_COLORS | GAME_MECHANICAL))
 		fprintf(m_output, " status=\"preliminary\"");
 	else if (m_drivlist.driver().flags & (GAME_IMPERFECT_COLORS | GAME_IMPERFECT_SOUND | GAME_IMPERFECT_GRAPHICS))
 		fprintf(m_output, " status=\"imperfect\"");
@@ -1221,13 +1230,12 @@ void info_xml_creator::output_software_list()
 	for (const device_t *dev = m_drivlist.config().devicelist().first(SOFTWARE_LIST); dev != NULL; dev = dev->typenext())
 	{
 		software_list_config *swlist = (software_list_config *)downcast<const legacy_device_base *>(dev)->inline_config();
-
-		for (int i = 0; i < DEVINFO_STR_SWLIST_MAX - DEVINFO_STR_SWLIST_0; i++)
-			if (swlist->list_name[i])
-			{
-				fprintf(m_output, "\t\t<softwarelist name=\"%s\" ", swlist->list_name[i]);
-				fprintf(m_output, "status=\"%s\" />\n", (swlist->list_type == SOFTWARE_LIST_ORIGINAL_SYSTEM) ? "original" : "compatible");
-			}
+		fprintf(m_output, "\t\t<softwarelist name=\"%s\" ", swlist->list_name);
+		fprintf(m_output, "status=\"%s\" ", (swlist->list_type == SOFTWARE_LIST_ORIGINAL_SYSTEM) ? "original" : "compatible");
+		if (swlist->filter) {
+			fprintf(m_output, "filter=\"%s\" ", swlist->filter);
+		}
+		fprintf(m_output, "/>\n");
 	}
 }
 
@@ -1242,17 +1250,18 @@ void info_xml_creator::output_ramoptions()
 {
 	for (const device_t *device = m_drivlist.config().devicelist().first(RAM); device != NULL; device = device->typenext())
 	{
-		ram_config *ram = (ram_config *)downcast<const legacy_device_base *>(device)->inline_config();
-		fprintf(m_output, "\t\t<ramoption default=\"1\">%u</ramoption>\n", ram_parse_string(ram->default_size));
+		const ram_device *ram = downcast<const ram_device *>(device);
 
-		if (ram->extra_options != NULL)
+		fprintf(m_output, "\t\t<ramoption default=\"1\">%u</ramoption>\n", ram->default_size());
+
+		if (ram->extra_options() != NULL)
 		{
-			astring options(ram->extra_options);
+			astring options(ram->extra_options());
 			for (int start = 0, end = options.chr(0, ','); ; start = end + 1, end = options.chr(start, ','))
 			{
 				astring option;
 				option.cpysubstr(options, start, (end == -1) ? -1 : end - start);
-				fprintf(m_output, "\t\t<ramoption>%u</ramoption>\n", ram_parse_string(option));
+				fprintf(m_output, "\t\t<ramoption>%u</ramoption>\n", ram_device::parse_string(option));
 				if (end == -1)
 					break;
 			}
@@ -1269,12 +1278,11 @@ void info_xml_creator::output_ramoptions()
 const char *info_xml_creator::get_merge_name(const hash_collection &romhashes)
 {
 	const char *merge_name = NULL;
-
 	// walk the parent chain
 	for (int clone_of = m_drivlist.find(m_drivlist.driver().parent); clone_of != -1; clone_of = m_drivlist.find(m_drivlist.driver(clone_of).parent))
 
 		// look in the parent's ROMs
-		for (const rom_source *psource = rom_first_source(m_drivlist.config(clone_of)); psource != NULL; psource = rom_next_source(*psource))
+		for (const rom_source *psource = rom_first_source(m_drivlist.config(clone_of,m_lookup_options)); psource != NULL; psource = rom_next_source(*psource))
 			for (const rom_entry *pregion = rom_first_region(*psource); pregion != NULL; pregion = rom_next_region(pregion))
 				for (const rom_entry *prom = rom_first_file(pregion); prom != NULL; prom = rom_next_file(prom))
 				{

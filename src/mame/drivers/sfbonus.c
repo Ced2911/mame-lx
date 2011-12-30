@@ -270,6 +270,7 @@ MH86171 Color Pallete RAMDAC
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/okim6295.h"
+#include "video/ramdac.h"
 
 #include "pirpok2.lh"
 
@@ -300,7 +301,6 @@ public:
 	UINT8* m_3000_regs;
 	UINT8* m_2801_regs;
 	UINT8* m_2c01_regs;
-	struct { int r,g,b,offs,offs_internal; } m_pal;
 };
 
 
@@ -1058,41 +1058,6 @@ static SCREEN_UPDATE(sfbonus)
 }
 
 
-static WRITE8_HANDLER( paletteram_io_w )
-{
-	sfbonus_state *state = space->machine().driver_data<sfbonus_state>();
-	switch(offset)
-	{
-		case 0:
-			state->m_pal.offs = data;
-			break;
-		case 2:
-			state->m_pal.offs_internal = 0;
-			break;
-		case 1:
-			switch(state->m_pal.offs_internal)
-			{
-				case 0:
-					state->m_pal.r = ((data & 0x3f) << 2) | ((data & 0x30) >> 4);
-					state->m_pal.offs_internal++;
-					break;
-				case 1:
-					state->m_pal.g = ((data & 0x3f) << 2) | ((data & 0x30) >> 4);
-					state->m_pal.offs_internal++;
-					break;
-				case 2:
-					state->m_pal.b = ((data & 0x3f) << 2) | ((data & 0x30) >> 4);
-					palette_set_color(space->machine(), state->m_pal.offs, MAKE_RGB(state->m_pal.r, state->m_pal.g, state->m_pal.b));
-					state->m_pal.offs_internal = 0;
-					state->m_pal.offs++;
-					break;
-			}
-
-			break;
-	}
-}
-
-
 
 static ADDRESS_MAP_START( sfbonus_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROMBANK("bank1") AM_WRITE(sfbonus_videoram_w)
@@ -1182,7 +1147,9 @@ static ADDRESS_MAP_START( sfbonus_io, AS_IO, 8 )
 
 	AM_RANGE(0x0800, 0x0800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 
-	AM_RANGE(0x0c00, 0x0c03) AM_WRITE( paletteram_io_w )
+	AM_RANGE(0x0c00, 0x0c00) AM_DEVWRITE_MODERN("ramdac", ramdac_device, index_w)
+	AM_RANGE(0x0c01, 0x0c01) AM_DEVWRITE_MODERN("ramdac", ramdac_device, pal_w)
+	AM_RANGE(0x0c02, 0x0c02) AM_DEVWRITE_MODERN("ramdac", ramdac_device, mask_w)
 
 	AM_RANGE(0x1800, 0x1807) AM_WRITE(sfbonus_1800_w) AM_BASE_MEMBER(sfbonus_state, m_1800_regs) // lamps and coin counters
 
@@ -1267,6 +1234,15 @@ static NVRAM_HANDLER( sfbonus )
 	}
 }
 
+static ADDRESS_MAP_START( ramdac_map, AS_0, 8 )
+	AM_RANGE(0x000, 0x3ff) AM_DEVREADWRITE_MODERN("ramdac",ramdac_device,ramdac_pal_r,ramdac_rgb666_w)
+ADDRESS_MAP_END
+
+static RAMDAC_INTERFACE( ramdac_intf )
+{
+	0
+};
+
 
 static MACHINE_CONFIG_START( sfbonus, sfbonus_state )
 	MCFG_CPU_ADD("maincpu", Z80, 6000000) // custom packaged z80 CPU ?? Mhz
@@ -1279,7 +1255,6 @@ static MACHINE_CONFIG_START( sfbonus, sfbonus_state )
 
 	MCFG_NVRAM_HANDLER(sfbonus)
 
-
 	MCFG_GFXDECODE(sfbonus)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -1291,6 +1266,8 @@ static MACHINE_CONFIG_START( sfbonus, sfbonus_state )
 	MCFG_SCREEN_UPDATE(sfbonus)
 
 	MCFG_PALETTE_LENGTH(0x100*2) // *2 for priority workaraound / custom drawing
+
+	MCFG_RAMDAC_ADD("ramdac", ramdac_intf, ramdac_map)
 
 	MCFG_VIDEO_START(sfbonus)
 
@@ -5385,6 +5362,62 @@ ROM_START( atworldd1 )
 	ROM_LOAD_OPTIONAL( "aw13re.id", 0x00, 0x1000,  CRC(0f9991fb) SHA1(5ea9e49c6b8b00c2c3638cc39e479d6e5e112b7a) )
 ROM_END
 
+/* Fruit Bonus Deluxe */
+/*
+
+Version 1.0.3 program rom need dumping. Board was reflashed (updated) to v1.0.9
+
+   ROM    SUM16 on label     Flash ROM type
+   -----------------------------------------
+   ROM1   E4E6  <-- V1.0.3   AMIC A29040B
+   ROM2   5802               EON EN29F002ANT
+   ROM3   2C2C               EON EN29F002ANT
+   ROM4   844D               EON EN29F002ANT
+   ROM5   3E9E               EON EN29F040A
+   ROM6   9EC8               EON EN29F040A
+
+All ROMs dumped via manufacturer's ROM types and matched the SUM16 printed on the labels
+
+*/
+
+ROM_START( fbdeluxe )
+	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
+	ROM_LOAD( "fbd109r.bin", 0x00000, 0x80000, CRC(e5e83752) SHA1(7fb53de0ea24ce402298fba59eb14208cf266f3e) )
+
+	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
+	ROM_LOAD( "fbrom2.bin", 0x00000, 0x40000, CRC(8ae6273f) SHA1(23b242a05cf50ceb8d044def69f8671527feca59) )
+
+	ROM_REGION( 0x100000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "fbrom3.bin", 0x00000, 0x40000, CRC(14e60e0e) SHA1(66871107d1abf274c794b443d0251672e4ad420a) ) /* 2Mbit rom is correct */
+	ROM_LOAD16_BYTE( "fbrom4.bin", 0x00001, 0x40000, CRC(83daa849) SHA1(4be8ea3f0f2d036c750f3602b9a79360c58a6da7) ) /* 2Mbit rom is correct */
+
+	ROM_REGION( 0x100000, "gfx2", 0 )
+	ROM_LOAD16_BYTE( "fbrom5.bin", 0x00000, 0x80000, CRC(b27393bf) SHA1(e3798327c7ba1cec694cd4bd21215d3d8f620bcc) )
+	ROM_LOAD16_BYTE( "fbrom6.bin", 0x00001, 0x80000, CRC(ec47c758) SHA1(f8cb7f8cadc6d6b0b98bb71e78adcd9239ec734f) )
+
+	ROM_REGION( 0x1000, "defaults", 0 ) /* default settings */
+	ROM_LOAD_OPTIONAL( "fbdeluxe.id", 0x00, 0x1000, CRC(4a4ab8f6) SHA1(12710cb4e5f94449a4899daac0ab9687dabd82cd) )
+ROM_END
+
+ROM_START( fbdeluxeo )
+	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
+	ROM_LOAD( "fbd107r.bin", 0x00000, 0x80000, CRC(b29be47d) SHA1(bd3098fa6b914b2f9dcbe36e2cf36f90c67c1424) )
+
+	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
+	ROM_LOAD( "fbrom2.bin", 0x00000, 0x40000, CRC(8ae6273f) SHA1(23b242a05cf50ceb8d044def69f8671527feca59) )
+
+	ROM_REGION( 0x100000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "fbrom3.bin", 0x00000, 0x40000, CRC(14e60e0e) SHA1(66871107d1abf274c794b443d0251672e4ad420a) ) /* 2Mbit rom is correct */
+	ROM_LOAD16_BYTE( "fbrom4.bin", 0x00001, 0x40000, CRC(83daa849) SHA1(4be8ea3f0f2d036c750f3602b9a79360c58a6da7) ) /* 2Mbit rom is correct */
+
+	ROM_REGION( 0x100000, "gfx2", 0 )
+	ROM_LOAD16_BYTE( "fbrom5.bin", 0x00000, 0x80000, CRC(b27393bf) SHA1(e3798327c7ba1cec694cd4bd21215d3d8f620bcc) )
+	ROM_LOAD16_BYTE( "fbrom6.bin", 0x00001, 0x80000, CRC(ec47c758) SHA1(f8cb7f8cadc6d6b0b98bb71e78adcd9239ec734f) )
+
+	ROM_REGION( 0x1000, "defaults", 0 ) /* default settings */
+	ROM_LOAD_OPTIONAL( "fbdeluxe.id", 0x00, 0x1000, CRC(4a4ab8f6) SHA1(12710cb4e5f94449a4899daac0ab9687dabd82cd) )
+ROM_END
+
 /* Fruit Bonus 3G */
 /*
 
@@ -5607,38 +5640,6 @@ ROM_START( spooky )
 	ROM_REGION( 0x100000, "gfx2", 0 )
 	ROM_LOAD16_BYTE( "snrom5.bin", 0x00000, 0x80000, NO_DUMP )
 	ROM_LOAD16_BYTE( "snrom6.bin", 0x00001, 0x80000, NO_DUMP )
-ROM_END
-
-ROM_START( fbdeluxe )
-	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
-	ROM_LOAD( "fbd109r.bin", 0x00000, 0x80000, CRC(e5e83752) SHA1(7fb53de0ea24ce402298fba59eb14208cf266f3e) )
-
-	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
-	ROM_LOAD( "fbrom2.bin", 0x00000, 0x40000, NO_DUMP )
-
-	ROM_REGION( 0x100000, "gfx1", 0 )
-	ROM_LOAD16_BYTE( "fbrom3.bin", 0x00000, 0x80000, NO_DUMP )
-	ROM_LOAD16_BYTE( "fbrom4.bin", 0x00001, 0x80000, NO_DUMP )
-
-	ROM_REGION( 0x100000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "fbrom5.bin", 0x00000, 0x80000, NO_DUMP )
-	ROM_LOAD16_BYTE( "fbrom6.bin", 0x00001, 0x80000, NO_DUMP )
-ROM_END
-
-ROM_START( fbdeluxeo )
-	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
-	ROM_LOAD( "fbd107r.bin", 0x00000, 0x80000, CRC(b29be47d) SHA1(bd3098fa6b914b2f9dcbe36e2cf36f90c67c1424) )
-
-	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
-	ROM_LOAD( "fbrom2.bin", 0x00000, 0x40000, NO_DUMP )
-
-	ROM_REGION( 0x100000, "gfx1", 0 )
-	ROM_LOAD16_BYTE( "fbrom3.bin", 0x00000, 0x80000, NO_DUMP )
-	ROM_LOAD16_BYTE( "fbrom4.bin", 0x00001, 0x80000, NO_DUMP )
-
-	ROM_REGION( 0x100000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "fbrom5.bin", 0x00000, 0x80000, NO_DUMP )
-	ROM_LOAD16_BYTE( "fbrom6.bin", 0x00001, 0x80000, NO_DUMP )
 ROM_END
 
 ROM_START( getrich )
@@ -6149,6 +6150,9 @@ GAME( 2007, atworld,     0,        sfbonus,    amcoe1_reels3,    atworldd,      
 GAME( 2007, atworlde1,   atworld,  sfbonus,    amcoe1_reels3,    atworld,         ROT0,  "Amcoe", "Around The World (Version 1.3E CGA)", 0) /* Year according to Amcoe web site */
 GAME( 2007, atworldd1,   atworld,  sfbonus,    amcoe1_reels3,    atworldd,        ROT0,  "Amcoe", "Around The World (Version 1.3R CGA)", 0) /* Year according to Amcoe web site */
 
+GAME( 200?, fbdeluxe,    0,        sfbonus,    amcoe1_reels3,    fbdeluxe,        ROT0,  "Amcoe", "Fruit Bonus Deluxe (Version 1.0.9)", 0) /* After Around The World */
+GAME( 200?, fbdeluxeo,   fbdeluxe, sfbonus,    amcoe1_reels3,    fbdeluxe,        ROT0,  "Amcoe", "Fruit Bonus Deluxe (Version 1.0.7)", 0) /* After Around The World */
+
 GAME( 200?, fb3g,        0,        sfbonus,    amcoe1_reels3,    fb3g,            ROT0,  "Amcoe", "Fruit Bonus 3G (Version 1.0.3)", 0) /* After Around The World */
 
 // no graphic / sound roms dumped for these sets, but functional program roms & descramble are in place
@@ -6164,9 +6168,6 @@ GAME( 2006, version4v3,  version4, sfbonus,    amcoe1_reels3,    version4v,     
 GAME( 2006, version4o,   version4, sfbonus,    amcoe1_reels3,    version4,        ROT0,  "Amcoe", "Version 4 (Version 4.2R CGA)", GAME_NOT_WORKING)
 
 GAME( 200?, spooky,      0,        sfbonus,    amcoe1_reels3,    spooky,          ROT0,  "Amcoe", "Spooky Night (2nd edition) (Version 2.0.4)", GAME_NOT_WORKING) /* After Around The World */
-
-GAME( 200?, fbdeluxe,    0,        sfbonus,    amcoe1_reels3,    fbdeluxe,        ROT0,  "Amcoe", "Fruit Bonus Deluxe (Version 1.0.9)", GAME_NOT_WORKING) /* After Around The World */
-GAME( 200?, fbdeluxeo,   fbdeluxe, sfbonus,    amcoe1_reels3,    fbdeluxe,        ROT0,  "Amcoe", "Fruit Bonus Deluxe (Version 1.0.7)", GAME_NOT_WORKING) /* After Around The World */
 
 GAME( 200?, getrich,     0,        sfbonus,    amcoe1_reels3,    getrich,         ROT0,  "Amcoe", "Get Rich (Version 1.0.1)", GAME_NOT_WORKING) /* After Around The World */
 

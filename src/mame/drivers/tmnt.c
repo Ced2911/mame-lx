@@ -65,7 +65,6 @@ Updates:
 ***************************************************************************/
 
 #include "emu.h"
-#include "deprecat.h"
 #include "video/konicdev.h"
 #include "machine/eeprom.h"
 #include "cpu/m68000/m68000.h"
@@ -176,18 +175,8 @@ static INTERRUPT_GEN(cuebrick_interrupt)
 {
 	tmnt_state *state = device->machine().driver_data<tmnt_state>();
 
-	// cheap IRQ multiplexing to avoid losing sound IRQs
-	switch (cpu_getiloops(device))
-	{
-		case 0:
-			device_set_input_line(device, M68K_IRQ_5, HOLD_LINE);
-			break;
-
-		default:
-			if (state->m_cuebrick_snd_irqlatch)
-				device_set_input_line(device, M68K_IRQ_6, HOLD_LINE);
-			break;
-	}
+	if (state->m_irq5_mask)
+		device_set_input_line(device, M68K_IRQ_5, HOLD_LINE);
 }
 
 static INTERRUPT_GEN( punkshot_interrupt )
@@ -2119,7 +2108,8 @@ INPUT_PORTS_END
 static void cuebrick_irq_handler( device_t *device, int state )
 {
 	tmnt_state *tmnt = device->machine().driver_data<tmnt_state>();
-	tmnt->m_cuebrick_snd_irqlatch = state;
+
+	device_set_input_line(tmnt->m_maincpu, M68K_IRQ_6, (state) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 static const ym2151_interface ym2151_interface_cbj =
@@ -2326,13 +2316,22 @@ static MACHINE_RESET( common )
 	state->m_cuebrick_nvram_bank = 0;
 }
 
+/* cuebrick, mia and tmnt */
+static INTERRUPT_GEN( tmnt_vblank_irq )
+{
+	tmnt_state *state = device->machine().driver_data<tmnt_state>();
+
+	if(state->m_irq5_mask)
+		device_set_input_line(device, 5, HOLD_LINE);
+}
+
 
 static MACHINE_CONFIG_START( cuebrick, tmnt_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz */
 	MCFG_CPU_PROGRAM_MAP(cuebrick_main_map)
-	MCFG_CPU_VBLANK_INT_HACK(cuebrick_interrupt,10)
+	MCFG_CPU_VBLANK_INT("screen",cuebrick_interrupt)
 
 	MCFG_MACHINE_START(common)
 	MCFG_MACHINE_RESET(common)
@@ -2371,7 +2370,7 @@ static MACHINE_CONFIG_START( mia, tmnt_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/3)
 	MCFG_CPU_PROGRAM_MAP(mia_main_map)
-	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_VBLANK_INT("screen", tmnt_vblank_irq)
 
 	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
 	MCFG_CPU_PROGRAM_MAP(mia_audio_map)
@@ -2425,7 +2424,7 @@ static MACHINE_CONFIG_START( tmnt, tmnt_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/3)
 	MCFG_CPU_PROGRAM_MAP(tmnt_main_map)
-	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_VBLANK_INT("screen", tmnt_vblank_irq)
 
 	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
 	MCFG_CPU_PROGRAM_MAP(tmnt_audio_map)
