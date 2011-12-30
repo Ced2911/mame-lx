@@ -43,6 +43,22 @@
 #include <stdlib.h>
 #include <debug.h>
 
+static void CleanupPath(char * path) {
+    if (!path || path[0] == 0)
+        return;
+
+    int pathlen = strlen(path);
+    int j = 0;
+    for (int i = 0; i < pathlen && i < 1024; i++) {
+        if (path[i] == '\\')
+            path[i] = '/';
+
+        if (j == 0 || !(path[j - 1] == '/' && path[i] == '/'))
+            path[j++] = path[i];
+    }
+    path[j] = 0;
+}
+
 //============================================================
 //  osd_open
 //============================================================
@@ -57,6 +73,8 @@ file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64
     } else {
         strcpy(path, _path);
     }
+    
+    CleanupPath(path);
 
     // based on the flags, choose a mode
     if (openflags & OPEN_FLAG_WRITE) {
@@ -73,6 +91,7 @@ file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64
     // open the file
     fileptr = fopen(path, mode);
     if (fileptr == NULL) {
+         printf("osd_open : %s not found\r\n", path);
         return FILERR_NOT_FOUND;
     }
 

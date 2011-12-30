@@ -76,13 +76,13 @@ static const char * x360DeviceNames[] = {
 };
 
 static const char * x360BtnNames[] = {
-    "Big X", "Start", "Back",
+    "Big_X", "Start", "Back",
     "Up", "Down", "Left", "Right",
     "A", "B", "X", "Y", "LB", "RB",
 };
 static const char * x360AnalogNames[] = {
-    "RStick X", "RStick Y",
-    "LStick X", "LStick Y",
+    "RStick_X", "RStick_Y",
+    "LStick_X", "LStick_Y",
     "LT", "RT",
 };
 
@@ -129,7 +129,7 @@ static render_target *our_target;
 //  FUNCTION PROTOTYPES
 //============================================================
 static INT32 keyboard_get_state(void *device_internal, void *item_internal);
-
+static INT32 generic_axis_get_state(void *device_internal, void *item_internal);
 
 //============================================================
 //  main
@@ -142,9 +142,12 @@ int main() {
     {
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
-        "mame.elf", "mk"
+       //"mame.elf", "sfiiin"
+        //"mame.elf", "sf2ce"
         //"mame.elf", "sfa3"
+        "mame.elf", "mk"
         //"mame.elf"
+         //"mame.elf", "umk3"
     };
     TR;
     // cli_frontend does the heavy lifting; if we have osd-specific options, we
@@ -211,10 +214,10 @@ void mini_osd_interface::init(running_machine &machine) {
         joystick_device[i]->add_item(x360BtnNames[XINPUT_RB], (input_item_id)(btn_pos+4),keyboard_get_state, &joystick_state[i][XINPUT_RB]);
         joystick_device[i]->add_item(x360BtnNames[XINPUT_LB], (input_item_id)(btn_pos+5),keyboard_get_state, &joystick_state[i][XINPUT_LB]);
         // axis
-        joystick_device[i]->add_item(x360AnalogNames[XINPUT_LX], ITEM_ID_XAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_LX]);
-        joystick_device[i]->add_item(x360AnalogNames[XINPUT_LY], ITEM_ID_YAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_LY]);
-        joystick_device[i]->add_item(x360AnalogNames[XINPUT_RX], ITEM_ID_RXAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_RX]);
-        joystick_device[i]->add_item(x360AnalogNames[XINPUT_RY], ITEM_ID_RYAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_RY]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_LX], ITEM_ID_XAXIS,generic_axis_get_state, &joystick_axis[i][XINPUT_LX]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_LY], ITEM_ID_YAXIS,generic_axis_get_state, &joystick_axis[i][XINPUT_LY]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_RX], ITEM_ID_RXAXIS,generic_axis_get_state, &joystick_axis[i][XINPUT_RX]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_RY], ITEM_ID_RYAXIS,generic_axis_get_state, &joystick_axis[i][XINPUT_RY]);
     }
 
     // nothing yet to do to initialize sound, since we don't have any
@@ -270,7 +273,7 @@ void update_input() {
         
         //axis
         joystick_axis[i][XINPUT_LX] = ctrl.s1_x;
-        joystick_axis[i][XINPUT_LY] = ctrl.s2_y;
+        joystick_axis[i][XINPUT_LY] = ctrl.s1_y;
         joystick_axis[i][XINPUT_RX] = ctrl.s2_x;
         joystick_axis[i][XINPUT_RY] = ctrl.s2_y;
     }
@@ -372,4 +375,11 @@ static INT32 keyboard_get_state(void *device_internal, void *item_internal) {
     // devices
     UINT8 *keystate = (UINT8 *) item_internal;
     return *keystate;
+}
+static INT32 generic_axis_get_state(void *device_internal, void *item_internal)
+{
+	INT32 *axisdata = (INT32 *) item_internal;
+
+	// return the current state
+	return *axisdata;
 }

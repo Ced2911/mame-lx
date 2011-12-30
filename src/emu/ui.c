@@ -24,7 +24,7 @@
 #include "uigfx.h"
 #include <ctype.h>
 
-
+#include "config.h"
 
 /***************************************************************************
     CONSTANTS
@@ -264,6 +264,8 @@ static void ui_exit(running_machine &machine)
 	/* free the font */
 	machine.render().font_free(ui_font);
 	ui_font = NULL;
+        /* save cfg */
+        config_save_settings(machine);
 }
 
 

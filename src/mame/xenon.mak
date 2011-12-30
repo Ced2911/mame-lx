@@ -108,6 +108,14 @@ DRVLIBS += \
 	$(DRIVERS)/cps2.o \
         $(MACHINE)/cps2crpt.o \
         $(MACHINE)/kabuki.o \
+
+#cps3
+DRVLIBS += \
+        $(DRIVERS)/cps3.o $(AUDIO)/cps3.o \
+
+SOUNDS += CDDA
+CPUS += SH2
+
 # mk
 DRVLIBS += \
         $(MACHINE)/nmk112.o \
