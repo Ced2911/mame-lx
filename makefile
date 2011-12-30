@@ -51,6 +51,15 @@ HOST_OBJDUMP = objdump
 # do it only when linking libosd.a (png error ...)
 XENON_INCDIR = -I$(DEVKITXENON)/usr/include
 
+
+#
+FILE2STR = btools/file2str
+MAKEDEP = btools/makedep
+MAKELIST = btools/makelist
+MAKEDEV = btools/makedev
+PNG2BDC = btools/png2bdc
+VERINFO = btools/verinfo
+
 #-------------------------------------------------
 # specify core target: mame, mess, etc.
 # specify subtarget: mame, mess, tiny, etc.
@@ -693,7 +702,7 @@ include $(SRC)/osd/$(OSD)/$(OSD).mak
 include $(SRC)/$(TARGET)/$(SUBTARGET).mak
 include $(SRC)/emu/emu.mak
 include $(SRC)/lib/lib.mak
-include $(SRC)/build/build.mak
+#include $(SRC)/build/build.mak
 -include $(SRC)/osd/$(CROSS_BUILD_OSD)/build.mak
 include $(SRC)/tools/tools.mak
 
@@ -801,11 +810,11 @@ $(OBJ)/%.s: $(SRC)/%.c | $(OSPREBUILD)
 	@echo Compiling $<...
 	$(CC) $(CDEFS) $(CFLAGS) -S $< -o $@
 
-$(OBJ)/%.lh: $(SRC)/%.lay $(FILE2STR_TARGET)
+$(OBJ)/%.lh: $(SRC)/%.lay 
 	@echo Converting $<...
 	@$(FILE2STR) $< $@ layout_$(basename $(notdir $<))
 
-$(OBJ)/%.fh: $(SRC)/%.png $(PNG2BDC_TARGET) $(FILE2STR_TARGET)
+$(OBJ)/%.fh: $(SRC)/%.png 
 	@echo Converting $<...
 	@$(PNG2BDC) $< $(OBJ)/temp.bdc
 	@$(FILE2STR) $(OBJ)/temp.bdc $@ font_$(basename $(notdir $<)) UINT8
@@ -818,11 +827,11 @@ $(DEVLISTOBJ): $(DEVLISTSRC)
 	@echo Compiling $<...
 	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
 
-$(DRIVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET).lst $(MAKELIST_TARGET)
+$(DRIVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET).lst 
 	@echo Building driver list $<...
 	@$(MAKELIST) $< >$@
 
-$(DEVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET)_dev.lst $(MAKEDEV_TARGET)
+$(DEVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET)_dev.lst 
 	@echo Building device list $<...
 	@$(MAKEDEV) $< >$@
 
