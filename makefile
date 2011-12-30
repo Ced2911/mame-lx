@@ -40,6 +40,8 @@ SYMBOLS = 1
 SYMLEVEL = 2
 MAP = 1
 
+OPTIMIZE = fast
+
 #DEBUG = 1
 #PROFILER = 1
 

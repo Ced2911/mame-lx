@@ -48,6 +48,8 @@
 #include <debug.h>
 #include <usb/usbmain.h>
 #include <input/input.h>
+#include <ppc/timebase.h>
+#include <time/time.h>
 //============================================================
 //  CONSTANTS
 //============================================================
@@ -68,6 +70,53 @@ enum {
     KEY_TOTAL
 };
 
+static const char * x360DeviceNames[] = {
+    "Joystick 1", "Joystick 2",
+    "Joystick 3", "Joystick 4",
+};
+
+static const char * x360BtnNames[] = {
+    "Big X", "Start", "Back",
+    "Up", "Down", "Left", "Right",
+    "A", "B", "X", "Y", "LB", "RB",
+};
+static const char * x360AnalogNames[] = {
+    "RStick X", "RStick Y",
+    "LStick X", "LStick Y",
+    "LT", "RT",
+};
+
+enum XINPUT_AXIS{
+    XINPUT_RX,
+    XINPUT_RY,
+    XINPUT_LX,
+    XINPUT_LY,
+    XINPUT_LT,
+    XINPUT_RT,
+};
+
+enum XINPUTBTN {
+    XINPUT_BIGX,
+    XINPUT_START,
+    XINPUT_BACK,
+    XINPUT_UP,
+    XINPUT_DOWN,
+    XINPUT_LEFT,
+    XINPUT_RIGHT,
+    XINPUT_A,
+    XINPUT_B,
+    XINPUT_X,
+    XINPUT_Y,
+    XINPUT_LB,
+    XINPUT_RB,
+    XINPUT_MAX
+};
+
+static UINT8 joystick_state[4][XINPUT_MAX];
+static signed short joystick_axis[4][XINPUT_MAX];
+
+// a single input device
+static input_device *joystick_device[4];
 
 //============================================================
 //  GLOBALS
@@ -76,17 +125,9 @@ enum {
 // a single rendering target
 static render_target *our_target;
 
-// a single input device
-static input_device *keyboard_device;
-
-// the state of each key
-static UINT8 keyboard_state[KEY_TOTAL];
-
-
 //============================================================
 //  FUNCTION PROTOTYPES
 //============================================================
-
 static INT32 keyboard_get_state(void *device_internal, void *item_internal);
 
 
@@ -102,6 +143,7 @@ int main() {
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
         "mame.elf", "mk"
+        //"mame.elf", "sfa3"
         //"mame.elf"
     };
     TR;
@@ -144,83 +186,112 @@ void mini_osd_interface::init(running_machine &machine) {
     // initialize the video system by allocating a rendering target
     our_target = machine.render().target_alloc();
 
+    for (int i = 0; i < 4; i++) {
+
+        joystick_device[i] = machine.input().device_class(DEVICE_CLASS_JOYSTICK).add_device(x360DeviceNames[i]);
+        if (joystick_device[i] == NULL)
+            fatalerror("Error creating joystick device");
+        int dir_pos = ITEM_ID_BUTTON10;
+        int btn_pos = ITEM_ID_BUTTON1;// (input_item_id)
+        
+        // add key
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_START], ITEM_ID_START,keyboard_get_state, &joystick_state[i][XINPUT_START]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_BACK], ITEM_ID_SELECT,keyboard_get_state, &joystick_state[i][XINPUT_BACK]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_BIGX], ITEM_ID_BUTTON16,keyboard_get_state, &joystick_state[i][XINPUT_BIGX]);
+        // dir
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_UP], (input_item_id)(dir_pos),keyboard_get_state, &joystick_state[i][XINPUT_UP]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_LEFT], (input_item_id)(dir_pos+1),keyboard_get_state, &joystick_state[i][XINPUT_LEFT]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_RIGHT], (input_item_id)(dir_pos+2),keyboard_get_state, &joystick_state[i][XINPUT_RIGHT]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_DOWN], (input_item_id)(dir_pos+3),keyboard_get_state, &joystick_state[i][XINPUT_DOWN]);
+        // btn 
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_A], (input_item_id)(btn_pos),keyboard_get_state, &joystick_state[i][XINPUT_A]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_B], (input_item_id)(btn_pos+1),keyboard_get_state, &joystick_state[i][XINPUT_B]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_X], (input_item_id)(btn_pos+2),keyboard_get_state, &joystick_state[i][XINPUT_X]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_Y], (input_item_id)(btn_pos+3),keyboard_get_state, &joystick_state[i][XINPUT_Y]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_RB], (input_item_id)(btn_pos+4),keyboard_get_state, &joystick_state[i][XINPUT_RB]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_LB], (input_item_id)(btn_pos+5),keyboard_get_state, &joystick_state[i][XINPUT_LB]);
+        // axis
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_LX], ITEM_ID_XAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_LX]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_LY], ITEM_ID_YAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_LY]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_RX], ITEM_ID_RXAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_RX]);
+        joystick_device[i]->add_item(x360AnalogNames[XINPUT_RY], ITEM_ID_RYAXIS,keyboard_get_state, &joystick_axis[i][XINPUT_RY]);
+    }
+
     // nothing yet to do to initialize sound, since we don't have any
     // sound updates are handled by update_audio_stream() below
 
     // initialize the input system by adding devices
     // let's pretend like we have a keyboard device
-    keyboard_device = machine.input().device_class(DEVICE_CLASS_KEYBOARD).add_device("Keyboard");
-    if (keyboard_device == NULL)
-        fatalerror("Error creating keyboard device");
+
 
     // our faux keyboard only has a couple of keys (corresponding to the
     // common defaults)
-    keyboard_device->add_item("Esc", ITEM_ID_ESC, keyboard_get_state, &keyboard_state[KEY_ESCAPE]);
-    keyboard_device->add_item("P1", ITEM_ID_1, keyboard_get_state, &keyboard_state[KEY_P1_START]);
-    keyboard_device->add_item("B1", ITEM_ID_LCONTROL, keyboard_get_state, &keyboard_state[KEY_BUTTON_1]);
-    keyboard_device->add_item("B2", ITEM_ID_LALT, keyboard_get_state, &keyboard_state[KEY_BUTTON_2]);
-    keyboard_device->add_item("B3", ITEM_ID_SPACE, keyboard_get_state, &keyboard_state[KEY_BUTTON_3]);
-    keyboard_device->add_item("JoyU", ITEM_ID_UP, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_U]);
-    keyboard_device->add_item("JoyD", ITEM_ID_DOWN, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_D]);
-    keyboard_device->add_item("JoyL", ITEM_ID_LEFT, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_L]);
-    keyboard_device->add_item("JoyR", ITEM_ID_RIGHT, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_R]);
+    /*
+        keyboard_device->add_item("Esc", ITEM_ID_ESC, keyboard_get_state, &keyboard_state[KEY_ESCAPE]);
+        keyboard_device->add_item("P1", ITEM_ID_1, keyboard_get_state, &keyboard_state[KEY_P1_START]);
+        keyboard_device->add_item("B1", ITEM_ID_LCONTROL, keyboard_get_state, &keyboard_state[KEY_BUTTON_1]);
+        keyboard_device->add_item("B2", ITEM_ID_LALT, keyboard_get_state, &keyboard_state[KEY_BUTTON_2]);
+        keyboard_device->add_item("B3", ITEM_ID_SPACE, keyboard_get_state, &keyboard_state[KEY_BUTTON_3]);
+        keyboard_device->add_item("JoyU", ITEM_ID_UP, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_U]);
+        keyboard_device->add_item("JoyD", ITEM_ID_DOWN, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_D]);
+        keyboard_device->add_item("JoyL", ITEM_ID_LEFT, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_L]);
+        keyboard_device->add_item("JoyR", ITEM_ID_RIGHT, keyboard_get_state, &keyboard_state[KEY_JOYSTICK_R]);
+     */
 
     // hook up the debugger log
     //  add_logerror_callback(machine, output_oslog);
 }
 
-
-
-void update_inpit(){
+void update_input() {
     usb_do_poll();
-    struct controller_data_s ctrl;
-    
-    get_controller_data(&ctrl, 0);
-    
-    memset(keyboard_state,0,KEY_TOTAL);
-    
-    if (ctrl.s1_y > 13107)
-        keyboard_state[KEY_P1_START]=1;
 
-    if (ctrl.s1_y < -13107)
-       keyboard_state[KEY_P1_START]=1;
 
-    if (ctrl.s1_x > 13107)
-        keyboard_state[KEY_P1_START]=1;
+    for (int i = 0; i < 4; i++) {
+        //memset(keyboard_state,0,KEY_TOTAL);
+        struct controller_data_s ctrl;
+        get_controller_data(&ctrl, i);
 
-    if (ctrl.s1_x < -13107)
-        keyboard_state[KEY_P1_START]=1;
+        //btn
+        joystick_state[i][XINPUT_START] = ctrl.start;
+        joystick_state[i][XINPUT_BACK] = ctrl.select;
+        joystick_state[i][XINPUT_BIGX] = ctrl.logo;
 
-    if (ctrl.up)
-        keyboard_state[KEY_JOYSTICK_U]=1;
+        joystick_state[i][XINPUT_UP] = ctrl.up;
+        joystick_state[i][XINPUT_LEFT] = ctrl.left;
+        joystick_state[i][XINPUT_RIGHT] = ctrl.right;
+        joystick_state[i][XINPUT_DOWN] = ctrl.down;
 
-    if (ctrl.down)
-        keyboard_state[KEY_JOYSTICK_D]=1;
+        joystick_state[i][XINPUT_A] = ctrl.a;
+        joystick_state[i][XINPUT_B] = ctrl.b;
+        joystick_state[i][XINPUT_X] = ctrl.x;
+        joystick_state[i][XINPUT_Y] = ctrl.y;
+        joystick_state[i][XINPUT_RB] = ctrl.rb;
+        joystick_state[i][XINPUT_LB] = ctrl.lb;
+        
+        //axis
+        joystick_axis[i][XINPUT_LX] = ctrl.s1_x;
+        joystick_axis[i][XINPUT_LY] = ctrl.s2_y;
+        joystick_axis[i][XINPUT_RX] = ctrl.s2_x;
+        joystick_axis[i][XINPUT_RY] = ctrl.s2_y;
+    }
 
-    if (ctrl.left)
-        keyboard_state[KEY_JOYSTICK_L]=1;
-
-    if (ctrl.right)
-        keyboard_state[KEY_JOYSTICK_R]=1;
-
-    if (ctrl.a)
-        keyboard_state[KEY_BUTTON_1]=1;
-
-    if (ctrl.b)
-        keyboard_state[KEY_BUTTON_2]=1;
-
-    if (ctrl.x)
-        keyboard_state[KEY_BUTTON_3]=1;
-
-    if (ctrl.y)
-        keyboard_state[KEY_P1_START]=1;
-
-    if (ctrl.start)
-        keyboard_state[KEY_P1_START]=1;
-
-    if (ctrl.select)
-        keyboard_state[KEY_P1_START]=1;
 }
+
+static void ShowFPS() {
+    static unsigned long lastTick = 0;
+    static int frames = 0;
+    unsigned long nowTick;
+    frames++;
+    nowTick = mftb() / (PPC_TIMEBASE_FREQ / 1000);
+    if (lastTick + 1000 <= nowTick) {
+
+        printf("mini_osd_interface::update %d fps\r\n", frames);
+
+        frames = 0;
+        lastTick = nowTick;
+    }
+}
+
 
 //============================================================
 //  osd_update
@@ -233,7 +304,7 @@ void mini_osd_interface::update(bool skip_redraw) {
 
     // make that the size of our target
     our_target->set_bounds(minwidth, minheight);
-    
+
     xenon_set_dim(minwidth, minheight);
 
     // get the list of primitives for the target at the current size
@@ -242,8 +313,9 @@ void mini_osd_interface::update(bool skip_redraw) {
     // lock them, and then render them
     primlist.acquire_lock();
 
-    xenon_update_video(primlist);
-    
+    if(skip_redraw==false)
+        xenon_update_video(primlist);
+
     // do the drawing here
     primlist.release_lock();
 
@@ -252,7 +324,9 @@ void mini_osd_interface::update(bool skip_redraw) {
         //machine().schedule_exit();
     }
     
-    update_inpit();
+    ShowFPS();
+
+    update_input();
 }
 
 

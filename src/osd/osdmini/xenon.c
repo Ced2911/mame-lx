@@ -389,9 +389,14 @@ void xenon_update_video(render_primitive_list &primlist) {
     
     Xe_SetStreamSource(g_pVideoDevice, 0, soft_vb, 0, sizeof (DrawVerticeFormats));
     
-    draw32_draw_primitives(primlist, screen, mamew, mameh, mamew);
+    //draw32_draw_primitives(primlist, screen, mamew, mameh, mamew);
     
-    xeGfx_setTextureData(g_pTexture,screen);
+    //xeGfx_setTextureData(g_pTexture,screen);
+    
+    
+    uint8_t * surfbuf = (uint8_t*) Xe_Surface_LockRect(g_pVideoDevice, g_pTexture, 0, 0, 0, 0, XE_LOCK_WRITE);
+    draw32_draw_primitives(primlist, surfbuf, mamew, mameh, g_pTexture->wpitch/4);
+    Xe_Surface_Unlock(g_pVideoDevice, g_pTexture);
     
     g_pTexture->width = mamew;
     g_pTexture->height = mameh;
