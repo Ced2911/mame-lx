@@ -19,7 +19,7 @@
 #xenon cfg
 #PTR64 = 0
 BIGENDIAN = 1
-OSD = osdmini
+OSD = xenon
 AR = xenon-ar
 CC = xenon-gcc
 LD = xenon-g++
