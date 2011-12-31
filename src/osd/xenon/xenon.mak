@@ -60,6 +60,7 @@ OSDCOREOBJS = \
 	$(XENONOBJ)/xenonsync.o \
 	$(XENONOBJ)/xenontime.o \
 	$(XENONOBJ)/xenonwork.o \
+        $(XENONOBJ)/xenon_input.o \
 	$(XENONOBJ)/xenon.o \
 
 
