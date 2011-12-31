@@ -82,6 +82,6 @@ void osd_sleep(osd_ticks_t duration)
 	// TR;
 	//delay(duration);
     // convert to milliseconds, rounding down
-    unsigned int msec = (unsigned int)(duration * 1000 / PPC_TIMEBASE_FREQ);
-    mdelay(msec);
+//    unsigned int msec = (unsigned int)(duration * 1000 / PPC_TIMEBASE_FREQ);
+//    mdelay(msec);
 }

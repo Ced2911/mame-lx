@@ -43,6 +43,31 @@
 #include <stdlib.h>
 #include <debug.h>
 
+extern "C" int mkdir(const char *pathname, mode_t mode);
+
+#define PATHSEPCH '/'
+#define NO_ERROR	(0)
+
+static UINT32 create_path_recursive(char *path) {
+    printf("create_path_recursive : %s\r\n",path);
+    char *sep = strrchr(path, PATHSEPCH);
+    UINT32 filerr;
+
+    // if there's still a separator, and it's not the root, nuke it and recurse
+    if (sep != NULL && sep > path && sep[0] != ':' && sep[-1] != PATHSEPCH) {
+        *sep = 0;
+        filerr = create_path_recursive(path);
+        *sep = PATHSEPCH;
+        if (filerr != NO_ERROR)
+            return filerr;
+    }
+
+    // create the path
+    if (mkdir(path, 0777) != 0)
+        return -1;
+    return NO_ERROR;
+}
+
 static void CleanupPath(char * path) {
     if (!path || path[0] == 0)
         return;
@@ -64,6 +89,9 @@ static void CleanupPath(char * path) {
 //============================================================
 
 file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64 *filesize) {
+
+    printf("osd_open : %s\r\n", _path);
+
     const char *mode;
     FILE *fileptr;
     char path[1024];
@@ -73,7 +101,7 @@ file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64
     } else {
         strcpy(path, _path);
     }
-    
+
     CleanupPath(path);
 
     // based on the flags, choose a mode
@@ -87,10 +115,23 @@ file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64
     else {
         return FILERR_INVALID_ACCESS;
     }
+    
+    if ((openflags & OPEN_FLAG_CREATE) && (openflags & OPEN_FLAG_CREATE_PATHS)) {
+        char *pathsep = strrchr(path, PATHSEPCH);
+        if (pathsep != NULL) {
+            int error;
+
+            // create the path up to the file
+            *pathsep = 0;
+            error = create_path_recursive(path);
+            *pathsep = PATHSEPCH;
+        }
+    } 
 
     // open the file
     fileptr = fopen(path, mode);
-    if (fileptr == NULL) {
+   
+    if(fileptr == NULL){
          printf("osd_open : %s not found\r\n", path);
         return FILERR_NOT_FOUND;
     }
@@ -125,6 +166,8 @@ file_error osd_close(osd_file *file) {
 //============================================================
 
 file_error osd_read(osd_file *file, void *buffer, UINT64 offset, UINT32 length, UINT32 *actual) {
+    //TR;
+    
     size_t count;
 
     // seek to the new location; note that most fseek implementations are limited to 32 bits
@@ -144,6 +187,9 @@ file_error osd_read(osd_file *file, void *buffer, UINT64 offset, UINT32 length, 
 //============================================================
 
 file_error osd_write(osd_file *file, const void *buffer, UINT64 offset, UINT32 length, UINT32 *actual) {
+    /*
+    TR;
+    
     size_t count;
 
     // seek to the new location; note that most fseek implementations are limited to 32 bits
@@ -153,7 +199,7 @@ file_error osd_write(osd_file *file, const void *buffer, UINT64 offset, UINT32 l
     count = fwrite(buffer, 1, length, (FILE *) file);
     if (actual != NULL)
         *actual = count;
-
+     */ 
     return FILERR_NONE;
 }
 

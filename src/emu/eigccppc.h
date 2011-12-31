@@ -466,7 +466,6 @@ _atomic_decrement32(INT32 volatile *ptr)
 	  : [ptr]    "r"   (ptr)
 	  : "cr0"
 	);
-
 	return result;
 }
 

@@ -71,8 +71,8 @@ enum {
 };
 
 static const char * x360DeviceNames[] = {
-    "Joystick 1", "Joystick 2",
-    "Joystick 3", "Joystick 4",
+    "Joystick_1", "Joystick_2",
+    "Joystick_3", "Joystick_4",
 };
 
 static const char * x360BtnNames[] = {
@@ -140,12 +140,13 @@ int main() {
     int argc = 2;
     char * argv[]
     {
+        "mame.elf", "mslug"
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
        //"mame.elf", "sfiiin"
         //"mame.elf", "sf2ce"
         //"mame.elf", "sfa3"
-        "mame.elf", "mk"
+        //"mame.elf", "mk"
         //"mame.elf"
          //"mame.elf", "umk3"
     };

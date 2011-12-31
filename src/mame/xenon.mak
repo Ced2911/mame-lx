@@ -136,3 +136,13 @@ $(DRIVERS)/astrocde.o:	$(LAYOUT)/gorf.lh \
 						$(LAYOUT)/tenpindx.lh
 $(DRIVERS)/circus.o:	$(LAYOUT)/circus.lh \
 						$(LAYOUT)/crash.lh
+
+# neogeo
+$(DRIVERS)/neogeo.o : $(LAYOUT)/neogeo.lh \
+
+DRVLIBS += \
+	$(DRIVERS)/neogeo.o $(VIDEO)/neogeo.o \
+	$(MACHINE)/neoboot.o \
+	$(MACHINE)/neocrypt.o \
+	$(MACHINE)/neoprot.o \
+        
