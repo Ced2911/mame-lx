@@ -121,9 +121,11 @@ void mini_osd_interface::init(running_machine &machine) {
 
     // initialize the video system by allocating a rendering target
     our_target = machine.render().target_alloc();
-    
+
     // init input
-    xenon_input_init(machine);
+    osd_xenon_input_init(machine);
+    // init sound
+    osd_xenon_sound_init();
 }
 
 static void ShowFPS() {
@@ -134,7 +136,7 @@ static void ShowFPS() {
     nowTick = mftb() / (PPC_TIMEBASE_FREQ / 1000);
     if (lastTick + 1000 <= nowTick) {
 
-        printf("mini_osd_interface::update %d fps\r\n", frames);
+        printf("Mame %d fps\r\n", frames);
 
         frames = 0;
         lastTick = nowTick;
@@ -168,14 +170,9 @@ void mini_osd_interface::update(bool skip_redraw) {
     // do the drawing here
     primlist.release_lock();
 
-    // after 5 seconds, exit
-    if (machine().time() > attotime::from_seconds(5)) {
-        //machine().schedule_exit();
-    }
-
     ShowFPS();
 
-    xenon_update_input();
+    osd_xenon_update_input();
 }
 
 
@@ -202,12 +199,15 @@ void mini_osd_interface::set_mastervolume(int attenuation) {
 //============================================================
 //  customize_input_type_list
 //============================================================
-
+void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist); // xenon_input.c
 void mini_osd_interface::customize_input_type_list(simple_list<input_type_entry> &typelist) {
     // This function is called on startup, before reading the
     // configuration from disk. Scan the list, and change the
     // default control mappings you want. It is quite possible
     // you won't need to change a thing.
+
+
+    osd_xenon_customize_input_type_list(typelist);
 }
 
 

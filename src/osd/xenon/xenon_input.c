@@ -80,7 +80,7 @@ static signed int joystick_axis[4][XINPUT_MAX];
 // a single input device
 static input_device *joystick_device[4];
 
-void xenon_input_init(running_machine &machine){
+void osd_xenon_input_init(running_machine &machine){
     for (int i = 0; i < 4; i++) {
 
         joystick_device[i] = machine.input().device_class(DEVICE_CLASS_JOYSTICK).add_device(x360DeviceNames[i]);
@@ -121,7 +121,7 @@ void xenon_input_init(running_machine &machine){
     }
 }
 
-void xenon_update_input(){
+void osd_xenon_update_input(){
     usb_do_poll();
 
 
@@ -154,6 +154,24 @@ void xenon_update_input(){
         joystick_axis[i][XINPUT_RY] = ctrl.s2_y * -512;
     }
 }
+
+
+// default ...
+void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist) {
+    input_type_entry *entry;
+
+    // loop over the defaults
+    for (entry = typelist.first(); entry != NULL; entry = entry->next()) {
+        switch (entry->type) {
+            case IPT_UI_CONFIGURE:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16_INDEXED(0));
+                break;
+
+        }
+    }
+}
+
+
 
 //============================================================
 //  keyboard_get_state
