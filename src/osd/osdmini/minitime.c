@@ -51,12 +51,11 @@ static uint64_t start_time = 0;
 //  osd_ticks
 //============================================================
 
-osd_ticks_t osd_ticks(void)
-{
-	if(start_time==0)
-		start_time = mftb();
-		
-	return mftb()-start_time;
+osd_ticks_t osd_ticks(void) {
+    if (start_time == 0)
+        start_time = mftb();
+
+    return mftb() - start_time;
 }
 
 
@@ -64,10 +63,9 @@ osd_ticks_t osd_ticks(void)
 //  osd_ticks_per_second
 //============================================================
 
-osd_ticks_t osd_ticks_per_second(void)
-{
-	//return CLOCKS_PER_SEC;
-	return PPC_TIMEBASE_FREQ;
+osd_ticks_t osd_ticks_per_second(void) {
+    //return CLOCKS_PER_SEC;
+    return PPC_TIMEBASE_FREQ;
 }
 
 
@@ -75,13 +73,12 @@ osd_ticks_t osd_ticks_per_second(void)
 //  osd_sleep
 //============================================================
 
-void osd_sleep(osd_ticks_t duration)
-{
-	// if there was a generic, cross-platform way to give up
-	// time, this is where we would do it
-	// TR;
-	//delay(duration);
+void osd_sleep(osd_ticks_t duration) {
+    // if there was a generic, cross-platform way to give up
+    // time, this is where we would do it
+    // TR;
+    //delay(duration);
     // convert to milliseconds, rounding down
-//    unsigned int msec = (unsigned int)(duration * 1000 / PPC_TIMEBASE_FREQ);
-//    mdelay(msec);
+    unsigned int msec = (unsigned int) (duration * 1000 / PPC_TIMEBASE_FREQ);
+    mdelay(msec);
 }

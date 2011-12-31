@@ -61,10 +61,11 @@ static UINT32 create_path_recursive(char *path) {
         if (filerr != NO_ERROR)
             return filerr;
     }
-
+/*
     // create the path
     if (mkdir(path, 0777) != 0)
         return -1;
+ */ 
     return NO_ERROR;
 }
 
@@ -166,8 +167,6 @@ file_error osd_close(osd_file *file) {
 //============================================================
 
 file_error osd_read(osd_file *file, void *buffer, UINT64 offset, UINT32 length, UINT32 *actual) {
-    //TR;
-    
     size_t count;
 
     // seek to the new location; note that most fseek implementations are limited to 32 bits
@@ -186,10 +185,7 @@ file_error osd_read(osd_file *file, void *buffer, UINT64 offset, UINT32 length, 
 //  osd_write
 //============================================================
 
-file_error osd_write(osd_file *file, const void *buffer, UINT64 offset, UINT32 length, UINT32 *actual) {
-    /*
-    TR;
-    
+file_error osd_write(osd_file *file, const void *buffer, UINT64 offset, UINT32 length, UINT32 *actual) {    
     size_t count;
 
     // seek to the new location; note that most fseek implementations are limited to 32 bits
@@ -199,7 +195,6 @@ file_error osd_write(osd_file *file, const void *buffer, UINT64 offset, UINT32 l
     count = fwrite(buffer, 1, length, (FILE *) file);
     if (actual != NULL)
         *actual = count;
-     */ 
     return FILERR_NONE;
 }
 

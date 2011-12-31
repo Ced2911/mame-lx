@@ -122,6 +122,8 @@ void xenon_init_video() {
     g_pTexture = Xe_CreateTexture(g_pVideoDevice, XE_W, XE_H, 1, XE_FMT_8888 | XE_FMT_ARGB, 0);
     //screen = (unsigned int*) Xe_Surface_LockRect(g_pVideoDevice, g_pTexture, 0, 0, 0, 0, XE_LOCK_WRITE);
 
+    g_pTexture->use_filtering = 0;
+    
     pitch = g_pTexture->wpitch;
     //Xe_Surface_Unlock(g_pVideoDevice, g_pTexture);
     
