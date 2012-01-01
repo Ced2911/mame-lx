@@ -62,6 +62,7 @@ OSDCOREOBJS = \
 	$(XENONOBJ)/xenonwork.o \
         $(XENONOBJ)/xenon_input.o \
         $(XENONOBJ)/xenon_sound.o \
+        $(XENONOBJ)/xenon_video.o \
 	$(XENONOBJ)/xenon.o \
 
 

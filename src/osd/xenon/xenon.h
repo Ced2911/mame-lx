@@ -1,8 +1,9 @@
 // init libxenon
-int xenon_init();
+int osd_xenon_init();
 // update video
-void xenon_update_video(render_primitive_list &primlist);
-void xenon_set_dim(int w,int h);
+void osd_xenon_update_video(render_primitive_list &primlist);
+void osd_xenon_set_dim(int w,int h);
+void osd_xenon_video_init();
 
 // input
 void osd_xenon_input_init(running_machine &machine);

@@ -60,19 +60,19 @@
 //============================================================
 
 // a single rendering target
-static render_target *our_target;
+render_target *xenos_target;
 
 
 //============================================================
 //  main
 //============================================================
-
 int main() {
-    xenon_init();
-    int argc = 2;
+    osd_xenon_init();
+    int argc = 1;
     char * argv[]
     {
-        "mame.elf", "mslug"
+        //"mame.elf", "mslug"
+        "mame.elf"
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
         //"mame.elf", "sfiiin"
@@ -106,7 +106,6 @@ mini_osd_interface::mini_osd_interface() {
 //============================================================
 //  destructor
 //============================================================
-
 mini_osd_interface::~mini_osd_interface() {
 }
 
@@ -114,20 +113,22 @@ mini_osd_interface::~mini_osd_interface() {
 //============================================================
 //  init
 //============================================================
-
 void mini_osd_interface::init(running_machine &machine) {
     // call our parent
     osd_interface::init(machine);
 
     // initialize the video system by allocating a rendering target
-    our_target = machine.render().target_alloc();
+    xenos_target = machine.render().target_alloc();
 
     // init input
     osd_xenon_input_init(machine);
-    // init sound
-    osd_xenon_sound_init();
 }
 
+
+
+//============================================================
+//  osd_update
+//============================================================
 static void ShowFPS() {
     static unsigned long lastTick = 0;
     static int frames = 0;
@@ -143,32 +144,12 @@ static void ShowFPS() {
     }
 }
 
-
-//============================================================
-//  osd_update
-//============================================================
-
 void mini_osd_interface::update(bool skip_redraw) {
-    // get the minimum width/height for the current layout
-    int minwidth, minheight;
-    our_target->compute_minimum_size(minwidth, minheight);
-
-    // make that the size of our target
-    our_target->set_bounds(minwidth, minheight);
-
-    xenon_set_dim(minwidth, minheight);
-
     // get the list of primitives for the target at the current size
-    render_primitive_list &primlist = our_target->get_primitives();
+    render_primitive_list &primlist = xenos_target->get_primitives();
 
-    // lock them, and then render them
-    primlist.acquire_lock();
-
-    if (skip_redraw == false)
-        xenon_update_video(primlist);
-
-    // do the drawing here
-    primlist.release_lock();
+    if (!skip_redraw)
+        osd_xenon_update_video(primlist);
 
     ShowFPS();
 
@@ -179,17 +160,16 @@ void mini_osd_interface::update(bool skip_redraw) {
 //============================================================
 //  update_audio_stream
 //============================================================
-
 void mini_osd_interface::update_audio_stream(const INT16 *buffer, int samples_this_frame) {
     // if we had actual sound output, we would copy the
     // interleaved stereo samples to our sound stream
+    osd_xenon_update_sound(buffer,samples_this_frame);
 }
 
 
 //============================================================
 //  set_mastervolume
 //============================================================
-
 void mini_osd_interface::set_mastervolume(int attenuation) {
     // if we had actual sound output, we would adjust the global
     // volume in response to this function

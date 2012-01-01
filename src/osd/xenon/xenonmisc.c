@@ -47,9 +47,8 @@
 //  osd_malloc
 //============================================================
 
-void *osd_malloc(size_t size)
-{
-	return malloc(size);
+void *osd_malloc(size_t size) {
+    return malloc(size);
 }
 
 
@@ -57,9 +56,8 @@ void *osd_malloc(size_t size)
 //  osd_malloc_array
 //============================================================
 
-void *osd_malloc_array(size_t size)
-{
-	return malloc(size);
+void *osd_malloc_array(size_t size) {
+    return malloc(size);
 }
 
 
@@ -67,9 +65,8 @@ void *osd_malloc_array(size_t size)
 //  osd_free
 //============================================================
 
-void osd_free(void *ptr)
-{
-	free(ptr);
+void osd_free(void *ptr) {
+    free(ptr);
 }
 
 
@@ -77,11 +74,10 @@ void osd_free(void *ptr)
 //  osd_alloc_executable
 //============================================================
 
-void *osd_alloc_executable(size_t size)
-{
-	// to use this version of the code, we have to assume that
-	// code injected into a malloc'ed region can be safely executed
-	return malloc(size);
+void *osd_alloc_executable(size_t size) {
+    // to use this version of the code, we have to assume that
+    // code injected into a malloc'ed region can be safely executed
+    return malloc(size);
 }
 
 
@@ -89,9 +85,8 @@ void *osd_alloc_executable(size_t size)
 //  osd_free_executable
 //============================================================
 
-void osd_free_executable(void *ptr, size_t size)
-{
-	free(ptr);
+void osd_free_executable(void *ptr, size_t size) {
+    free(ptr);
 }
 
 
@@ -99,9 +94,8 @@ void osd_free_executable(void *ptr, size_t size)
 //  osd_break_into_debugger
 //============================================================
 
-void osd_break_into_debugger(const char *message)
-{
-	// there is no standard way to do this, so ignore it
+void osd_break_into_debugger(const char *message) {
+    // there is no standard way to do this, so ignore it
 }
 
 
@@ -109,10 +103,9 @@ void osd_break_into_debugger(const char *message)
 //  osd_get_clipboard_text
 //============================================================
 
-char *osd_get_clipboard_text(void)
-{
-	// can't support clipboards generically
-	return NULL;
+char *osd_get_clipboard_text(void) {
+    // can't support clipboards generically
+    return NULL;
 }
 
 
@@ -120,8 +113,7 @@ char *osd_get_clipboard_text(void)
 //  osd_get_slider_list
 //============================================================
 
-const void *osd_get_slider_list()
-{
-	// nothing to slide in mini OSD
-	return NULL;
+const void *osd_get_slider_list() {
+    // nothing to slide in mini OSD
+    return NULL;
 }
