@@ -70,10 +70,10 @@ void osd_xenon_input_init(running_machine &machine) {
     for (int i = 0; i < 4; i++) {
 
         joystick_device[i] = machine.input().device_class(DEVICE_CLASS_JOYSTICK).add_device(x360DeviceNames[i]);
-        
+
         if (joystick_device[i] == NULL)
             fatalerror("Error creating joystick device");
-        
+
         int dir_pos = ITEM_ID_BUTTON10;
         int btn_pos = ITEM_ID_BUTTON1; // (input_item_id)
 
@@ -101,7 +101,7 @@ void osd_xenon_input_init(running_machine &machine) {
         joystick_device[i]->add_item(x360BtnNames[XINPUT_Y], (input_item_id) (btn_pos + 3), generic_btn_get_state, &joystick_state[i][XINPUT_Y]);
         joystick_device[i]->add_item(x360BtnNames[XINPUT_RB], (input_item_id) (btn_pos + 4), generic_btn_get_state, &joystick_state[i][XINPUT_RB]);
         joystick_device[i]->add_item(x360BtnNames[XINPUT_LB], (input_item_id) (btn_pos + 5), generic_btn_get_state, &joystick_state[i][XINPUT_LB]);
-        
+
         // axis
         joystick_device[i]->add_item(x360AnalogNames[XINPUT_LX], ITEM_ID_XAXIS, generic_axis_get_state, &joystick_axis[i][XINPUT_LX]);
         joystick_device[i]->add_item(x360AnalogNames[XINPUT_LY], ITEM_ID_YAXIS, generic_axis_get_state, &joystick_axis[i][XINPUT_LY]);
@@ -115,12 +115,12 @@ void osd_xenon_update_input() {
 
     for (int i = 0; i < 4; i++) {
         //memset(keyboard_state,0,KEY_TOTAL);
-        
+
         get_controller_data(&ctrl[i], i);
-       /*
-        if(ctrl[i].logo)
-            exit(0);
-        */
+        /*
+         if(ctrl[i].logo)
+             exit(0);
+         */
         //btn
         joystick_state[i][XINPUT_START] = (ctrl[i].start) ? 0x80 : 0;
         joystick_state[i][XINPUT_BACK] = (ctrl[i].select) ? 0x80 : 0;
@@ -158,6 +158,27 @@ void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist
             case IPT_UI_CONFIGURE:
                 entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
                 break;
+/*                
+            case JOYSTICKRIGHT_UP:
+                entry->defseq[SEQ_TYPE_STANDARD].set();
+                break;
+
+            case JOYSTICKRIGHT_DOWN:
+                entry->defseq[SEQ_TYPE_STANDARD].set();
+                break;
+                
+            case UI_LEFT:
+                entry->defseq[SEQ_TYPE_STANDARD].set();
+                break;
+                
+            case UI_RIGHT:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
+                break;
+                
+            case UI_SELECT:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
+                break;
+ */ 
         }
     }
 }

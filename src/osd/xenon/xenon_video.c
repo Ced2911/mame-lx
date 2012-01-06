@@ -231,17 +231,7 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     xenos_target->set_bounds(minwidth, minheight);
 
     xenos_target->compute_visible_area(screen_width, screen_height, screen_width / screen_height, xenos_target->orientation(), newwidth, newheight);
-
-    /*
-
-    //   Name                  Reg   Size
-    //   --------------------- ----- ----
-    //   settings_texture_size c0       1
-
-    Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, &TargetWidth, 1);
-    Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, &TargetHeight, 1);
-    */
-    
+   
     float settings_texture_size[2] = {minwidth,minheight};
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
     Xe_SetPixelShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);

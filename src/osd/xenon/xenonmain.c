@@ -66,10 +66,10 @@ render_target *xenos_target;
 //============================================================
 int main() {
     osd_xenon_init();
-    int argc = 2;
+    int argc = 1;
     char * argv[]
     {
-        "mame.elf", "mslug"
+        "mame.elf"
         //"mame.elf"
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
@@ -132,7 +132,7 @@ static void ShowFPS() {
     static int frames = 0;
     unsigned long nowTick;
     frames++;
-    nowTick = mftb() / (PPC_TIMEBASE_FREQ / 1000);
+    nowTick = mftb() / (PPC_TIMEBASE_FREQ/1000);
     if (lastTick + 1000 <= nowTick) {
 
         printf("Mame %d fps\r\n", frames);
@@ -179,12 +179,6 @@ void mini_osd_interface::set_mastervolume(int attenuation) {
 //============================================================
 void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist); // xenon_input.c
 void mini_osd_interface::customize_input_type_list(simple_list<input_type_entry> &typelist) {
-    // This function is called on startup, before reading the
-    // configuration from disk. Scan the list, and change the
-    // default control mappings you want. It is quite possible
-    // you won't need to change a thing.
-
-
     osd_xenon_customize_input_type_list(typelist);
 }
 
