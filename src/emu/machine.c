@@ -687,6 +687,7 @@ void running_machine::add_logerror_callback(logerror_callback callback)
 
 void CLIB_DECL running_machine::logerror(const char *format, ...)
 {
+#ifndef XENON 
 	// process only if there is a target
 	if (m_logerror_list.first() != NULL)
 	{
@@ -695,6 +696,7 @@ void CLIB_DECL running_machine::logerror(const char *format, ...)
 		vlogerror(format, arg);
 		va_end(arg);
 	}
+#endif
 }
 
 
@@ -704,6 +706,7 @@ void CLIB_DECL running_machine::logerror(const char *format, ...)
 
 void CLIB_DECL running_machine::vlogerror(const char *format, va_list args)
 {
+#ifndef XENON 
 	// process only if there is a target
 	if (m_logerror_list.first() != NULL)
 	{
@@ -718,6 +721,7 @@ void CLIB_DECL running_machine::vlogerror(const char *format, va_list args)
 
 		g_profiler.stop();
 	}
+#endif
 }
 
 

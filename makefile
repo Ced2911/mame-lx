@@ -20,19 +20,19 @@
 #PTR64 = 0
 BIGENDIAN = 1
 OSD = xenon
-AR = xenon-ar
-CC = xenon-gcc
+AR = @xenon-ar
+CC = @xenon-gcc
 LD = xenon-g++
 MD = -mkdir$(EXE)
 RM = rm -f
-OBJDUMP = xenon-objdump
+OBJDUMP = @xenon-objdump
 NOWERROR = 1
 CROSS_BUILD = 1
 FORCE_DRC_C_BACKEND = 1
 
 SUBTARGET = xenon
 MACHDEP =  -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
-CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -fomit-frame-pointer
+CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -fomit-frame-pointer -pg
 CPPONLYFLAGS = 
 LDSCRIPT := $(DEVKITXENON)/app.lds
 
@@ -42,8 +42,9 @@ MAP = 1
 
 OPTIMIZE = fast
 
-#DEBUG = 1
-#PROFILER = 1
+# DEBUG = 1
+# PROFILER = 1
+# PROFILE = 1
 
 HOST_AR = ar
 HOST_CC = gcc
@@ -756,9 +757,6 @@ checkautodetect:
 	@echo UNAME="$(UNAME)"
 
 run:$(EMULATOR)
-	@echo converting and stripping ... $(EMULATOR)
-	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $(EMULATOR) $(EMULATOR)32
-	xenon-strip $(EMULATOR)32
 	cp $(EMULATOR)32 /var/lib/tftpboot/tftpboot/xenon
 	xenon-strip /var/lib/tftpboot/tftpboot/xenon
 #-------------------------------------------------

@@ -108,12 +108,22 @@ void mame_set_output_channel(output_channel channel, output_callback_func callba
 void mame_file_output_callback(void *param, const char *format, va_list argptr);
 void mame_null_output_callback(void *param, const char *format, va_list argptr);
 
+#ifndef XENON
 /* calls to be used by the code */
 void mame_printf_error(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_warning(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_info(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_verbose(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_debug(const char *format, ...) ATTR_PRINTF(1,2);
+#else
+#define mame_printf_error(...)
+#define mame_printf_warning(...)
+#define mame_printf_info(...)
+#define mame_printf_verbose(...)
+#define mame_printf_debug(...)
+
+
+#endif
 
 /* discourage the use of printf directly */
 /* sadly, can't do this because of the ATTR_PRINTF under GCC */
@@ -128,9 +138,17 @@ void mame_printf_debug(const char *format, ...) ATTR_PRINTF(1,2);
 // pop-up a user visible message
 void CLIB_DECL popmessage(const char *format,...) ATTR_PRINTF(1,2);
 
+#ifndef XENON
 // log to the standard error.log file
 void CLIB_DECL logerror(const char *format,...) ATTR_PRINTF(1,2);
 void CLIB_DECL vlogerror(const char *format, va_list arg);
-
+#else
+static inline void logerror(const char *format,...){
+    
+}
+static inline void vlogerror(const char *format,...){
+    
+}
+#endif
 
 #endif	/* __MAME_H__ */

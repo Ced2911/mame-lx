@@ -83,6 +83,8 @@ typedef struct DrawVerticeFormats {
     float u, v;
 } DrawVerticeFormats;
 
+DrawVerticeFormats *vertices;
+
 struct mame_surface {
     XenosSurface * surf;
     mame_surface * next;
@@ -130,28 +132,28 @@ static void draw_quad(render_primitive *prim) {
             break;
     }
 
-    DrawVerticeFormats *vertex = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, vb, nb_vertices, 3 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
-    memset(vertex, 0, 3 * sizeof (DrawVerticeFormats));
+   
+    memset(vertices, 0, 3 * sizeof (DrawVerticeFormats));
     {
-        vertex[0].x = prim->bounds.x0 - 0.5f;
-        vertex[0].y = prim->bounds.y0 - 0.5f;
-        vertex[1].x = prim->bounds.x1 - 0.5f;
-        vertex[1].y = prim->bounds.y0 - 0.5f;
-        vertex[2].x = prim->bounds.x0 - 0.5f;
-        vertex[2].y = prim->bounds.y1 - 0.5f;
-        vertex[3].x = prim->bounds.x1 - 0.5f;
-        vertex[3].y = prim->bounds.y1 - 0.5f;
+        vertices[0].x = prim->bounds.x0 - 0.5f;
+        vertices[0].y = prim->bounds.y0 - 0.5f;
+        vertices[1].x = prim->bounds.x1 - 0.5f;
+        vertices[1].y = prim->bounds.y0 - 0.5f;
+        vertices[2].x = prim->bounds.x0 - 0.5f;
+        vertices[2].y = prim->bounds.y1 - 0.5f;
+        vertices[3].x = prim->bounds.x1 - 0.5f;
+        vertices[3].y = prim->bounds.y1 - 0.5f;
 
         // set the texture coordinates
         if (texture != NULL) {
-            vertex[0].u = prim->texcoords.tl.u;
-            vertex[0].v = prim->texcoords.tl.v;
-            vertex[1].u = prim->texcoords.tr.u;
-            vertex[1].v = prim->texcoords.tr.v;
-            vertex[2].u = prim->texcoords.bl.u;
-            vertex[2].v = prim->texcoords.bl.v;
-            vertex[3].u = prim->texcoords.br.u;
-            vertex[3].v = prim->texcoords.br.v;
+            vertices[0].u = prim->texcoords.tl.u;
+            vertices[0].v = prim->texcoords.tl.v;
+            vertices[1].u = prim->texcoords.tr.u;
+            vertices[1].v = prim->texcoords.tr.v;
+            vertices[2].u = prim->texcoords.bl.u;
+            vertices[2].v = prim->texcoords.bl.v;
+            vertices[3].u = prim->texcoords.br.u;
+            vertices[3].v = prim->texcoords.br.v;
             n++;
         }
 
@@ -163,18 +165,19 @@ static void draw_quad(render_primitive *prim) {
 
         int i = 0;
         for (i = 0; i < 3; i++) {
-            vertex[i].z = 0.0;
-            vertex[i].w = 1.0;
+            vertices[i].z = 0.0;
+            vertices[i].w = 1.0;
+            vertices[i].color = color.lcol;
         }
     }
 
+     
+    
+    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, nb_vertices, 1);
 
-    Xe_VB_Unlock(g_pVideoDevice, vb);
-
-    Xe_SetStreamSource(g_pVideoDevice, 0, vb, nb_vertices, sizeof (DrawVerticeFormats));
-    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
-
-    nb_vertices += 256;
+    vertices+=4;
+    
+    nb_vertices += 4;
 }
 
 void osd_xenon_video_init() {
@@ -213,7 +216,6 @@ void osd_xenon_video_init() {
     screen_height = fb->height;
 
     vb = Xe_CreateVertexBuffer(g_pVideoDevice, 65536 * sizeof (DrawVerticeFormats));
-    soft_vb = Xe_CreateVertexBuffer(g_pVideoDevice, 65536 * sizeof (DrawVerticeFormats));
 
 
     float w = fb->width;
@@ -236,10 +238,15 @@ static void pre_render() {
 
     //Xe_SetFillMode(g_pVideoDevice,0x25,0x25);
     
+    Xe_SetStreamSource(g_pVideoDevice, 0, vb, 0, sizeof (DrawVerticeFormats));
+    vertices = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, vb, 0, 65536 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
+    
     nb_vertices = 0;
 }
 
 static void render() {
+    Xe_VB_Unlock(g_pVideoDevice, vb);
+    
     Xe_Resolve(g_pVideoDevice);
     //while (!Xe_IsVBlank(g_pVideoDevice));
     Xe_Sync(g_pVideoDevice);

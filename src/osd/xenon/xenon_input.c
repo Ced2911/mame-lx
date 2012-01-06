@@ -115,9 +115,12 @@ void osd_xenon_update_input() {
 
     for (int i = 0; i < 4; i++) {
         //memset(keyboard_state,0,KEY_TOTAL);
-
+        
         get_controller_data(&ctrl[i], i);
-
+       
+        if(ctrl[i].logo)
+            exit(0);
+        
         //btn
         joystick_state[i][XINPUT_START] = (ctrl[i].start) ? 0x80 : 0;
         joystick_state[i][XINPUT_BACK] = (ctrl[i].select) ? 0x80 : 0;
@@ -153,9 +156,8 @@ void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist
     for (entry = typelist.first(); entry != NULL; entry = entry->next()) {
         switch (entry->type) {
             case IPT_UI_CONFIGURE:
-                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16_INDEXED(0));
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
                 break;
-
         }
     }
 }

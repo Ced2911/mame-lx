@@ -42,8 +42,13 @@ extern render_target *xenos_target;
  * Shaders
  **/
 typedef unsigned int DWORD;
+/*
 #include "shaders/osd_ps.h"
 #include "shaders/osd_vs.h"
+*/
+
+#include "ps.h"
+#include "vs.h"
 
 static struct XenosDevice _xe;
 static struct XenosVertexBuffer *vb = NULL;
@@ -56,8 +61,6 @@ static unsigned int * screen = NULL;
 
 static int screen_width;
 static int screen_height;
-static int hofs;
-static int vofs;
 
 typedef union {
 
@@ -78,204 +81,46 @@ typedef struct DrawVerticeFormats {
     float u, v;
 } DrawVerticeFormats;
 
-struct mame_surface {
-    XenosSurface * surf;
-    mame_surface * next;
-};
-
-mame_surface * first_surf;
+static DrawVerticeFormats *vertices;
 
 static int nb_vertices = 0;
 
-int n = 0;
+static DrawVerticeFormats * CreateRect(float width, float height, DrawVerticeFormats *Rect) {
+    // bottom left
+    Rect[0].x = -width;
+    Rect[0].y = -height;
+    Rect[0].u = 0;
+    Rect[0].v = 0;
+    Rect[0].color = 0;
 
-enum {
-    UvBottom = 0,
-    UvTop,
-    UvLeft,
-    UvRight
-};
-float ScreenUv[4] = {0.f, 1.0f, 1.0f, 0.f};
+    // bottom right
+    Rect[1].x = width;
+    Rect[1].y = -height;
+    Rect[1].u = 1;
+    Rect[1].v = 0;
+    Rect[1].color = 0;
 
-#if 0
+    // top right
+    Rect[2].x = width;
+    Rect[2].y = height;
+    Rect[2].u = 1;
+    Rect[2].v = 1;
+    Rect[2].color = 0;
 
-static void draw_line(render_primitive *prim) {
-    /*
-        nb_vertices += 256;
-     */
-}
+    // Top left
+    Rect[3].x = -width;
+    Rect[3].y = height;
+    Rect[3].u = 0;
+    Rect[3].v = 1;
+    Rect[3].color = 0;
 
-static void draw_quad(render_primitive *prim) {
-    void * texture = (prim->texture.base);
-
-    //void Xe_SetBlendControl(struct XenosDevice *xe, int col_src, int col_op, int col_dst, int alpha_src, int alpha_op, int alpha_dst);
-    switch (PRIMFLAG_GET_BLENDMODE(prim->flags)) {
-        case BLENDMODE_NONE:
-            Xe_SetBlendOp(g_pVideoDevice, XE_BLENDOP_MIN);
-            Xe_SetSrcBlend(g_pVideoDevice, XE_BLEND_ONE);
-            Xe_SetDestBlend(g_pVideoDevice, XE_BLEND_ZERO);
-            //GX_SetBlendMode(GX_BM_NONE, GX_BL_ONE, GX_BL_ZERO, GX_LO_CLEAR);
-            break;
-        case BLENDMODE_ALPHA:
-            Xe_SetBlendOp(g_pVideoDevice, XE_BLENDOP_ADD);
-            Xe_SetSrcBlend(g_pVideoDevice, XE_BLEND_SRCALPHA);
-            Xe_SetDestBlend(g_pVideoDevice, XE_BLEND_INVSRCALPHA);
-            //GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
-            break;
-        case BLENDMODE_RGB_MULTIPLY:
-            Xe_SetBlendOp(g_pVideoDevice, XE_BLENDOP_SUBTRACT);
-            Xe_SetSrcBlend(g_pVideoDevice, XE_BLEND_SRCCOLOR);
-            Xe_SetDestBlend(g_pVideoDevice, XE_BLEND_ZERO);
-            //GX_SetBlendMode(GX_BM_SUBTRACT, GX_BL_SRCCLR, GX_BL_ZERO, GX_LO_CLEAR);
-            break;
-        case BLENDMODE_ADD:
-            Xe_SetBlendOp(g_pVideoDevice, XE_BLENDOP_ADD);
-            Xe_SetSrcBlend(g_pVideoDevice, XE_BLEND_SRCALPHA);
-            Xe_SetDestBlend(g_pVideoDevice, XE_BLEND_ONE);
-            //GX_SetBlendMode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_ONE, GX_LO_CLEAR);
-            break;
+    int i = 0;
+    for (i = 0; i < 3; i++) {
+        Rect[i].z = 0.0;
+        Rect[i].w = 1.0;
     }
 
-    DrawVerticeFormats *vertex = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, vb, nb_vertices, 3 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
-    memset(vertex, 0, 3 * sizeof (DrawVerticeFormats));
-    {
-        vertex[0].x = prim->bounds.x0 - 0.5f;
-        vertex[0].y = prim->bounds.y0 - 0.5f;
-        vertex[1].x = prim->bounds.x1 - 0.5f;
-        vertex[1].y = prim->bounds.y0 - 0.5f;
-        vertex[2].x = prim->bounds.x0 - 0.5f;
-        vertex[2].y = prim->bounds.y1 - 0.5f;
-        vertex[3].x = prim->bounds.x1 - 0.5f;
-        vertex[3].y = prim->bounds.y1 - 0.5f;
-
-        // set the texture coordinates
-        if (texture != NULL) {
-            vertex[0].u = prim->texcoords.tl.u;
-            vertex[0].v = prim->texcoords.tl.v;
-            vertex[1].u = prim->texcoords.tr.u;
-            vertex[1].v = prim->texcoords.tr.v;
-            vertex[2].u = prim->texcoords.bl.u;
-            vertex[2].v = prim->texcoords.bl.v;
-            vertex[3].u = prim->texcoords.br.u;
-            vertex[3].v = prim->texcoords.br.v;
-            n++;
-        }
-
-        XeColor color;
-        color.r = (prim->color.r * 255.0f);
-        color.g = (prim->color.g * 255.0f);
-        color.b = (prim->color.b * 255.0f);
-        color.a = (prim->color.a * 255.0f);
-
-        int i = 0;
-        for (i = 0; i < 3; i++) {
-            vertex[i].z = 0.0;
-            vertex[i].w = 1.0;
-        }
-    }
-
-
-    Xe_VB_Unlock(g_pVideoDevice, vb);
-
-    Xe_SetStreamSource(g_pVideoDevice, 0, vb, nb_vertices, sizeof (DrawVerticeFormats));
-    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
-
-    nb_vertices += 256;
-}
-
-void hw_xenon_update_video(render_primitive_list &primlist) {
-    pre_render();
-
-    render_primitive *prim;
-
-    // texture ...
-    /*
-        for (prim = primlist.first(); prim != NULL; prim = prim->next()) {
-            if (prim->texture.base != NULL) {
-                // update texture ...
-                texture_update(prim);
-            }
-        }
-     */
-
-    n = 0;
-    // begin ...
-    for (prim = primlist.first(); prim != NULL; prim = prim->next()) {
-
-        switch (prim->type) {
-            case render_primitive::LINE:
-                draw_line(prim);
-                break;
-
-            case render_primitive::QUAD:
-                draw_quad(prim);
-                break;
-
-            default:
-                throw emu_fatalerror("Unexpected render_primitive type");
-        }
-    }
-
-
-    printf("N:%d\r\n", n);
-
-    render();
-}
-#endif
-
-static DrawVerticeFormats * CreateVertices(float x, float y, float w, float h) {
-    DrawVerticeFormats *Rect = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, soft_vb, 0, 3 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
-    {
-#if 0
-        // top left
-        Rect[0].x = x;
-        Rect[0].y = y + h;
-        Rect[0].u = ScreenUv[UvBottom];
-        Rect[0].v = ScreenUv[UvRight];
-        Rect[0].color = 0;
-
-        // bottom left
-        Rect[1].x = x;
-        Rect[1].y = y;
-        Rect[1].u = ScreenUv[UvBottom];
-        Rect[1].v = ScreenUv[UvLeft];
-        Rect[1].color = 0;
-
-        // top right
-        Rect[2].x = x + w;
-        Rect[2].y = y + h;
-        Rect[2].u = ScreenUv[UvTop];
-        Rect[2].v = ScreenUv[UvRight];
-        Rect[2].color = 0;
-#else
-        // top left
-        Rect[0].x = x - w;
-        Rect[0].y = y + h;
-        Rect[0].u = ScreenUv[UvBottom];
-        Rect[0].v = ScreenUv[UvRight];
-        Rect[0].color = 0;
-
-        // bottom left
-        Rect[1].x = x - w;
-        Rect[1].y = y - h;
-        Rect[1].u = ScreenUv[UvBottom];
-        Rect[1].v = ScreenUv[UvLeft];
-        Rect[1].color = 0;
-
-        // top right
-        Rect[2].x = x + w;
-        Rect[2].y = y + h;
-        Rect[2].u = ScreenUv[UvTop];
-        Rect[2].v = ScreenUv[UvRight];
-        Rect[2].color = 0;
-#endif
-        int i = 0;
-        for (i = 0; i < 3; i++) {
-            Rect[i].z = 0.0;
-            Rect[i].w = 1.0;
-        }
-    }
-    Xe_VB_Unlock(g_pVideoDevice, soft_vb);
+    Rect += 3;
 
     return Rect;
 }
@@ -297,10 +142,10 @@ void osd_xenon_video_init() {
         }
     };
 
-    g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_ps_main);
+    g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_PS);
     Xe_InstantiateShader(g_pVideoDevice, g_pPixelTexturedShader, 0);
 
-    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_vs_main);
+    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_VS);
     Xe_InstantiateShader(g_pVideoDevice, g_pVertexShader, 0);
     Xe_ShaderApplyVFetchPatches(g_pVideoDevice, g_pVertexShader, 0, &vbf);
 
@@ -322,8 +167,8 @@ void osd_xenon_video_init() {
     float w = fb->width;
     float h = fb->height;
 
-    //CreateVertices(0, 0, w, h);
-     CreateVertices(-1, -1, w, h);
+    //CreateRect(w, h);
+    // CreateVertices(-1, -1, w, h);
 
     Xe_SetClearColor(g_pVideoDevice, 0);
 
@@ -340,10 +185,15 @@ static void pre_render() {
     Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, g_pPixelTexturedShader, 0);
     Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, g_pVertexShader, 0);
 
+    Xe_SetStreamSource(g_pVideoDevice, 0, soft_vb, 0, sizeof (DrawVerticeFormats));
+
+    vertices = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, soft_vb, 0, 3 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
+
     nb_vertices = 0;
 }
 
 static void render() {
+    Xe_VB_Unlock(g_pVideoDevice, soft_vb);
     Xe_Resolve(g_pVideoDevice);
     //while (!Xe_IsVBlank(g_pVideoDevice));
     Xe_Sync(g_pVideoDevice);
@@ -352,6 +202,8 @@ static void render() {
 void osd_xenon_update_video(render_primitive_list &primlist) {
     // lock them, and then render them
     primlist.acquire_lock();
+    
+    pre_render();
 
     int minwidth, minheight;
     int newwidth, newheight;
@@ -364,6 +216,7 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 
     xenos_target->compute_visible_area(screen_width, screen_height, screen_width / screen_height, xenos_target->orientation(), newwidth, newheight);
 
+    /*
 
     //   Name         Reg   Size
     //   ------------ ----- ----
@@ -374,6 +227,8 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, &TargetWidth, 1);
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, &TargetHeight, 1);
+    */
+    CreateRect(((float)newwidth/(float)screen_width),-((float)newheight/(float)screen_height),vertices);
 
     // update texture
     draw32_draw_primitives(primlist, screen, minwidth, minheight, g_pTexture->wpitch / 4);
@@ -383,11 +238,8 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     // correct texture size
     g_pTexture->width = minwidth;
     g_pTexture->height = minheight;
-
-    pre_render();
-
+    
     // draw
-    Xe_SetStreamSource(g_pVideoDevice, 0, soft_vb, 0, sizeof (DrawVerticeFormats));
     Xe_SetTexture(g_pVideoDevice, 0, g_pTexture);
     Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
 
