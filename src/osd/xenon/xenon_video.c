@@ -47,8 +47,16 @@ typedef unsigned int DWORD;
 #include "shaders/osd_vs.h"
 */
 
-#include "ps.h"
-#include "vs.h"
+// #include "ps.h"
+// #include "vs.h"
+
+/*
+#include "shaders/xbr_ps.h"
+#include "shaders/xbr_vs.h"
+*/
+
+#include "shaders/xbr_5x_ps.h"
+#include "shaders/xbr_5x_vs.h"
 
 static struct XenosDevice _xe;
 static struct XenosVertexBuffer *vb = NULL;
@@ -142,10 +150,12 @@ void osd_xenon_video_init() {
         }
     };
 
-    g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_PS);
+    //g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_PS);
+    g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_ps_main);
     Xe_InstantiateShader(g_pVideoDevice, g_pPixelTexturedShader, 0);
 
-    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_VS);
+    //g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_VS);
+    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_vs_main);
     Xe_InstantiateShader(g_pVideoDevice, g_pVertexShader, 0);
     Xe_ShaderApplyVFetchPatches(g_pVideoDevice, g_pVertexShader, 0, &vbf);
 
@@ -176,6 +186,9 @@ void osd_xenon_video_init() {
 }
 
 static void pre_render() {
+    // sync before drawing
+    Xe_Sync(g_pVideoDevice);
+    
     Xe_SetAlphaTestEnable(g_pVideoDevice, 1);
 
     Xe_SetCullMode(g_pVideoDevice, XE_CULL_NONE);
@@ -196,7 +209,10 @@ static void render() {
     Xe_VB_Unlock(g_pVideoDevice, soft_vb);
     Xe_Resolve(g_pVideoDevice);
     //while (!Xe_IsVBlank(g_pVideoDevice));
-    Xe_Sync(g_pVideoDevice);
+    
+    // Xe_Sync(g_pVideoDevice); // done in pre_render
+    /* begin rendering in background */
+    Xe_Execute(g_pVideoDevice);
 }
 
 void osd_xenon_update_video(render_primitive_list &primlist) {
@@ -218,16 +234,18 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 
     /*
 
-    //   Name         Reg   Size
-    //   ------------ ----- ----
-    //   TargetWidth  c0       1
-    //   TargetHeight c1       1    
-    float TargetWidth = (float) minwidth;
-    float TargetHeight = (float) minheight;
+    //   Name                  Reg   Size
+    //   --------------------- ----- ----
+    //   settings_texture_size c0       1
 
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, &TargetWidth, 1);
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, &TargetHeight, 1);
     */
+    
+    float settings_texture_size[2] = {minwidth,minheight};
+    Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
+    Xe_SetPixelShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
+    
     CreateRect(((float)newwidth/(float)screen_width),-((float)newheight/(float)screen_height),vertices);
 
     // update texture
