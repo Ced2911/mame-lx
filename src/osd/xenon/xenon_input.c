@@ -117,10 +117,10 @@ void osd_xenon_update_input() {
         //memset(keyboard_state,0,KEY_TOTAL);
         
         get_controller_data(&ctrl[i], i);
-       
+       /*
         if(ctrl[i].logo)
             exit(0);
-        
+        */
         //btn
         joystick_state[i][XINPUT_START] = (ctrl[i].start) ? 0x80 : 0;
         joystick_state[i][XINPUT_BACK] = (ctrl[i].select) ? 0x80 : 0;
