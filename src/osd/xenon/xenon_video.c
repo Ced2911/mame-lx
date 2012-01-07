@@ -13,6 +13,8 @@
 #include <xenos/edram.h>
 #include <debug.h>
 
+#include <vector>
+
 #include "emu.h"
 #include "osdepend.h"
 #include "render.h"
@@ -45,18 +47,19 @@ typedef unsigned int DWORD;
 /*
 #include "shaders/osd_ps.h"
 #include "shaders/osd_vs.h"
-*/
+ */
 
-// #include "ps.h"
-// #include "vs.h"
+#include "ps.h"
+#include "vs.h"
 
-/*
-#include "shaders/xbr_ps.h"
-#include "shaders/xbr_vs.h"
-*/
+#include "shaders/xbr_2x_ps.h"
+#include "shaders/xbr_2x_vs.h"
 
 #include "shaders/xbr_5x_ps.h"
 #include "shaders/xbr_5x_vs.h"
+
+#include "shaders/xbr_5x_crt_ps.h"
+#include "shaders/xbr_5x_crt_vs.h"
 
 static struct XenosDevice _xe;
 static struct XenosVertexBuffer *vb = NULL;
@@ -92,6 +95,87 @@ typedef struct DrawVerticeFormats {
 static DrawVerticeFormats *vertices;
 
 static int nb_vertices = 0;
+
+class shader_effect
+{
+public:
+    char * name;
+    void * vs_program;
+    void * ps_program;
+    XenosShader * ps;
+    XenosShader * vs;
+
+    void Set(char * _name, void * _vs_program, void * _ps_program) {
+        name = _name;
+        vs_program = _vs_program;
+        ps_program = _ps_program;
+        ps = NULL;
+        vs = NULL;
+    }
+
+    void Init() {
+        static const struct XenosVBFFormat vbf = {
+            3,
+            {
+                {XE_USAGE_POSITION, 0, XE_TYPE_FLOAT4},
+                {XE_USAGE_COLOR, 0, XE_TYPE_UBYTE4},
+                {XE_USAGE_TEXCOORD, 0, XE_TYPE_FLOAT2},
+            }
+        };
+
+        ps = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) ps_program);
+        Xe_InstantiateShader(g_pVideoDevice, ps, 0);
+
+        vs = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) vs_program);
+        Xe_InstantiateShader(g_pVideoDevice, vs, 0);
+        Xe_ShaderApplyVFetchPatches(g_pVideoDevice, vs, 0, &vbf);
+    }
+
+    virtual void Render(int width, int height) {
+        Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, ps, 0);
+        Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, vs, 0);
+    };
+};
+
+class xbr_effect : public shader_effect
+{
+
+public:
+    void Render(int width, int height) {
+        float settings_texture_size[2] = {width, height};
+
+        Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, ps, 0);
+        Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, vs, 0);
+
+        Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
+        Xe_SetPixelShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
+    };
+};
+
+std::vector <shader_effect> ShaderEffects;
+
+static void LoadShaderEffects() {
+    shader_effect normal;
+    xbr_effect xbr2x;
+    xbr_effect xbr5x;
+    xbr_effect xbr5x_crt;
+
+    normal.Set("Normal", (void*) g_xvs_VS, (void*) g_xps_PS);
+    xbr2x.Set("Xbr 2x", (void*) g_xvs_xbr2x_vs_main, (void*) g_xps_xbr2x_ps_main);
+    xbr5x.Set("Xbr 5x", (void*) g_xvs_xbr5x_vs_main, (void*) g_xps_xbr5x_ps_main);
+    xbr5x_crt.Set("Xbr 5x Crt", (void*) g_xvs_xbr5xcrt_vs_main, (void*) g_xps_xbr5xcrt_ps_main);
+
+    ShaderEffects.push_back(normal);
+    ShaderEffects.push_back(xbr2x);
+    ShaderEffects.push_back(xbr5x);
+    ShaderEffects.push_back(xbr5x_crt);
+
+    std::vector<shader_effect>::iterator it;
+
+    for (it = ShaderEffects.begin(); it < ShaderEffects.end(); it++) {
+        it->Init();
+    }
+}
 
 static DrawVerticeFormats * CreateRect(float width, float height, DrawVerticeFormats *Rect) {
     // bottom left
@@ -141,24 +225,8 @@ void osd_xenon_video_init() {
 
     Xe_SetRenderTarget(g_pVideoDevice, fb);
 
-    static const struct XenosVBFFormat vbf = {
-        3,
-        {
-            {XE_USAGE_POSITION, 0, XE_TYPE_FLOAT4},
-            {XE_USAGE_COLOR, 0, XE_TYPE_UBYTE4},
-            {XE_USAGE_TEXCOORD, 0, XE_TYPE_FLOAT2},
-        }
-    };
-
-    //g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_PS);
-    g_pPixelTexturedShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_ps_main);
-    Xe_InstantiateShader(g_pVideoDevice, g_pPixelTexturedShader, 0);
-
-    //g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_VS);
-    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_vs_main);
-    Xe_InstantiateShader(g_pVideoDevice, g_pVertexShader, 0);
-    Xe_ShaderApplyVFetchPatches(g_pVideoDevice, g_pVertexShader, 0, &vbf);
-
+    LoadShaderEffects();
+    
     g_pTexture = Xe_CreateTexture(g_pVideoDevice, XE_W, XE_H, 1, XE_FMT_8888 | XE_FMT_ARGB, 0);
     screen = (unsigned int*) Xe_Surface_LockRect(g_pVideoDevice, g_pTexture, 0, 0, 0, 0, XE_LOCK_WRITE);
     Xe_Surface_Unlock(g_pVideoDevice, g_pTexture);
@@ -189,14 +257,13 @@ static void pre_render() {
     // sync before drawing
     Xe_Sync(g_pVideoDevice);
     
+    //while (!Xe_IsVBlank(g_pVideoDevice));
+
     Xe_SetAlphaTestEnable(g_pVideoDevice, 1);
 
     Xe_SetCullMode(g_pVideoDevice, XE_CULL_NONE);
 
     Xe_InvalidateState(g_pVideoDevice);
-
-    Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, g_pPixelTexturedShader, 0);
-    Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, g_pVertexShader, 0);
 
     Xe_SetStreamSource(g_pVideoDevice, 0, soft_vb, 0, sizeof (DrawVerticeFormats));
 
@@ -209,7 +276,7 @@ static void render() {
     Xe_VB_Unlock(g_pVideoDevice, soft_vb);
     Xe_Resolve(g_pVideoDevice);
     //while (!Xe_IsVBlank(g_pVideoDevice));
-    
+
     // Xe_Sync(g_pVideoDevice); // done in pre_render
     /* begin rendering in background */
     Xe_Execute(g_pVideoDevice);
@@ -218,7 +285,7 @@ static void render() {
 void osd_xenon_update_video(render_primitive_list &primlist) {
     // lock them, and then render them
     primlist.acquire_lock();
-    
+
     pre_render();
 
     int minwidth, minheight;
@@ -231,12 +298,10 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     xenos_target->set_bounds(minwidth, minheight);
 
     xenos_target->compute_visible_area(screen_width, screen_height, screen_width / screen_height, xenos_target->orientation(), newwidth, newheight);
-   
-    float settings_texture_size[2] = {minwidth,minheight};
-    Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
-    Xe_SetPixelShaderConstantF(g_pVideoDevice, 0, settings_texture_size, 1);
-    
-    CreateRect(((float)newwidth/(float)screen_width),-((float)newheight/(float)screen_height),vertices);
+
+    ShaderEffects.at(2).Render(minwidth,minheight);
+
+    CreateRect(((float) newwidth / (float) screen_width), -((float) newheight / (float) screen_height), vertices);
 
     // update texture
     draw32_draw_primitives(primlist, screen, minwidth, minheight, g_pTexture->wpitch / 4);
@@ -246,7 +311,7 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     // correct texture size
     g_pTexture->width = minwidth;
     g_pTexture->height = minheight;
-    
+
     // draw
     Xe_SetTexture(g_pVideoDevice, 0, g_pTexture);
     Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);

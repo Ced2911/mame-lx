@@ -62,7 +62,7 @@ float4 psT(_PSIN data): COLOR {
     return  Color * data.col ;
 }
 
-float4 ps_main(_PSIN data): COLOR {
+float4 psC(_PSIN data): COLOR {
     float4 Color;
 
     Color = data.col;

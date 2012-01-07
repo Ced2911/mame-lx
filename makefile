@@ -798,7 +798,10 @@ endif
 #-------------------------------------------------
 # generic rules
 #-------------------------------------------------
-
+$(OBJ)/%.o: $(SRC)/%.cpp | $(OSPREBUILD)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
+	
 $(OBJ)/%.o: $(SRC)/%.c | $(OSPREBUILD)
 	@echo Compiling $<...
 	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@

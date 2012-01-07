@@ -11,7 +11,7 @@ echo.
 
 echo Compile psx shader
 fxc /Fh vs.h /Tvs_3_0 libwiigui.hlsl /EVSmain
-fxc /Fh ps.c.h /Tps_3_0 libwiigui.hlsl /Eps_main
+fxc /Fh ps.c.h /Tps_3_0 libwiigui.hlsl /EpsC
 fxc /Fh ps.t.h /Tps_3_0 libwiigui.hlsl /EpsT
 fxc /Fh ps.tc.h /Tps_3_0 libwiigui.hlsl /EpsTC
 

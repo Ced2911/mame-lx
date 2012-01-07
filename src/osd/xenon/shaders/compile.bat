@@ -13,9 +13,12 @@ echo Compile mame osd shaders
 fxc /Fh osd_vs.h /Tvs_3_0 xenon_osd.hlsl /Evs_main
 fxc /Fh osd_ps.h /Tps_3_0 xenon_osd.hlsl /Eps_main
 echo Compile 2xXBR shaders
-fxc /Fh xbr_vs.h /Tvs_3_0 2xBR-v3.5a.cg /Evs_main
-fxc /Fh xbr_ps.h /Tps_3_0 2xBR-v3.5a.cg /Eps_main
+fxc /Fh xbr_2x_vs.h /Tvs_3_0 2xBR-v3.5a.cg /Exbr2x_vs_main
+fxc /Fh xbr_2x_ps.h /Tps_3_0 2xBR-v3.5a.cg /Exbr2x_ps_main
 echo Compile 5xXBR shaders
-fxc /Fh xbr_5x_vs.h /Tvs_3_0 5xBR-v3.5.cg /Evs_main
-fxc /Fh xbr_5x_ps.h /Tps_3_0 5xBR-v3.5.cg /Eps_main
+fxc /Fh xbr_5x_vs.h /Tvs_3_0 5xBR-v3.5.cg /Exbr5x_vs_main
+fxc /Fh xbr_5x_ps.h /Tps_3_0 5xBR-v3.5.cg /Exbr5x_ps_main
+echo Compile 5xXBR+CRT shaders
+fxc /Fh xbr_5x_crt_vs.h /Tvs_3_0 5xBR-v3.5+CRT.cg /Exbr5xcrt_vs_main
+fxc /Fh xbr_5x_crt_ps.h /Tps_3_0 5xBR-v3.5+CRT.cg /Exbr5xcrt_ps_main
 cmd
