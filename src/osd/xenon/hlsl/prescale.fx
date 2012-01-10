@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Effect File Variables
+// Passthrough Effect
 //-----------------------------------------------------------------------------
 
 texture Diffuse;
@@ -22,32 +22,30 @@ sampler DiffuseSampler = sampler_state
 struct VS_OUTPUT
 {
 	float4 Position : POSITION;
-	float4 Color : COLOR0;
 	float2 TexCoord : TEXCOORD0;
 };
 
 struct VS_INPUT
 {
-	float3 Position : POSITION;
+	float4 Position : POSITION;
 	float4 Color : COLOR0;
 	float2 TexCoord : TEXCOORD0;
-	float2 TexCoord : TEXCOORD1;
 };
 
 struct PS_INPUT
 {
-	float4 Color : COLOR0;
 	float2 TexCoord : TEXCOORD0;
 };
 
 //-----------------------------------------------------------------------------
-// Simple Vertex Shader
+// Passthrough Vertex Shader
 //-----------------------------------------------------------------------------
 
-uniform float TargetWidth;
-uniform float TargetHeight;
-uniform float PostPass;
-uniform float FixedAlpha;
+float TargetWidth;
+float TargetHeight;
+
+float RawWidth;
+float RawHeight;
 
 VS_OUTPUT vs_main(VS_INPUT Input)
 {
@@ -60,35 +58,39 @@ VS_OUTPUT vs_main(VS_INPUT Input)
 	Output.Position.x -= 0.5f;
 	Output.Position.y -= 0.5f;
 	Output.Position *= float4(2.0f, 2.0f, 1.0f, 1.0f);
-	Output.Color = Input.Color;
-	Output.TexCoord = lerp(Input.TexCoord, Input.Position.xy / float2(TargetWidth, TargetHeight), PostPass);
+	
+	Output.TexCoord = Input.TexCoord + 0.5f / float2(TargetWidth, TargetHeight);
 
 	return Output;
 }
 
 //-----------------------------------------------------------------------------
-// Simple Pixel Shader
+// Passthrough Pixel Shader
 //-----------------------------------------------------------------------------
 
 float4 ps_main(PS_INPUT Input) : COLOR
 {
-	float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
-	return BaseTexel * Input.Color;
+	float2 RawDims = float2(RawWidth, RawHeight);
+	float2 TexCoord = Input.TexCoord * RawDims;
+	TexCoord -= frac(TexCoord);
+	TexCoord += 0.5f;
+	TexCoord /= RawDims;
+	
+	float4 Center = tex2D(DiffuseSampler, TexCoord);
+	return Center;
 }
 
 //-----------------------------------------------------------------------------
-// Simple Effect
+// Passthrough Effect
 //-----------------------------------------------------------------------------
 
-technique TestTechnique
+technique DeconvergeTechnique
 {
 	pass Pass0
 	{
 		Lighting = FALSE;
 
-		//Sampler[0] = <DiffuseSampler>;
-
-		VertexShader = compile vs_2_0 vs_main();
-		PixelShader  = compile ps_2_0 ps_main();
+		VertexShader = compile vs_3_0 vs_main();
+		PixelShader  = compile ps_3_0 ps_main();
 	}
 }

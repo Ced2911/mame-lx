@@ -199,13 +199,6 @@ static DrawVerticeFormats * CreateRect(float width, float height, DrawVerticeFor
     Rect[2].v = 1;
     Rect[2].color = 0;
 
-    // Top left
-    Rect[3].x = -width;
-    Rect[3].y = height;
-    Rect[3].u = 0;
-    Rect[3].v = 1;
-    Rect[3].color = 0;
-
     int i = 0;
     for (i = 0; i < 3; i++) {
         Rect[i].z = 0.0;
@@ -255,25 +248,19 @@ void osd_xenon_video_init() {
 
 static void pre_render() {
     // sync before drawing
-    Xe_Sync(g_pVideoDevice);
-    
-    //while (!Xe_IsVBlank(g_pVideoDevice));
+    Xe_Sync(g_pVideoDevice);    
 
+    Xe_InvalidateState(g_pVideoDevice);
+    
     Xe_SetAlphaTestEnable(g_pVideoDevice, 1);
 
     Xe_SetCullMode(g_pVideoDevice, XE_CULL_NONE);
-
-    Xe_InvalidateState(g_pVideoDevice);
-
-    Xe_SetStreamSource(g_pVideoDevice, 0, soft_vb, 0, sizeof (DrawVerticeFormats));
-
-    vertices = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, soft_vb, 0, 3 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
 
     nb_vertices = 0;
 }
 
 static void render() {
-    Xe_VB_Unlock(g_pVideoDevice, soft_vb);
+    
     Xe_Resolve(g_pVideoDevice);
     //while (!Xe_IsVBlank(g_pVideoDevice));
 
@@ -293,6 +280,9 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 
     // get the minimum width/height for the current layout
     xenos_target->compute_minimum_size(minwidth, minheight);
+    
+    minwidth = screen_width;
+    minheight = screen_height;
 
     // make that the size of our target
     xenos_target->set_bounds(minwidth, minheight);
@@ -301,7 +291,11 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 
     ShaderEffects.at(2).Render(minwidth,minheight);
 
+    Xe_SetStreamSource(g_pVideoDevice, 0, soft_vb, nb_vertices, sizeof (DrawVerticeFormats));
+    
+    vertices = (DrawVerticeFormats *) Xe_VB_Lock(g_pVideoDevice, soft_vb, 0, 3 * sizeof (DrawVerticeFormats), XE_LOCK_WRITE);
     CreateRect(((float) newwidth / (float) screen_width), -((float) newheight / (float) screen_height), vertices);
+    Xe_VB_Unlock(g_pVideoDevice, soft_vb);
 
     // update texture
     draw32_draw_primitives(primlist, screen, minwidth, minheight, g_pTexture->wpitch / 4);

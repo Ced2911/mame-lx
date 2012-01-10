@@ -18,3 +18,4 @@ void Menu_DrawMame(render_primitive *prim);
 
 void Menu_Render();
 void InitVideo();
+void InitMameShaders();

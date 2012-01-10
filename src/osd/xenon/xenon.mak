@@ -47,6 +47,20 @@ XENONOBJ = $(OBJ)/osd/$(OSD)
 
 OBJDIRS += $(XENONOBJ)
 
+# VIDEO
+VIDEOCOMMON = \
+        $(XENONOBJ)/gui/video.o \
+        $(XENONOBJ)/gui/video_mame.o \
+        $(XENONOBJ)/gui/VecMatrix.o \
+        $(XENONOBJ)/gui/VecVector.o \
+
+VIDEOOBJ = \
+        $(VIDEOCOMMON) \
+        $(XENONOBJ)/xenon_video.o \
+
+VIDEOOBJHW = \
+        $(VIDEOCOMMON) \
+        $(XENONOBJ)/xenon_video_hw.o \
 
 
 #-------------------------------------------------
@@ -63,12 +77,8 @@ OSDCOREOBJS = \
         $(XENONOBJ)/xenon_input.o \
         $(XENONOBJ)/xenon_sound.o \
 	$(XENONOBJ)/xenon.o \
-        $(XENONOBJ)/xenon_video_hw.o \
-        $(XENONOBJ)/gui/video.o \
-        $(XENONOBJ)/gui/VecMatrix.o \
-        $(XENONOBJ)/gui/VecVector.o \
-#        $(XENONOBJ)/xenon_video.o \
-#       $(XENONOBJ)/xenon_video_hw.o \
+        $(VIDEOOBJHW) \
+
 
 #-------------------------------------------------
 # OSD mini library

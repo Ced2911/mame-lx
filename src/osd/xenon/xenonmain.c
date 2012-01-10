@@ -50,6 +50,19 @@
 #include <input/input.h>
 #include <ppc/timebase.h>
 #include <time/time.h>
+extern "C"{
+#include <xenos/xenos_edid.h>
+}
+
+// edid stuff ...
+void edid_stuff(){
+    struct edid * hdmi_edid = xenos_get_edid();
+    if(hdmi_edid){
+        for(int i=0;i<8;i++)
+            printf("hsize = %02x vfreq_aspect = %02x\r\n",hdmi_edid->standard_timings[i].hsize ,hdmi_edid->standard_timings[i].vfreq_aspect);
+    }
+}
+
 //============================================================
 //  CONSTANTS
 //============================================================
@@ -80,6 +93,7 @@ int main() {
         //"mame.elf"
         //"mame.elf", "umk3"
     };
+    edid_stuff();
     TR;
     // cli_frontend does the heavy lifting; if we have osd-specific options, we
     // create a derivative of cli_options and add our own
@@ -107,7 +121,6 @@ mini_osd_interface::mini_osd_interface() {
 mini_osd_interface::~mini_osd_interface() {
 }
 
-
 //============================================================
 //  init
 //============================================================
@@ -117,6 +130,8 @@ void mini_osd_interface::init(running_machine &machine) {
 
     // initialize the video system by allocating a rendering target
     xenos_target = machine.render().target_alloc();
+        
+    //xenos_target->set_max_update_rate(59.94);
 
     // init input
     osd_xenon_input_init(machine);

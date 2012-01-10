@@ -210,12 +210,11 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     pre_render();
     
     int minwidth, minheight;
-
-    // get the minimum width/height for the current layout
-    xenos_target->compute_minimum_size(minwidth, minheight);
+    
+    XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
 
     // make that the size of our target
-    xenos_target->set_bounds(minwidth, minheight);
+    xenos_target->set_bounds(fb->width, fb->height);
 
     n = 0;
     // begin ...

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Effect File Variables
+// Color-Convolution Effect
 //-----------------------------------------------------------------------------
 
 texture Diffuse;
@@ -28,10 +28,9 @@ struct VS_OUTPUT
 
 struct VS_INPUT
 {
-	float3 Position : POSITION;
+	float4 Position : POSITION;
 	float4 Color : COLOR0;
 	float2 TexCoord : TEXCOORD0;
-	float2 TexCoord : TEXCOORD1;
 };
 
 struct PS_INPUT
@@ -41,18 +40,25 @@ struct PS_INPUT
 };
 
 //-----------------------------------------------------------------------------
-// Simple Vertex Shader
+// Post-Processing Vertex Shader
 //-----------------------------------------------------------------------------
 
 uniform float TargetWidth;
 uniform float TargetHeight;
-uniform float PostPass;
-uniform float FixedAlpha;
+
+uniform float RawWidth;
+uniform float RawHeight;
+
+uniform float WidthRatio;
+uniform float HeightRatio;
+
+uniform float YIQEnable;
 
 VS_OUTPUT vs_main(VS_INPUT Input)
 {
 	VS_OUTPUT Output = (VS_OUTPUT)0;
 	
+	float2 invDims = float2(1.0f / RawWidth, 1.0f / RawHeight);
 	Output.Position = float4(Input.Position.xyz, 1.0f);
 	Output.Position.x /= TargetWidth;
 	Output.Position.y /= TargetHeight;
@@ -61,34 +67,56 @@ VS_OUTPUT vs_main(VS_INPUT Input)
 	Output.Position.y -= 0.5f;
 	Output.Position *= float4(2.0f, 2.0f, 1.0f, 1.0f);
 	Output.Color = Input.Color;
-	Output.TexCoord = lerp(Input.TexCoord, Input.Position.xy / float2(TargetWidth, TargetHeight), PostPass);
+	Output.TexCoord = Input.TexCoord + float2(0.5f, 0.5f) * invDims;
 
 	return Output;
 }
 
 //-----------------------------------------------------------------------------
-// Simple Pixel Shader
+// Post-Processing Pixel Shader
 //-----------------------------------------------------------------------------
+
+uniform float3 RedRatios = float3(1.0f, 0.0f, 0.0f);
+uniform float3 GrnRatios = float3(0.0f, 1.0f, 0.0f);
+uniform float3 BluRatios = float3(0.0f, 0.0f, 1.0f);
+uniform float3 Offset = float3(0.0f, 0.0f, 0.0f);
+uniform float3 Scale = float3(1.0f, 1.0f, 1.0f);
+uniform float Saturation = 1.0f;
 
 float4 ps_main(PS_INPUT Input) : COLOR
 {
 	float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
-	return BaseTexel * Input.Color;
+	
+	float3 OutRGB = BaseTexel.rgb;
+
+	// -- RGB Tint & Shift --
+	float ShiftedRed = dot(OutRGB, RedRatios);
+	float ShiftedGrn = dot(OutRGB, GrnRatios);
+	float ShiftedBlu = dot(OutRGB, BluRatios);
+	
+	// -- RGB Offset & Scale --
+	float3 OutTexel = float3(ShiftedRed, ShiftedGrn, ShiftedBlu) * Scale + Offset;
+	
+	// -- Saturation --
+	float3 Gray = float3(0.3f, 0.59f, 0.11f);
+	float OutLuma = dot(OutTexel, Gray);
+	float3 OutChroma = OutTexel - OutLuma;
+	float3 Saturated = OutLuma + OutChroma * Saturation;
+	
+	return float4(Saturated, BaseTexel.a);
 }
 
 //-----------------------------------------------------------------------------
-// Simple Effect
+// Color-Convolution Technique
 //-----------------------------------------------------------------------------
 
-technique TestTechnique
+technique ColorTechnique
 {
 	pass Pass0
 	{
 		Lighting = FALSE;
 
-		//Sampler[0] = <DiffuseSampler>;
-
-		VertexShader = compile vs_2_0 vs_main();
-		PixelShader  = compile ps_2_0 ps_main();
+		VertexShader = compile vs_3_0 vs_main();
+		PixelShader  = compile ps_3_0 ps_main();
 	}
 }
