@@ -34,13 +34,30 @@ extern XenosVertexBuffer *vb;
 static XenosShader * g_pVertexShader = NULL;
 static XenosShader * g_pPixelShader = NULL;
 
+#define USE_MAME_HLSL
+
+#ifdef USE_MAME_HLSL
+#include "../hlsl/primary.ps.h"
+#include "../hlsl/primary.vs.h"
+
 typedef struct {
     float x, y, z; // 12
     unsigned int color; // 16
     float u, v; // 24
     /** padding **/
-    float p1,p2; // 32
+    float p1, p2; // 32
 } __attribute__((packed, aligned(32))) MameVerticeFormats;
+#else
+#include "../shaders_hw/ps.tc.h"
+#include "../shaders_hw/vs.h"
+
+typedef struct {
+    float x, y, z, w; // 16
+    unsigned int color; // 20
+    unsigned int padding; // 24
+    float u, v; // 32
+} __attribute__((packed, aligned(32))) MameVerticeFormats;
+#endif
 
 /**
  *
@@ -48,520 +65,464 @@ typedef struct {
  * 
  * 
  */
-/* d3d_texture_info holds information about a texture */
-typedef struct _d3d_texture_info d3d_texture_info;
+typedef struct _gx_tex gx_tex;
 
-struct _d3d_texture_info {
-    d3d_texture_info * next; // next texture in the list
-    d3d_texture_info * prev; // prev texture in the list
-    UINT32 hash; // hash value for the texture
-    UINT32 flags; // rendering flags
-    render_texinfo texinfo; // copy of the texture info
-    float ustart, ustop; // beginning/ending U coordinates
-    float vstart, vstop; // beginning/ending V coordinates
-    int rawwidth, rawheight; // raw width/height of the texture
-    int type; // what type of texture are we?
-    int xborderpix; // number of border pixels in X
-    int yborderpix; // number of border pixels in Y
-    int xprescale; // what is our X prescale factor?
-    int yprescale; // what is our Y prescale factor?
-    int cur_frame; // what is our current frame?
-    int prev_frame; // what was our last frame? (used to determine pause state)
-    struct XenosSurface * d3dtex; // Direct3D texture pointer
-    struct XenosSurface * d3dsurface; // Direct3D offscreen plain surface pointer
-    struct XenosSurface * d3dfinaltex; // Direct3D final (post-scaled) texture
-    int target_index; // Direct3D target index
+struct _gx_tex {
+    u32 size;
+    u8 format;
+    gx_tex *next;
+    void *addr;
+    void *data;
+    struct XenosSurface *surface;
 };
 
-d3d_texture_info * texlist;
+static gx_tex *firstTex = NULL;
+static gx_tex *lastTex = NULL;
+static gx_tex *firstScreenTex = NULL;
+static gx_tex *lastScreenTex = NULL;
 
-// textures
-static void texture_compute_size(int texwidth, int texheight, d3d_texture_info *texture);
-static void texture_set_data(d3d_texture_info *texture, const render_texinfo *texsource, UINT32 flags);
-static void texture_prescale(d3d_texture_info *texture);
-static d3d_texture_info *texture_find(const render_primitive *prim);
-static d3d_texture_info * texture_update(const render_primitive *prim);
-static inline UINT32 texture_compute_hash(const render_texinfo *texture, UINT32 flags);
+/* adapted from rendersw.c, might not work because as far as I can tell, only 
+   laserdisc uses YCbCr textures, and we don't support that be default */
 
-static inline XenosSurface * xe_create_tex(int w, int h, int fmt) {
-    if(w<32)
-        w=32;
-    if(h<128)
-        h=128;
-    
-    printf("CreateTexture(%d,%d)\r\n",w,h);
-    
-    return Xe_CreateTexture(g_pVideoDevice, w, h, 0, fmt, 0);
+static u32 yuy_rgb = 0;
+
+inline u8 clamp16_shift8(u32 x) {
+    return (((s32) x < 0) ? 0 : (x > 65535 ? 255 : x >> 8));
 }
 
-//============================================================
-//  texture_create
-//============================================================
+inline u16 GXGetRGBA5551_YUY16(u32 *src, u32 x, u8 i) {
+    if (!(i & 1)) {
+        u32 ycc = src[x];
+        u8 y = ycc;
+        u8 cb = ycc >> 8;
+        u8 cr = ycc >> 16;
+        u32 r, g, b, common;
 
-d3d_texture_info *texture_create(const render_texinfo *texsource, UINT32 flags) {
-    d3d_texture_info *texture;
+        common = 298 * y - 56992;
+        r = (common + 409 * cr);
+        g = (common - 100 * cb - 208 * cr + 91776);
+        b = (common + 516 * cb - 13696);
 
-    // allocate a new texture
-    texture = global_alloc_clear(d3d_texture_info);
+        yuy_rgb = MAKE_RGB(clamp16_shift8(r), clamp16_shift8(g), clamp16_shift8(b)) | 0xFF;
 
-    // fill in the core data
-    texture->hash = texture_compute_hash(texsource, flags);
-    texture->flags = flags;
-    texture->texinfo = *texsource;
-    texture->xprescale = 0;
-    texture->yprescale = 0;
-
-    // compute the size
-    texture_compute_size(texsource->width, texsource->height, texture);
-
-    // non-screen textures are easy
-    if (!PRIMFLAG_GET_SCREENTEX(flags)) {
-        assert(PRIMFLAG_TEXFORMAT(flags) != TEXFORMAT_YUY16);
-        texture->d3dtex = xe_create_tex(texture->rawwidth, texture->rawheight, XE_FMT_8888 | XE_FMT_ARGB);
-        TR;
-        texture->d3dfinaltex = texture->d3dtex;
-        //texture->type = TEXTURE_TYPE_PLAIN;
-    }// screen textures are allocated differently
-    else {
-        unsigned int format;
-        //DWORD usage = d3d->dynamic_supported ? D3DUSAGE_DYNAMIC : 0;
-        //D3DPOOL pool = d3d->dynamic_supported ? D3DPOOL_DEFAULT : D3DPOOL_MANAGED;
-        //int maxdim = MAX(d3d->presentation.BackBufferWidth, d3d->presentation.BackBufferHeight);
-        int attempt;
-
-        // pick the format
-        if (PRIMFLAG_GET_TEXFORMAT(flags) == TEXFORMAT_YUY16) {
-            //format = d3d->yuv_format;
-            TR;
-        } else if (PRIMFLAG_GET_TEXFORMAT(flags) == TEXFORMAT_ARGB32 || PRIMFLAG_GET_TEXFORMAT(flags) == TEXFORMAT_PALETTEA16) {
-            format = XE_FMT_8888;
-        } else {
-            TR;
-            //format = d3d->screen_format;
-            format = XE_FMT_8888;
-        }
-
-        // loop until we allocate something or error
-        for (attempt = 0; attempt < 2; attempt++) {
-            // second attempt is always 1:1
-            if (attempt == 1)
-                texture->xprescale = texture->yprescale = 1;
-
-            // screen textures with no prescaling are pretty easy
-            if (texture->xprescale == 1 && texture->yprescale == 1) {
-                //TR;
-                //result = (*d3dintf->device.create_texture)(d3d->device, texture->rawwidth, texture->rawheight, 1, usage, format, pool, &texture->d3dtex);
-                texture->d3dtex = xe_create_tex(texture->rawwidth, texture->rawheight, format | XE_FMT_ARGB);
-                //if (result == D3D_OK)
-                if (texture->d3dtex) {
-                    texture->d3dfinaltex = texture->d3dtex;
-                    //texture->type = d3d->dynamic_supported ? TEXTURE_TYPE_DYNAMIC : TEXTURE_TYPE_PLAIN;
-                    break;
-                }
-            }
-            else{
-                TR;
-            }
-#if 0
-                // screen textures with prescaling require two allocations
-            else {
-                int scwidth, scheight;
-                D3DFORMAT finalfmt;
-
-                // use an offscreen plain surface for stretching if supported
-                // (won't work for YUY textures)
-                if (d3d->stretch_supported && PRIMFLAG_GET_TEXFORMAT(flags) != TEXFORMAT_YUY16) {
-                    result = (*d3dintf->device.create_offscreen_plain_surface)(d3d->device, texture->rawwidth, texture->rawheight, format, D3DPOOL_DEFAULT, &texture->d3dsurface);
-                    if (result != D3D_OK)
-                        continue;
-                    texture->type = TEXTURE_TYPE_SURFACE;
-                }// otherwise, we allocate a dynamic texture for the source
-                else {
-                    result = (*d3dintf->device.create_texture)(d3d->device, texture->rawwidth, texture->rawheight, 1, usage, format, pool, &texture->d3dtex);
-                    if (result != D3D_OK)
-                        continue;
-                    texture->type = d3d->dynamic_supported ? TEXTURE_TYPE_DYNAMIC : TEXTURE_TYPE_PLAIN;
-                }
-
-                // for the target surface, we allocate a render target texture
-                scwidth = texture->rawwidth * texture->xprescale;
-                scheight = texture->rawheight * texture->yprescale;
-
-                // target surfaces typically cannot be YCbCr, so we always pick RGB in that case
-                finalfmt = (format != d3d->yuv_format) ? format : D3DFMT_A8R8G8B8;
-                result = (*d3dintf->device.create_texture)(d3d->device, scwidth, scheight, 1, D3DUSAGE_RENDERTARGET, finalfmt, D3DPOOL_DEFAULT, &texture->d3dfinaltex);
-                if (result == D3D_OK) {
-                    int ret = d3d->hlsl->register_prescaled_texture(texture, scwidth, scheight);
-                    if (ret != 0)
-                        goto error;
-
-                    break;
-                }
-                (*d3dintf->texture.release)(texture->d3dtex);
-                texture->d3dtex = NULL;
-            }
-#endif                        
-        }
+        return (yuy_rgb >> 16) & 0x0000FFFF;
+    } else {
+        return yuy_rgb & 0x0000FFFF;
     }
-
-    // copy the data to the texture
-    texture_set_data(texture, texsource, flags);
-
-    // add us to the texture list
-    if (texlist != NULL)
-        texlist->prev = texture;
-    texture->prev = NULL;
-    texture->next = texlist;
-    texlist = texture;
-    return texture;
-
-error:
-    return NULL;
 }
 
+/* heavily adapted from Wii64 */
 
-//============================================================
-//  texture_compute_size
-//============================================================
-#define ENABLE_BORDER_PIX	(1)
-
-static void texture_compute_size(int texwidth, int texheight, d3d_texture_info *texture) {
-    int finalheight = texheight;
-    int finalwidth = texwidth;
-
-    // if we're not wrapping, add a 1-2 pixel border on all sides
-    texture->xborderpix = 0;
-    texture->yborderpix = 0;
-    if (ENABLE_BORDER_PIX && !(texture->flags & PRIMFLAG_TEXWRAP_MASK)) {
-        // note we need 2 pixels in X for YUY textures
-        texture->xborderpix = (PRIMFLAG_GET_TEXFORMAT(texture->flags) == TEXFORMAT_YUY16) ? 2 : 1;
-        texture->yborderpix = 1;
-    }
-
-    // compute final texture size
-    finalwidth += 2 * texture->xborderpix;
-    finalheight += 2 * texture->yborderpix;
-
-    // round width/height up to nearest power of 2 if we need to
-    //if (!(d3d->texture_caps & D3DPTEXTURECAPS_NONPOW2CONDITIONAL))
-    if (1) {
-        // first the width
-        if (finalwidth & (finalwidth - 1)) {
-            finalwidth |= finalwidth >> 1;
-            finalwidth |= finalwidth >> 2;
-            finalwidth |= finalwidth >> 4;
-            finalwidth |= finalwidth >> 8;
-            finalwidth++;
-        }
-
-        // then the height
-        if (finalheight & (finalheight - 1)) {
-            finalheight |= finalheight >> 1;
-            finalheight |= finalheight >> 2;
-            finalheight |= finalheight >> 4;
-            finalheight |= finalheight >> 8;
-            finalheight++;
-        }
-    }
-
-    // round up to square if we need to
-    //if (d3d->texture_caps & D3DPTEXTURECAPS_SQUAREONLY)
-    if (1) {
-        if (finalwidth < finalheight)
-            finalwidth = finalheight;
-        else
-            finalheight = finalwidth;
-    }
-    // if we added pixels for the border, and that just barely pushed us over, take it back
-    int texture_max_width = 4096;
-    int texture_max_height = 4096;
-    if ((finalwidth > texture_max_width && finalwidth - 2 * texture->xborderpix <= texture_max_width) ||
-            (finalheight > texture_max_height && finalheight - 2 * texture->yborderpix <= texture_max_height)) {
-        finalwidth -= 2 * texture->xborderpix;
-        finalheight -= 2 * texture->yborderpix;
-        texture->xborderpix = 0;
-        texture->yborderpix = 0;
-    }
-
-    // if we're above the max width/height, do what?
-    if (finalwidth > texture_max_width || finalheight > texture_max_height) {
-        static int printed = FALSE;
-        if (!printed) printf("Texture too big! (wanted: %dx%d, max is %dx%d)\n", finalwidth, finalheight, (int) texture_max_width, (int) texture_max_height);
-        printed = TRUE;
-    }
-
-    // compute the U/V scale factors
-    texture->ustart = (float) texture->xborderpix / (float) finalwidth;
-    texture->ustop = (float) (texwidth + texture->xborderpix) / (float) finalwidth;
-    texture->vstart = (float) texture->yborderpix / (float) finalheight;
-    texture->vstop = (float) (texheight + texture->yborderpix) / (float) finalheight;
-
-    // set the final values
-    texture->rawwidth = finalwidth;
-    texture->rawheight = finalheight;
+inline u16 GXGetRGBA5551_RGB5A3(u16 *src, u32 x) {
+    u16 c = src[x];
+    if ((c & 1) != 0) c = 0x8000 | (((c >> 11)&0x1F) << 10) | (((c >> 6)&0x1F) << 5) | ((c >> 1)&0x1F); //opaque texel
+    else c = 0x0000 | (((c >> 12)&0xF) << 8) | (((c >> 7)&0xF) << 4) | ((c >> 2)&0xF); //transparent texel
+    return (u32) c;
 }
 
-//============================================================
-//  texture_set_data
-//============================================================
-#include "blit.inl.h"
+inline u16 GXGetRGBA8888_RGBA8(u32 *src, u32 x, u8 i) {
+    u32 c = src[x];
+    u32 color = (i & 1) ? /* GGBB */ c & 0x0000FFFF : /* AARR */ (c >> 16) & 0x0000FFFF;
+    return (u16) color;
+}
 
-static void texture_set_data(d3d_texture_info *texture, const render_texinfo *texsource, UINT32 flags) {
-    int miny, maxy;
-    int dsty;
-    unsigned char * pBits = NULL;
-    unsigned int pitch = texture->d3dtex->wpitch;
-    unsigned int wpitch = texture->d3dtex->wpitch;
+inline u16 GXGetRGBA5551_PALETTE16(u16 *src, u32 x, int i, const rgb_t *palette) {
+    u16 c = src[x];
+    u32 rgb = palette[c];
+    if (i == TEXFORMAT_PALETTE16) return rgb_to_rgb15(rgb) | (1 << 15);
+    else return (u32) (((RGB_RED(rgb) >> 4) << 8) | ((RGB_GREEN(rgb) >> 4) << 4) | ((RGB_BLUE(rgb) >> 4) << 0) | ((RGB_ALPHA(rgb) >> 5) << 12));
+}
 
-    unsigned char * src = (unsigned char *) texsource->base;
-    unsigned char * dst = (unsigned char *) pBits;
+/**
+ * set data for small textures
+ */
+void XXsetTextureData(XenosSurface * surf, void * buffer, int w, int h, int bpp) {
+    u8 * buf = (u8*) buffer;
 
-    // loop over Y
-    miny = 0 - texture->yborderpix;
-    maxy = texsource->height + texture->yborderpix;
-#if 0
-    for (dsty = miny; dsty < maxy; dsty++) {
-        int srcy = (dsty < 0) ? 0 : (dsty >= texsource->height) ? texsource->height - 1 : dsty;
-        void *dst = (unsigned char *) pBits + (dsty + texture->yborderpix) * pitch;
+    u8 * surfbuf;
 
-        // switch off of the format and
-        switch (PRIMFLAG_GET_TEXFORMAT(flags)) {
-            case TEXFORMAT_PALETTE16:
-                //TR;
-                copyline_palette16((UINT32 *) dst, (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                break;
+    surfbuf = (u8*) Xe_Surface_LockRect(g_pVideoDevice, surf, 0, 0, 0, 0, XE_LOCK_WRITE);
 
-            case TEXFORMAT_PALETTEA16:
-                //TR;
-                copyline_palettea16((UINT32 *) dst, (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                break;
+    uint8_t * dst = (uint8_t *) surfbuf;
+    uint8_t *src = NULL;
+    uint8_t * dst_limit = (uint8_t *) surfbuf + ((surf->hpitch) * (surf->wpitch));
 
-            case TEXFORMAT_RGB15:
-                // TR;
-                copyline_rgb15((UINT32 *) dst, (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                break;
+    int hpitch = 0;
+    int wpitch = 0;
+    int j, i;
 
-            case TEXFORMAT_RGB32:
-                //TR;
-                copyline_rgb32((UINT32 *) dst, (UINT32 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                break;
-
-            case TEXFORMAT_ARGB32:
-                //TR;
-                copyline_argb32((UINT32 *) dst, (UINT32 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                break;
-
-            case TEXFORMAT_YUY16:
-                //TR;
-#if 0
-                if (d3d->yuv_format == D3DFMT_YUY2)
-                    copyline_yuy16_to_yuy2((UINT16 *) dst, (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                else if (d3d->yuv_format == D3DFMT_UYVY)
-                    copyline_yuy16_to_uyvy((UINT16 *) dst, (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                else
-#endif
-                    copyline_yuy16_to_argb((UINT32 *) dst, (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-                break;
-
-            default:
-                TR;
-                //mame_printf_error("Unknown texture blendmode=%d format=%d\n", PRIMFLAG_GET_BLENDMODE(flags), PRIMFLAG_GET_TEXFORMAT(flags));
-                break;
-        }
-    }
-#elif 0
-    uint8_t * dst_limit = (uint8_t *) pBits + ((texture->d3dtex->hpitch) * (texture->d3dtex->wpitch));
-
-    for (int hpitch = 0; hpitch < texture->d3dtex->hpitch; hpitch += texture->d3dtex->height) {
+    for (hpitch = 0; hpitch < surf->hpitch; hpitch += surf->height) {
         //        for (int y = 0; y < bmp->rows; y++)
         int y, dsty = 0;
         //        int y_offset = charData->glyphDataTexture->height;
         int y_offset = 0;
 
-        for (y = 0, dsty = y_offset; y < (texsource->height); y++, dsty++) {
+        for (y = 0, dsty = y_offset; y < (w); y++, dsty++) {
             //        for (y = 0, dsty = y_offset; y < (bmp->rows); y++, dsty--) {
-            for (wpitch = 0; wpitch < texture->d3dtex->wpitch; wpitch += texture->d3dtex->width) {
-                src = (uint8_t *) texsource->base + ((y) * texsource->rowpixels);
-                dst = (uint8_t *) pBits + ((dsty + hpitch) * (texture->d3dtex->wpitch)) + wpitch;
-                for (int x = 0; x < texsource->width; x++) {
+            for (wpitch = 0; wpitch < surf->wpitch; wpitch += surf->width) {
+                src = (uint8_t *) buf + ((y) * (w * bpp));
+                dst = (uint8_t *) surfbuf + ((dsty + hpitch) * (surf->wpitch)) + wpitch;
+                for (int x = 0; x < w; x++) {
                     if (dst < dst_limit)
                         *dst++ = *src++;
                 }
             }
         }
     }
-#else
-    typedef void (*mame_32_blitter)(UINT32 *, const UINT32 *, int, const rgb_t *, int);
-    mame_32_blitter func = NULL;
 
-    // switch off of the format and
-    switch (PRIMFLAG_GET_TEXFORMAT(flags)) {
+    Xe_Surface_Unlock(g_pVideoDevice, surf);
+}
 
-        case TEXFORMAT_PALETTE16:
-            TR;
-            func = (mame_32_blitter) copyline_palette16;
-            break;
+static gx_tex *create_texture(render_primitive *prim) {
+    int j, k, l, x, y, tx, ty, bpp;
+    int flag = PRIMFLAG_GET_TEXFORMAT(prim->flags);
+    int rawwidth = prim->texture.width;
+    int rawheight = prim->texture.height;
+    int width = ((rawwidth + 3) & (~3));
+    int height = ((rawheight + 3) & (~3));
+    int hpitch, wpitch;
+    u8 *data = (u8 *) prim->texture.base;
+    u8 *src;
+    u16 *fixed;
+    gx_tex *newTex = (gx_tex*) malloc(sizeof (*newTex));
 
-        case TEXFORMAT_PALETTEA16:
-            TR;
-            func = (mame_32_blitter) copyline_palettea16;
-            break;
+    memset(newTex, 0, sizeof (*newTex));
 
-        case TEXFORMAT_RGB15:
-            TR;
-            func = (mame_32_blitter) copyline_rgb15;
-            break;
+    j = 0;
 
+    switch (flag) {
         case TEXFORMAT_RGB32:
+        {
             TR;
-            func = (mame_32_blitter) copyline_rgb32;
             break;
-
-
+        }
         case TEXFORMAT_ARGB32:
         {
-            //TR;
-            //func = (mame_32_blitter) copyline_argb32;
-            func = NULL;
+            newTex->format = XE_FMT_8888 | XE_FMT_ARGB;
+            bpp = 4;
+            //fixed = (newTex->data) ? newTex->data : memalign(32, height * width * bpp);
 
-            // XeTexSubImage(texture->d3dtex, 4, 4, 0, 0, texsource->width, texsource->height, texsource->base);
+            if (newTex->surface == NULL)
+                newTex->surface = Xe_CreateTexture(g_pVideoDevice, width, height, 1, newTex->format, 0);
+#if 1
+            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+            u32 * dst;
+            u32 * src32;
 
-            unsigned char* surfbuf = (unsigned char*) Xe_Surface_LockRect(g_pVideoDevice, texture->d3dtex, 0, 0, 0, 0, XE_LOCK_WRITE);
+            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
+                for (wpitch = 0; wpitch < newTex->surface->wpitch; wpitch += newTex->surface->width) {
+                    for (int y = 0; y < newTex->surface->height; y++) {
+                        for (int x = 0; x < newTex->surface->width; x++) {
 
-            int hpitch, wpitch;
+                            if (x >= newTex->surface->wpitch)
+                                break;
 
-            unsigned int* txdata = (unsigned int*) surfbuf;
+                            dst = xe_dest + ((x + ((y + hpitch) * (newTex->surface->wpitch/4))) + wpitch);
 
-            for (hpitch = 0; hpitch < texture->d3dtex->hpitch; hpitch += texture->d3dtex->height) {
-                for (wpitch = 0; wpitch < texture->d3dtex->wpitch; wpitch += texture->d3dtex->width) {
-                    txdata[0] = 0xFF1F7FFF;
-                    *txdata++;
-                }
-            }
-#if 0
-            for (hpitch = 0; hpitch < texture->d3dtex->hpitch; hpitch += texture->d3dtex->height) {
-                //        for (int y = 0; y < bmp->rows; y++)
-                int y, dsty = 0;
-                //        int y_offset = charData->glyphDataTexture->height;
-                int y_offset = 0;
+                            int nx = x;
+                            int ny = y;
 
-                for (y = 0, dsty = y_offset; y < (texsource->height); y++, dsty++) {
-                    //        for (y = 0, dsty = y_offset; y < (bmp->rows); y++, dsty--) {
-                    for (wpitch = 0; wpitch < texture->d3dtex->wpitch; wpitch += texture->d3dtex->width) {
-                        src = (uint8_t *) texsource->base + ((y) * texsource->rowpixels);
-                        dst = (uint8_t *) surfbuf + ((dsty + hpitch) * (texture->d3dtex->wpitch)) + wpitch;
+                            if (x > prim->texture.width) {
+                                nx = x - prim->texture.width;
+                            }
+                            if (y > prim->texture.height) {
+                                ny = y - prim->texture.height;
+                            }
 
-                        for (int x = 0; x < texsource->width; x++) {
-                            //if (dst < dst_limit)
-                            //*dst++ = *src++;
-                            // 32bits
-                            /*
-                            dst[0] = src[0];
-                            dst[1] = src[1];
-                            dst[2] = src[2];
-                            dst[3] = src[3];
-                             */
+                            src32 = (u32 *) data + ((nx)+(ny * prim->texture.rowpixels));
 
-
-                            dst[0] = 0xFF;
-                            dst[1] = 0x1F;
-                            dst[2] = 0x7F;
-                            dst[3] = 0xFF;
-
-                            *dst += 4;
-                            *src += 4;
+                            dst[0] = src32[0];
                         }
-
+                        if (y >= newTex->surface->hpitch)
+                            break;
                     }
                 }
-
             }
+
+
+            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
 #endif
-            Xe_Surface_Unlock(g_pVideoDevice, texture->d3dtex);
+#if 0
+            // lock
+            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+            u32 * dst;
+
+            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
+                for (y = 0; y < height; y += 4) {
+
+                    for (wpitch = 0; wpitch < newTex->surface->wpitch; wpitch += newTex->surface->width) {
+
+                        //dst =  xe_dest+()
+                        dst = xe_dest + ((y + hpitch) * (newTex->surface->wpitch)) + wpitch;
+
+                        for (x = 0; x < width; x += 4) {
+                            for (k = 0; k < 4; k++) {
+                                ty = y + k;
+                                src = &data[bpp * prim->texture.rowpixels * ty];
+                                for (l = 0; l < 4; l++) {
+                                    tx = x + l;
+                                    if (ty >= rawheight || tx >= rawwidth) {
+
+                                    } else {
+                                        u32 * c = (u32*) src;
+                                        dst[0] = c[0];
+                                        //dst[0] = (u32*)src[0];//GXGetRGBA8888_RGBA8((u32*) src, tx, 0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
+#elif 0
+            //fixed = (newTex->data) ? (u16*)newTex->data : (u16*)malloc(height * width * bpp);
+            fixed = (u16*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+
+            u16* end = (u16*) fixed + (newTex->surface->hpitch * newTex->surface->wpitch);
+
+            int hpitch = 0;
+            int wpitch = 0;
+
+            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
+                //j = 0;
+                for (y = 0; y < height; y += 4) {
+                    for (x = 0; x < width; x += 4) {
+                        for (k = 0; k < 4; k++) {
+                            ty = y + k;
+                            src = &data[bpp * prim->texture.rowpixels * ty];
+                            // 4 =  ARGB
+                            for (l = 0; l < 4; l++) {
+                                tx = x + l;
+                                if (fixed < end) {
+                                    if (ty >= rawheight || tx >= rawwidth) {
+                                        // dont fill it
+                                        fixed[j] = 0x0000;
+                                        fixed[j + 16] = 0x0000;
+                                    } else {
+                                        fixed[j] = GXGetRGBA8888_RGBA8((u32*) src, tx, 0);
+                                        fixed[j + 16] = GXGetRGBA8888_RGBA8((u32*) src, tx, 1);
+                                    }
+                                    j++;
+                                }
+                            }
+                        }
+                        j += 16;
+                    }
+                }
+            }
+            //XXsetTextureData(newTex->surface,newTex->data,width,height,bpp);
+
+            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
+#endif
 
             break;
         }
-
+#if 0		
+        case TEXFORMAT_PALETTE16:
+        case TEXFORMAT_PALETTEA16:
+            newTex->format = GX_TF_RGB5A3;
+            bpp = 2;
+            fixed = (newTex->data) ? newTex->data : memalign(32, height * width * bpp);
+            for (y = 0; y < height; y += 4) {
+                for (x = 0; x < width; x += 4) {
+                    for (k = 0; k < 4; k++) {
+                        ty = y + k;
+                        src = &data[bpp * prim->texture.rowpixels * ty];
+                        for (l = 0; l < 4; l++) {
+                            tx = x + l;
+                            if (ty >= rawheight || tx >= rawwidth)
+                                fixed[j++] = 0x0000;
+                            else
+                                fixed[j++] = GXGetRGBA5551_PALETTE16((u16*) src, tx, flag, prim->texture.palette);
+                        }
+                    }
+                }
+            }
+            break;
+        case TEXFORMAT_RGB15:
+            newTex->format = GX_TF_RGB5A3;
+            bpp = 2;
+            fixed = (newTex->data) ? newTex->data : memalign(32, height * width * bpp);
+            for (y = 0; y < height; y += 4) {
+                for (x = 0; x < width; x += 4) {
+                    for (k = 0; k < 4; k++) {
+                        ty = y + k;
+                        src = &data[bpp * prim->texture.rowpixels * ty];
+                        for (l = 0; l < 4; l++) {
+                            tx = x + l;
+                            if (ty >= rawheight || tx >= rawwidth)
+                                fixed[j++] = 0x0000;
+                            else
+                                fixed[j++] = GXGetRGBA5551_RGB5A3((u16*) src, tx);
+                        }
+                    }
+                }
+            }
+            break;
         case TEXFORMAT_YUY16:
-            func = (mame_32_blitter) copyline_yuy16_to_argb;
-            break;
-
-        default:
-            TR;
-            printf("Unknown texture blendmode=%d format=%d\n", PRIMFLAG_GET_BLENDMODE(flags), PRIMFLAG_GET_TEXFORMAT(flags));
-            //BP;
-            func = NULL;
-            break;
-    }
-
-    if (func) {
-        // lock the texture
-        pBits = (unsigned char*) Xe_Surface_LockRect(g_pVideoDevice, texture->d3dtex, 0, 0, 0, 0, XE_LOCK_WRITE);
-
-        for (int hpitch = 0; hpitch < texture->d3dtex->hpitch; hpitch += texture->d3dtex->height) {
-            for (dsty = miny; dsty < maxy; dsty++) {
-                int srcy = (dsty < 0) ? 0 : (dsty >= texsource->height) ? texsource->height - 1 : dsty;
-                void *dst = (unsigned char *) pBits + (hpitch + dsty + texture->yborderpix) * pitch;
-
-                func((UINT32 *) dst, (const UINT32 *) (UINT16 *) texsource->base + srcy * texsource->rowpixels, texsource->width, texsource->palette, texture->xborderpix);
-
+            newTex->format = GX_TF_RGBA8;
+            bpp = 4;
+            fixed = (newTex->data) ? newTex->data : memalign(32, height * width * bpp);
+            for (y = 0; y < height; y += 4) {
+                for (x = 0; x < width; x += 4) {
+                    for (k = 0; k < 4; k++) {
+                        ty = y + k;
+                        src = &data[bpp * prim->texture.rowpixels * ty];
+                        for (l = 0; l < 4; l++) {
+                            tx = x + l;
+                            if (ty >= rawheight || tx >= rawwidth) {
+                                fixed[j] = 0x0000;
+                                fixed[j + 16] = 0x0000;
+                            } else {
+                                fixed[j] = GXGetRGBA5551_YUY16((u32*) src, tx, 0);
+                                fixed[j + 16] = GXGetRGBA5551_YUY16((u32*) src, tx, 1);
+                            }
+                            j++;
+                        }
+                    }
+                    j += 16;
+                }
             }
-        }
-        // unlock
-        Xe_Surface_Unlock(g_pVideoDevice, texture->d3dtex);
-    }
+            break;
 #endif
+#if 1
+        case TEXFORMAT_YUY16:
+        {
+            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+            u32 * dst;
+            u32 * src32;
+
+            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
+                for (wpitch = 0; wpitch < newTex->surface->wpitch; wpitch += newTex->surface->width) {
+                    for (int y = 0; y < newTex->surface->height; y++) {
+                        for (int x = 0; x < newTex->surface->width; x += 2) {
+
+                            if (x >= newTex->surface->wpitch)
+                                break;
+
+                            dst = xe_dest + ((x + ((y + hpitch) * newTex->surface->wpitch)) + wpitch);
+
+                            int nx = x;
+                            int ny = y;
+
+                            if (x > prim->texture.width) {
+                                nx = x - prim->texture.width;
+                            }
+                            if (y > prim->texture.height) {
+                                ny = y - prim->texture.height;
+                            }
+
+                            src32 = (u32 *) data + ((nx)+(ny * prim->texture.rowpixels));
+
+                            fixed = (u16*) dst;
+
+                            fixed[0] = GXGetRGBA5551_YUY16((u32*) src32, nx, 0);
+                            fixed[16] = GXGetRGBA5551_YUY16((u32*) src32, nx, 1);
+
+                            //dst[0] = src32[0];
+                        }
+                        if (y >= newTex->surface->hpitch)
+                            break;
+                    }
+                }
+            }
 
 
-    // prescale
-    //texture_prescale(d3d, texture);
-}
-
-UINT32 texture_compute_hash(const render_texinfo *texture, UINT32 flags) {
-    return (FPTR) texture->base ^ (flags & (PRIMFLAG_BLENDMODE_MASK | PRIMFLAG_TEXFORMAT_MASK));
-}
-
-//============================================================
-//  texture_find
-//============================================================
-
-static d3d_texture_info * texture_find(const render_primitive * prim) {
-    UINT32 texhash = texture_compute_hash(&prim->texture, prim->flags);
-    d3d_texture_info *texture;
-
-    // find a match
-    for (texture = texlist; texture != NULL; texture = texture->next)
-        if (texture->hash == texhash &&
-                texture->texinfo.base == prim->texture.base &&
-                texture->texinfo.width == prim->texture.width &&
-                texture->texinfo.height == prim->texture.height &&
-                ((texture->flags ^ prim->flags) & (PRIMFLAG_BLENDMODE_MASK | PRIMFLAG_TEXFORMAT_MASK)) == 0)
-            return texture;
-
-    // nothing found
-    return NULL;
-}
-
-//============================================================
-//  texture_update
-//============================================================
-
-static d3d_texture_info * texture_update(const render_primitive * prim) {
-    d3d_texture_info *texture = texture_find(prim);
-
-    // if we didn't find one, create a new texture
-    if (texture == NULL) {
-        TR;
-        texture = texture_create(&prim->texture, prim->flags);
-    } else
-        if (texture->texinfo.seqid != prim->texture.seqid) {
-        //        texture_set_data(texture, &prim->texture, prim->flags);
-        texture->texinfo.seqid = prim->texture.seqid;
+            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
+            break;
+        }
+#endif
+        default:
+            return NULL;
     }
 
-    texture_set_data(texture, &prim->texture, prim->flags);
+    newTex->size = height * width * bpp;
+    newTex->data = fixed;
+    newTex->addr = &(*data);
 
-    return texture;
+    if (PRIMFLAG_GET_SCREENTEX(prim->flags)) {
+        if (firstScreenTex == NULL)
+            firstScreenTex = newTex;
+        else
+            lastScreenTex->next = newTex;
+
+        lastScreenTex = newTex;
+    } else {
+        if (firstTex == NULL)
+            firstTex = newTex;
+        else
+            lastTex->next = newTex;
+
+        lastTex = newTex;
+    }
+
+    return newTex;
+}
+
+static gx_tex *get_texture(render_primitive *prim) {
+    gx_tex *t = firstTex;
+
+    if (PRIMFLAG_GET_SCREENTEX(prim->flags))
+        return create_texture(prim);
+
+    while (t != NULL)
+        if (t->addr == prim->texture.base)
+            return t;
+        else
+            t = t->next;
+
+    return create_texture(prim);
+}
+
+static void prep_texture(render_primitive *prim) {
+    gx_tex *newTex = get_texture(prim);
+
+    if (newTex == NULL)
+        return;
+
+    //DCFlushRange(newTex->data, newTex->size);
+    //GX_InitTexObj(&texObj, newTex->data, prim->texture.width, prim->texture.height, newTex->format, GX_CLAMP, GX_CLAMP, GX_FALSE);
+
+    //if (PRIMFLAG_GET_SCREENTEX(prim->flags))
+    //	GX_InitTexObjLOD(&texObj, GX_NEAR, GX_NEAR, 0.0f, 0.0f, 0.0f, GX_DISABLE, GX_DISABLE, GX_ANISO_1);
+
+    //GX_LoadTexObj(&texObj, GX_TEXMAP0);
+
+    if (prim->texture.base == NULL)
+        Xe_SetTexture(g_pVideoDevice, 0, NULL);
+    else
+        Xe_SetTexture(g_pVideoDevice, 0, newTex->surface);
+}
+
+static void clearTexs() {
+    gx_tex *t = firstTex;
+    gx_tex *n;
+
+    while (t != NULL) {
+        n = t->next;
+        free(t->data);
+        free(t);
+        t = n;
+    }
+
+    firstTex = NULL;
+    lastTex = NULL;
+}
+
+static void clearScreenTexs() {
+    gx_tex *t = firstScreenTex;
+    gx_tex *n;
+
+    while (t != NULL) {
+        n = t->next;
+        free(t->data);
+        free(t);
+        t = n;
+    }
+
+    firstScreenTex = NULL;
+    lastScreenTex = NULL;
 }
 
 /****************************************************************************
@@ -570,6 +531,18 @@ static d3d_texture_info * texture_update(const render_primitive * prim) {
  * Draws the specified image on screen using GX
  ***************************************************************************/
 void Menu_DrawMame(render_primitive * prim) {
+    /* from shader */
+    XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
+    float TargetWidth = fb->width;
+    float TargetHeight = fb->height;
+    float RawWidth = prim->texture.width;
+    float RawHeight = prim->texture.height;
+
+    float PostPass = 0.f;
+
+    float WidthRatio = 1;
+    float HeightRatio = 1;
+
     XeColor color;
 
     color.a = prim->color.a * 255.f;
@@ -577,7 +550,7 @@ void Menu_DrawMame(render_primitive * prim) {
     color.g = prim->color.g * 255.f;
     color.b = prim->color.b * 255.f;
 
-    d3d_texture_info *texture = texture_update(prim);
+    prep_texture(prim);
 
     MameVerticeFormats* Rect = (MameVerticeFormats*) Xe_VB_Lock(g_pVideoDevice, vb, nb_vertices, 4 * sizeof (MameVerticeFormats), XE_LOCK_WRITE);
     {
@@ -647,66 +620,50 @@ void Menu_DrawMame(render_primitive * prim) {
         //        Rect[3].x = -width;
         //        Rect[3].y = height;
         // set the texture coordinates
-        if (texture != NULL) {
-            float du = texture->ustop - texture->ustart;
-            float dv = texture->vstop - texture->vstart;
-            Rect[0].u = texture->ustart + du * prim->texcoords.tl.u;
-            Rect[0].v = texture->vstart + dv * prim->texcoords.tl.v;
-            Rect[1].u = texture->ustart + du * prim->texcoords.tr.u;
-            Rect[1].v = texture->vstart + dv * prim->texcoords.tr.v;
-            Rect[2].u = texture->ustart + du * prim->texcoords.bl.u;
-            Rect[2].v = texture->vstart + dv * prim->texcoords.bl.v;
-            Rect[3].u = texture->ustart + du * prim->texcoords.br.u;
-            Rect[3].v = texture->vstart + dv * prim->texcoords.br.v;
+        //if (texture != NULL) {
+        if (1) {
+            Rect[0].u = prim->texcoords.tl.u;
+            Rect[0].v = prim->texcoords.tl.v;
+            Rect[1].u = prim->texcoords.tr.u;
+            Rect[1].v = prim->texcoords.tr.v;
+            Rect[2].u = prim->texcoords.bl.u;
+            Rect[2].v = prim->texcoords.bl.v;
+            Rect[3].u = prim->texcoords.br.u;
+            Rect[3].v = prim->texcoords.br.v;
         }
 #endif
-
-        Rect[0].u = 0;
-        Rect[0].v = 0;
-
-        // bottom right
-        Rect[1].u = 1;
-        Rect[1].v = 0;
-
-        // top right
-        Rect[2].u = 1;
-        Rect[2].v = 1;
-
-        // Top left
-        Rect[3].u = 0;
-        Rect[3].v = 1;
 
         int i = 0;
         for (i = 0; i < 4; i++) {
             Rect[i].z = 0.0;
-            //Rect[i].w = 1.0;
+#ifndef USE_MAME_HLSL
+            Rect[i].w = 1.0;
+            // offset size ...
+            Rect[i].x /= TargetWidth;
+            Rect[i].y /= TargetHeight;
+            Rect[i].y = 1.0f - Rect[i].y;
+            Rect[i].x -= 0.5f;
+            Rect[i].y -= 0.5f;
+
+            Rect[i].x *= 2.f;
+            Rect[i].y *= 2.f;
+#endif
             Rect[i].color = color.lcol;
         }
     }
     Xe_VB_Unlock(g_pVideoDevice, vb);
 
-    if (texture && texture->d3dtex)
-        Xe_SetTexture(g_pVideoDevice, 0, texture->d3dtex);
-    else
-        Xe_SetTexture(g_pVideoDevice, 0, 0);
+    //if (texture && texture->d3dtex)
+    //    Xe_SetTexture(g_pVideoDevice, 0, texture->d3dtex);
+    //else
+    //    Xe_SetTexture(g_pVideoDevice, 0, 0);
 
     //    UpdatesMatrices(x, y, width, height, 0, 1, 1);
 
     Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, g_pPixelShader, 0);
     Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, g_pVertexShader, 0);
 
-    /* from shader */
-    XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
-    float TargetWidth = fb->width;
-    float TargetHeight = fb->height;
 
-    float RawWidth = texture->rawwidth;
-    float RawHeight = texture->rawheight;
-
-    float PostPass = 0.f;
-
-    float WidthRatio = texture->ustop - texture->ustart;
-    float HeightRatio = texture->vstop - texture->vstart;
 
     // primary.fx    
     // Registers:
@@ -717,10 +674,11 @@ void Menu_DrawMame(render_primitive * prim) {
     //   TargetHeight c1       1
     //   PostPass     c2       1
 
-
+#ifdef USE_MAME_HLSL
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, (float*) &TargetWidth, 1);
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, (float*) &TargetHeight, 1);
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 2, (float*) &PostPass, 1);
+#endif
 
     SetRS();
 
@@ -729,11 +687,10 @@ void Menu_DrawMame(render_primitive * prim) {
     nb_vertices += 256; // fixe aligement
 }
 
-
-#include "../hlsl/primary.ps.h"
-#include "../hlsl/primary.vs.h"
-
 void InitMameShaders() {
+    void* vs_program = NULL;
+    void* ps_program = NULL;
+
     /*
      struct VS_INPUT
     {
@@ -742,6 +699,7 @@ void InitMameShaders() {
             float2 TexCoord : TEXCOORD0;
     };
      */
+#ifdef USE_MAME_HLSL
     static const struct XenosVBFFormat vbf = {
         4,
         {
@@ -751,11 +709,27 @@ void InitMameShaders() {
             {XE_USAGE_TEXCOORD, 1, XE_TYPE_FLOAT2}, //padding
         }
     };
+    vs_program = (void*) g_xvs_vs_main;
+    ps_program = (void*) g_xps_ps_main;
+#else
 
-    g_pPixelShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xps_ps_main);
+    static const struct XenosVBFFormat vbf = {
+        4,
+        {
+            {XE_USAGE_POSITION, 0, XE_TYPE_FLOAT3},
+            {XE_USAGE_COLOR, 0, XE_TYPE_UBYTE4},
+            {XE_USAGE_COLOR, 1, XE_TYPE_UBYTE4}, //padding
+            {XE_USAGE_TEXCOORD, 0, XE_TYPE_FLOAT2},
+        }
+    };
+    vs_program = (void*) g_xvs_VSmain;
+    ps_program = (void*) g_xps_psTC;
+#endif
+
+    g_pPixelShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) ps_program);
     Xe_InstantiateShader(g_pVideoDevice, g_pPixelShader, 0);
 
-    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) g_xvs_vs_main);
+    g_pVertexShader = Xe_LoadShaderFromMemory(g_pVideoDevice, (void*) vs_program);
     Xe_InstantiateShader(g_pVideoDevice, g_pVertexShader, 0);
 
     Xe_ShaderApplyVFetchPatches(g_pVideoDevice, g_pVertexShader, 0, &vbf);
