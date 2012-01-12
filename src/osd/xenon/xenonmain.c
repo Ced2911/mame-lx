@@ -79,11 +79,11 @@ render_target *xenos_target;
 //============================================================
 int main() {
     osd_xenon_init();
-    int argc = 1;
+    int argc = 2;
     char * argv[]
     {
-        "mame.elf"
         //"mame.elf"
+        "mame.elf","mslug"
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
         //"mame.elf", "sfiiin"

@@ -34,6 +34,8 @@ extern XenosVertexBuffer *vb;
 static XenosShader * g_pVertexShader = NULL;
 static XenosShader * g_pPixelShader = NULL;
 
+static XenosSurface * default_surface = NULL;
+
 #define USE_MAME_HLSL
 
 #ifdef USE_MAME_HLSL
@@ -173,13 +175,54 @@ void XXsetTextureData(XenosSurface * surf, void * buffer, int w, int h, int bpp)
     Xe_Surface_Unlock(g_pVideoDevice, surf);
 }
 
+
+static int allowed = 0;
+
+static struct XenosSurface * CreateSurface(int w, int h, int fmt) {
+    printf("Create texture : %d %d\r\n", w, h);
+
+    struct XenosSurface * s = Xe_CreateTexture(g_pVideoDevice, w, h, 1, fmt, 0);
+
+    allowed += s->wpitch * s->height;
+
+    printf("Allowed %d for texture\r\n", allowed);
+
+    return s;
+}
+
+struct XenosSurface * screen_texture = NULL;
+
 static gx_tex *create_texture(render_primitive *prim) {
     int j, k, l, x, y, tx, ty, bpp;
     int flag = PRIMFLAG_GET_TEXFORMAT(prim->flags);
     int rawwidth = prim->texture.width;
     int rawheight = prim->texture.height;
-    int width = ((rawwidth + 3) & (~3));
-    int height = ((rawheight + 3) & (~3));
+    //    int width = ((rawwidth + 3) & (~3));
+    //    int height = ((rawheight + 3) & (~3));
+
+    int width = ((rawwidth));
+    int height = ((rawheight));
+    // first the width
+    if (width & (width - 1)) {
+        width |= width >> 1;
+        width |= width >> 2;
+        width |= width >> 4;
+        width |= width >> 8;
+        width++;
+    }
+
+    // then the height
+    if (height & (height - 1)) {
+        height |= height >> 1;
+        height |= height >> 2;
+        height |= height >> 4;
+        height |= height >> 8;
+        height++;
+    }
+
+    //    int width = ((rawwidth + 3) & (~3));
+    //    int height = ((rawheight + 3) & (~3));
+
     int hpitch, wpitch;
     u8 *data = (u8 *) prim->texture.base;
     u8 *src;
@@ -191,20 +234,44 @@ static gx_tex *create_texture(render_primitive *prim) {
     j = 0;
 
     switch (flag) {
+        // screen tex
         case TEXFORMAT_RGB32:
         {
-            TR;
+            newTex->format = XE_FMT_8888 | XE_FMT_ARGB;
+            bpp = 4;
+            //fixed = (newTex->data) ? newTex->data : memalign(32, height * width * bpp);
+
+            if (screen_texture == NULL) {
+                screen_texture = CreateSurface(rawwidth, rawheight, newTex->format);
+                //memset(newTex->surface->base, 0, newTex->surface->hpitch * newTex->surface->wpitch);
+            }
+            
+            newTex->surface = screen_texture;
+            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+            u32 * dst;
+            u32 * src32 = (u32 *)data;
+
+            for (int srcy = 0; srcy < rawheight; srcy++) {
+                for (int x = 0; x < rawwidth; x++) {
+                    //dst = xe_dest + ((x + ((srcy) * (newTex->surface->wpitch / 4))));
+                    //dst[0] = 0xff000000 | *src32++;
+                }
+            }
+
+            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
             break;
         }
+        // Small bitmap
         case TEXFORMAT_ARGB32:
         {
             newTex->format = XE_FMT_8888 | XE_FMT_ARGB;
             bpp = 4;
             //fixed = (newTex->data) ? newTex->data : memalign(32, height * width * bpp);
 
-            if (newTex->surface == NULL)
-                newTex->surface = Xe_CreateTexture(g_pVideoDevice, width, height, 1, newTex->format, 0);
-#if 1
+            if (newTex->surface == NULL) {
+                newTex->surface = CreateSurface(width, height, newTex->format);
+                memset(newTex->surface->base, 0, newTex->surface->hpitch * newTex->surface->wpitch);
+            }
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
             u32 * src32;
@@ -217,20 +284,19 @@ static gx_tex *create_texture(render_primitive *prim) {
                             if (x >= newTex->surface->wpitch)
                                 break;
 
-                            dst = xe_dest + ((x + ((y + hpitch) * (newTex->surface->wpitch/4))) + wpitch);
+                            dst = xe_dest + ((x + ((y + hpitch) * (newTex->surface->wpitch / 4))) + wpitch);
 
                             int nx = x;
                             int ny = y;
 
-                            if (x > prim->texture.width) {
-                                nx = x - prim->texture.width;
+                            if (x > rawwidth) {
+                                nx = 0;
                             }
-                            if (y > prim->texture.height) {
-                                ny = y - prim->texture.height;
+                            if (y > rawheight) {
+                                ny = 0;
                             }
 
                             src32 = (u32 *) data + ((nx)+(ny * prim->texture.rowpixels));
-
                             dst[0] = src32[0];
                         }
                         if (y >= newTex->surface->hpitch)
@@ -238,83 +304,7 @@ static gx_tex *create_texture(render_primitive *prim) {
                     }
                 }
             }
-
-
             Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
-#endif
-#if 0
-            // lock
-            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
-            u32 * dst;
-
-            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
-                for (y = 0; y < height; y += 4) {
-
-                    for (wpitch = 0; wpitch < newTex->surface->wpitch; wpitch += newTex->surface->width) {
-
-                        //dst =  xe_dest+()
-                        dst = xe_dest + ((y + hpitch) * (newTex->surface->wpitch)) + wpitch;
-
-                        for (x = 0; x < width; x += 4) {
-                            for (k = 0; k < 4; k++) {
-                                ty = y + k;
-                                src = &data[bpp * prim->texture.rowpixels * ty];
-                                for (l = 0; l < 4; l++) {
-                                    tx = x + l;
-                                    if (ty >= rawheight || tx >= rawwidth) {
-
-                                    } else {
-                                        u32 * c = (u32*) src;
-                                        dst[0] = c[0];
-                                        //dst[0] = (u32*)src[0];//GXGetRGBA8888_RGBA8((u32*) src, tx, 0);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
-#elif 0
-            //fixed = (newTex->data) ? (u16*)newTex->data : (u16*)malloc(height * width * bpp);
-            fixed = (u16*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
-
-            u16* end = (u16*) fixed + (newTex->surface->hpitch * newTex->surface->wpitch);
-
-            int hpitch = 0;
-            int wpitch = 0;
-
-            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
-                //j = 0;
-                for (y = 0; y < height; y += 4) {
-                    for (x = 0; x < width; x += 4) {
-                        for (k = 0; k < 4; k++) {
-                            ty = y + k;
-                            src = &data[bpp * prim->texture.rowpixels * ty];
-                            // 4 =  ARGB
-                            for (l = 0; l < 4; l++) {
-                                tx = x + l;
-                                if (fixed < end) {
-                                    if (ty >= rawheight || tx >= rawwidth) {
-                                        // dont fill it
-                                        fixed[j] = 0x0000;
-                                        fixed[j + 16] = 0x0000;
-                                    } else {
-                                        fixed[j] = GXGetRGBA8888_RGBA8((u32*) src, tx, 0);
-                                        fixed[j + 16] = GXGetRGBA8888_RGBA8((u32*) src, tx, 1);
-                                    }
-                                    j++;
-                                }
-                            }
-                        }
-                        j += 16;
-                    }
-                }
-            }
-            //XXsetTextureData(newTex->surface,newTex->data,width,height,bpp);
-
-            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
-#endif
 
             break;
         }
@@ -386,53 +376,6 @@ static gx_tex *create_texture(render_primitive *prim) {
             }
             break;
 #endif
-#if 1
-        case TEXFORMAT_YUY16:
-        {
-            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
-            u32 * dst;
-            u32 * src32;
-
-            for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
-                for (wpitch = 0; wpitch < newTex->surface->wpitch; wpitch += newTex->surface->width) {
-                    for (int y = 0; y < newTex->surface->height; y++) {
-                        for (int x = 0; x < newTex->surface->width; x += 2) {
-
-                            if (x >= newTex->surface->wpitch)
-                                break;
-
-                            dst = xe_dest + ((x + ((y + hpitch) * newTex->surface->wpitch)) + wpitch);
-
-                            int nx = x;
-                            int ny = y;
-
-                            if (x > prim->texture.width) {
-                                nx = x - prim->texture.width;
-                            }
-                            if (y > prim->texture.height) {
-                                ny = y - prim->texture.height;
-                            }
-
-                            src32 = (u32 *) data + ((nx)+(ny * prim->texture.rowpixels));
-
-                            fixed = (u16*) dst;
-
-                            fixed[0] = GXGetRGBA5551_YUY16((u32*) src32, nx, 0);
-                            fixed[16] = GXGetRGBA5551_YUY16((u32*) src32, nx, 1);
-
-                            //dst[0] = src32[0];
-                        }
-                        if (y >= newTex->surface->hpitch)
-                            break;
-                    }
-                }
-            }
-
-
-            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
-            break;
-        }
-#endif
         default:
             return NULL;
     }
@@ -463,9 +406,11 @@ static gx_tex *create_texture(render_primitive *prim) {
 static gx_tex *get_texture(render_primitive *prim) {
     gx_tex *t = firstTex;
 
+    // must handle this correctly
+    /*
     if (PRIMFLAG_GET_SCREENTEX(prim->flags))
         return create_texture(prim);
-
+     */ 
     while (t != NULL)
         if (t->addr == prim->texture.base)
             return t;
@@ -476,6 +421,8 @@ static gx_tex *get_texture(render_primitive *prim) {
 }
 
 static void prep_texture(render_primitive *prim) {
+    Xe_SetTexture(g_pVideoDevice, 0, default_surface);
+
     gx_tex *newTex = get_texture(prim);
 
     if (newTex == NULL)
@@ -489,9 +436,7 @@ static void prep_texture(render_primitive *prim) {
 
     //GX_LoadTexObj(&texObj, GX_TEXMAP0);
 
-    if (prim->texture.base == NULL)
-        Xe_SetTexture(g_pVideoDevice, 0, NULL);
-    else
+    if (prim->texture.base)
         Xe_SetTexture(g_pVideoDevice, 0, newTex->surface);
 }
 
@@ -501,7 +446,8 @@ static void clearTexs() {
 
     while (t != NULL) {
         n = t->next;
-        free(t->data);
+        //free(t->data);
+        Xe_DestroyTexture(g_pVideoDevice, t->surface);
         free(t);
         t = n;
     }
@@ -516,7 +462,9 @@ static void clearScreenTexs() {
 
     while (t != NULL) {
         n = t->next;
-        free(t->data);
+        //free(t->data);
+        if (t->surface)
+            Xe_DestroyTexture(g_pVideoDevice, t->surface);
         free(t);
         t = n;
     }
@@ -682,12 +630,27 @@ void Menu_DrawMame(render_primitive * prim) {
 
     SetRS();
 
-    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_TRIANGLESTRIP, 0, 2);
+    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
     //nb_vertices += 4 * sizeof (DrawVerticeFormats);
     nb_vertices += 256; // fixe aligement
 }
 
+void MameFrame() {
+    clearScreenTexs();
+}
+
 void InitMameShaders() {
+    // fake texture
+    default_surface = Xe_CreateTexture(g_pVideoDevice, 256, 256, 1, XE_FMT_ARGB | XE_FMT_8888, 0);
+
+    u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, default_surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+
+    for (int y = 0; y < default_surface->height; y++)
+        for (int x = 0; x < default_surface->width; x++)
+            *xe_dest++ = 0xFFFFFFFF;
+
+    Xe_Surface_Unlock(g_pVideoDevice, default_surface);
+
     void* vs_program = NULL;
     void* ps_program = NULL;
 

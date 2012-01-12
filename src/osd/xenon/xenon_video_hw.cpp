@@ -204,6 +204,8 @@ static void render() {
     Menu_Render();
 }
 
+extern void MameFrame();
+
 void osd_xenon_update_video(render_primitive_list &primlist) {
     primlist.acquire_lock();
     
@@ -240,6 +242,9 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     //printf("Number of primitives :%d\r\n", n);
 
     render();
+    
+    
+	MameFrame();
     
     primlist.release_lock();
 }
