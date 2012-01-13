@@ -83,11 +83,11 @@ int main() {
     char * argv[]
     {
         //"mame.elf"
-        "mame.elf","mslug"
+        //"mame.elf","mslug"
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
         //"mame.elf", "sfiiin"
-        //"mame.elf", "sf2ce"
+        "mame.elf", "sf2ce"
         //"mame.elf", "sfa3"
         //"mame.elf", "mk"
         //"mame.elf"

@@ -25,6 +25,7 @@
 
 int osd_xenon_init() {
     TR;
+    xenon_make_it_faster(XENON_SPEED_FULL);
     // init xenon stuff	
     xenos_init(VIDEO_MODE_HDMI_720P);
     //console_init();
@@ -32,7 +33,6 @@ int osd_xenon_init() {
     usb_do_poll();
 
     // init video
-    xenon_make_it_faster(XENON_SPEED_FULL);
     osd_xenon_video_init();
 
     // init sound
