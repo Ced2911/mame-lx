@@ -44,11 +44,10 @@
 
 #include <debug.h>
 
-/*
 struct _osd_lock{
     unsigned int __attribute__ ((aligned (128))) _lock;
 };
-*/
+
 //============================================================
 //  osd_lock_alloc
 //============================================================
@@ -57,10 +56,10 @@ osd_lock *osd_lock_alloc(void)
 {
 	// the minimal implementation does not support threading
 	// just return a dummy value here
-	return (osd_lock *)1;
-    //_osd_lock * _lock = new _osd_lock;
-    //_lock->_lock = 0;
-   // return _lock;
+	//return (osd_lock *)1;
+    _osd_lock * _lock = (_osd_lock *)osd_malloc(sizeof(_osd_lock));
+    _lock->_lock = 0;
+    return _lock;
         //TR;
 }
 
@@ -113,8 +112,8 @@ void osd_lock_free(osd_lock *_lock)
     //TR;
 	// the minimal implementation does not support threading
 	// do nothing here
-/*
+
     _lock->_lock=0;
-    delete _lock;
-*/
+    osd_free(_lock);
+    _lock = NULL;
 }

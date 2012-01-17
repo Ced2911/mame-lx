@@ -91,7 +91,7 @@ static void CleanupPath(char * path) {
 
 file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64 *filesize) {
 
-    printf("osd_open : %s\r\n", _path);
+    //printf("osd_open : %s\r\n", _path);
 
     const char *mode;
     FILE *fileptr;
@@ -133,7 +133,7 @@ file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64
     fileptr = fopen(path, mode);
    
     if(fileptr == NULL){
-         printf("osd_open : %s not found\r\n", path);
+         //printf("osd_open : %s not found\r\n", path);
         return FILERR_NOT_FOUND;
     }
 
@@ -145,7 +145,7 @@ file_error osd_open(const char *_path, UINT32 openflags, osd_file **file, UINT64
     *filesize = ftell(fileptr);
     fseek(fileptr, 0, SEEK_SET);
 
-    printf("osd_open : %s\r\n", path);
+    //printf("osd_open : %s\r\n", path);
 
     return FILERR_NONE;
 }

@@ -28,20 +28,6 @@ extern render_target *xenos_target;
 #define XE_W 2048
 #define XE_H 2048
 
-//
-//  SOFTWARE RENDER
-//
-#define FUNC_PREFIX(x)          draw32_##x
-#define PIXEL_TYPE                      UINT32
-#define SRCSHIFT_R                      0
-#define SRCSHIFT_G                      0
-#define SRCSHIFT_B                      0
-#define DSTSHIFT_R                      16
-#define DSTSHIFT_G                      8
-#define DSTSHIFT_B                      0
-
-#include "rendersw.c"
-
 /**
  * Shaders
  **/
@@ -137,12 +123,12 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     for (prim = primlist.first(); prim != NULL; prim = prim->next()) {
         switch (prim->type) {
             case render_primitive::LINE:
-                draw_line(prim);
+                DrawLine(prim);
                 break;
 
             case render_primitive::QUAD:
                 //draw_quad(prim);
-                Menu_DrawMame(prim);
+                DrawQuad(prim);
                 break;
 
             default:
@@ -157,6 +143,7 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     render();
 
 
+    /** Clean some buffers **/
     MameFrame();
 
     primlist.release_lock();
