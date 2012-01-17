@@ -12,6 +12,7 @@
 #include <xenos/xe.h>
 #include <xenos/edram.h>
 #include <debug.h>
+#include <time/time.h>
 
 #include "emu.h"
 #include "osdepend.h"
@@ -23,74 +24,24 @@
 
 #include "gui/video.h"
 
+
+#include <ppc/atomic.h>
+
+#include <newlib/malloc_lock.h>
+
 extern render_target *xenos_target;
 
-#define XE_W 2048
-#define XE_H 2048
 
-/**
- * Shaders
- **/
-typedef unsigned int DWORD;
-//#include "shaders/osd_ps.h"
-//#include "shaders/osd_vs.h"
-
-#include "shaders_hw/ps.c.h"
-#include "shaders_hw/vs.h"
+static unsigned int thread_lock __attribute__((aligned(128))) = 0;
 
 static struct XenosDevice _xe;
-static struct XenosVertexBuffer *vb = NULL;
-static struct XenosVertexBuffer *soft_vb = NULL;
 struct XenosDevice * g_pVideoDevice = NULL;
-static struct XenosShader * g_pVertexShader = NULL;
-static struct XenosShader * g_pPixelTexturedShader = NULL;
-static struct XenosSurface * g_pTexture = NULL;
-static unsigned int * screen = NULL;
 
 static int screen_width;
 static int screen_height;
-static int hofs;
-static int vofs;
-
-static uint32_t pitch = 0;
-
-typedef struct DrawVerticeFormats {
-    float x, y, z, w;
-    unsigned int color;
-    float u, v;
-} DrawVerticeFormats;
-
-DrawVerticeFormats *vertices;
-
-struct mame_surface {
-    XenosSurface * surf;
-    mame_surface * next;
-};
-
-mame_surface * first_surf;
 
 static int nb_vertices = 0;
 int n = 0;
-
-static void draw_line(render_primitive *prim) {
-    /*
-        nb_vertices += 256;
-     */
-}
-
-void osd_xenon_video_init() {
-    g_pVideoDevice = &_xe;
-    Xe_Init(g_pVideoDevice);
-
-    InitVideo();
-
-    XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
-
-    float w = fb->width;
-    float h = fb->height;
-
-    Xe_SetClearColor(g_pVideoDevice, 0);
-}
 
 static void pre_render() {
 
@@ -101,6 +52,71 @@ static void render() {
 }
 
 extern void MameFrame();
+
+
+static int video_thread_running = 1;
+static render_primitive_list * currList;
+
+static void osd_xenon_video_thread() {
+    video_thread_running = 1;
+    while (video_thread_running) {
+
+        if (currList == NULL) {
+            udelay(10);
+            continue;
+        } else {
+            pre_render();
+
+            int minwidth, minheight;
+            int newwidth, newheight;
+
+            XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
+
+            // make that the size of our target
+            xenos_target->set_bounds(fb->width, fb->height);
+
+            xenos_target->compute_visible_area(fb->width, fb->height, (float) fb->width / (float) fb->height, xenos_target->orientation(), newwidth, newheight);
+
+            n = 0;
+            // begin ...
+            currList->acquire_lock();
+            // tmp
+            lock(&thread_lock);
+            
+            render_primitive *prim;
+            for (prim = currList->first(); prim != NULL; prim = prim->next()) {
+                switch (prim->type) {
+                    case render_primitive::LINE:
+                        DrawLine(prim);
+                        break;
+
+                    case render_primitive::QUAD:
+                        //draw_quad(prim);
+                        DrawQuad(prim);
+                        break;
+
+                    default:
+                        throw emu_fatalerror("Unexpected render_primitive type");
+                }
+
+                n++;
+            }
+            currList->release_lock();
+            // tmp
+            unlock(&thread_lock);
+
+            //printf("Number of primitives :%d\r\n", n);
+
+            render();
+
+
+            /** Clean some buffers **/
+            MameFrame();
+        }
+    }
+}
+
+#if 0
 
 void osd_xenon_update_video(render_primitive_list &primlist) {
     primlist.acquire_lock();
@@ -114,8 +130,8 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 
     // make that the size of our target
     xenos_target->set_bounds(fb->width, fb->height);
-    
-    xenos_target->compute_visible_area(fb->width, fb->height, (float)fb->width / (float)fb->height, xenos_target->orientation(), newwidth, newheight);
+
+    xenos_target->compute_visible_area(fb->width, fb->height, (float) fb->width / (float) fb->height, xenos_target->orientation(), newwidth, newheight);
 
     n = 0;
     // begin ...
@@ -147,4 +163,47 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     MameFrame();
 
     primlist.release_lock();
+}
+#else
+
+void osd_xenon_update_video(render_primitive_list &primlist) {
+    currList = &primlist;
+}
+#endif
+
+static void osd_xenon_video_cleanup(running_machine &machine) {
+    render_primitive_list *primlist = currList;
+    if (primlist) {
+        // tmp
+        lock(&thread_lock);
+        
+        primlist->acquire_lock();
+        currList = NULL;
+        primlist->release_lock();
+        
+        // tmp 
+        unlock(&thread_lock);
+    }
+}
+
+static unsigned char thread_stack[0x10000];
+
+void osd_xenon_video_hw_init(running_machine &machine) {
+    TR;
+
+    g_pVideoDevice = &_xe;
+    Xe_Init(g_pVideoDevice);
+
+    InitVideo();
+
+    XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
+
+    float w = fb->width;
+    float h = fb->height;
+
+    Xe_SetClearColor(g_pVideoDevice, 0);
+
+    xenon_run_thread_task(4, &thread_stack[sizeof (thread_stack) - 0x100], (void*) osd_xenon_video_thread);
+
+    machine.add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(osd_xenon_video_cleanup), &machine));
 }

@@ -79,15 +79,15 @@ render_target *xenos_target;
 //============================================================
 int main() {
     osd_xenon_init();
-    int argc = 2;
+    int argc =1;
     char * argv[]
     {
-        //"mame.elf"
+        "mame.elf"
         //"mame.elf","mslug"
         //		"uda:/xenon.elf"
         //"uda:/xenon.elf","-lx"
         //"mame.elf", "sfiiin"
-        "mame.elf", "sf2ce"
+        //"mame.elf", "sf2ce"
         //"mame.elf", "sfa3"
         //"mame.elf", "mk"
         //"mame.elf"
@@ -127,12 +127,16 @@ mini_osd_interface::~mini_osd_interface() {
 void mini_osd_interface::init(running_machine &machine) {
     // call our parent
     osd_interface::init(machine);
+    
+    
 
     // initialize the video system by allocating a rendering target
     xenos_target = machine.render().target_alloc();
         
     //xenos_target->set_max_update_rate(59.94);
 
+    osd_xenon_video_hw_init(machine);
+    
     // init input
     osd_xenon_input_init(machine);
 }

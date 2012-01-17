@@ -33,7 +33,7 @@ int osd_xenon_init() {
     usb_do_poll();
 
     // init video
-    osd_xenon_video_init();
+//    osd_xenon_video_init();
 
     // init sound
     osd_xenon_sound_init();
