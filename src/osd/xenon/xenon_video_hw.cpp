@@ -13,6 +13,8 @@
 #include <xenos/edram.h>
 #include <debug.h>
 #include <time/time.h>
+#include <ppc/atomic.h>
+#include <newlib/malloc_lock.h>
 
 #include "emu.h"
 #include "osdepend.h"
@@ -21,21 +23,13 @@
 #include "osdxenon.h"
 
 #include "xenon_video_hw.h"
-
 #include "gui/video.h"
+#include "gui/video_mame.h"
 
-
-#include <ppc/atomic.h>
-
-#include <newlib/malloc_lock.h>
-
-extern render_target *xenos_target;
-
+render_target *xenos_target;
 
 static unsigned int thread_lock __attribute__((aligned(128))) = 0;
-
-static struct XenosDevice _xe;
-struct XenosDevice * g_pVideoDevice = NULL;
+extern struct XenosDevice * g_pVideoDevice;
 
 static int screen_width;
 static int screen_height;
@@ -172,6 +166,7 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
 #endif
 
 static void osd_xenon_video_cleanup(running_machine &machine) {
+    video_thread_running = 0;
     render_primitive_list *primlist = currList;
     if (primlist) {
         // tmp
@@ -184,26 +179,21 @@ static void osd_xenon_video_cleanup(running_machine &machine) {
         // tmp 
         unlock(&thread_lock);
     }
+    
+    // wait a few
+    udelay(10);
 }
 
 static unsigned char thread_stack[0x10000];
 
 void osd_xenon_video_hw_init(running_machine &machine) {
     TR;
-
-    g_pVideoDevice = &_xe;
-    Xe_Init(g_pVideoDevice);
-
-    InitVideo();
-
     XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
-
-    float w = fb->width;
-    float h = fb->height;
-
     Xe_SetClearColor(g_pVideoDevice, 0);
 
+    // run the video on a new thread
     xenon_run_thread_task(4, &thread_stack[sizeof (thread_stack) - 0x100], (void*) osd_xenon_video_thread);
 
+    // on mame exit
     machine.add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(osd_xenon_video_cleanup), &machine));
 }

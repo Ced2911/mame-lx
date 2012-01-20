@@ -63,6 +63,10 @@ void edid_stuff(){
     }
 }
 
+xe_options::xe_options(){
+    
+}
+
 //============================================================
 //  CONSTANTS
 //============================================================
@@ -72,8 +76,9 @@ void edid_stuff(){
 //============================================================
 
 // a single rendering target
-render_target *xenos_target;
+extern render_target *xenos_target;
 
+#if 0
 //============================================================
 //  main
 //============================================================
@@ -105,7 +110,20 @@ int main() {
     TR;
     return frontend.execute(argc, argv);
 }
+#endif
 
+int xenon_main(int argc, char * argv[]){
+    osd_xenon_init();
+    // cli_frontend does the heavy lifting; if we have osd-specific options, we
+    // create a derivative of cli_options and add our own
+    cli_options options;
+    //options.
+    mini_osd_interface osd;
+    TR;
+    cli_frontend frontend(options, osd);
+    TR;
+    return frontend.execute(argc, argv);
+}
 
 //============================================================
 //  constructor
@@ -139,6 +157,9 @@ void mini_osd_interface::init(running_machine &machine) {
     
     // init input
     osd_xenon_input_init(machine);
+    
+    // init sound
+    osd_xenon_sound_init();
 }
 
 

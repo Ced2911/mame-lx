@@ -45,8 +45,9 @@ u32 FrameTimer = 0;
 #define MAX_VERTEX_COUNT 65536
 
 static struct XenosDevice _xe;
+struct XenosDevice * g_pVideoDevice;
 XenosVertexBuffer *vb = NULL;
-extern XenosDevice * g_pVideoDevice;
+
 static struct XenosShader * g_pVertexShader = NULL;
 static struct XenosShader * g_pPixelTexturedShader = NULL;
 //static struct XenosShader * g_pPixelTexturedColoredShader = NULL;
@@ -252,9 +253,9 @@ InitVideo() {
     //xenos_init(VIDEO_MODE_AUTO);
     //console_init();
 
-    //g_pVideoDevice = &_xe;
+    g_pVideoDevice = &_xe;
 
-    //Xe_Init(g_pVideoDevice);
+    Xe_Init(g_pVideoDevice);
 
     XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
 

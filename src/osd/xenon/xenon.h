@@ -1,3 +1,6 @@
+#include "clifront.h"
+#include "render.h"
+
 // init libxenon
 int osd_xenon_init();
 // update video
@@ -13,3 +16,10 @@ void osd_xenon_update_input();
 // sound
 void osd_xenon_update_sound(const INT16 *buffer, int samples_this_frame);
 void osd_xenon_sound_init();
+
+class xe_options : public cli_options
+{
+public:
+    // construction/destruction
+    xe_options();
+};

@@ -158,6 +158,20 @@ void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist
             case IPT_UI_CONFIGURE:
                 entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
                 break;
+                
+            case IPT_UI_UP:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
+                break;
+                
+            case IPT_UI_CANCEL:
+                //entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_START,JOYCODE_SELECT);
+                break;
+            // alt-enter for fullscreen
+            case IPT_OSD_1:
+                entry->token = "MAME_UI_EXIT";
+                entry->name = "Exit mame";
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON1, JOYCODE_BUTTON16);
+                break;
 /*                
             case JOYSTICKRIGHT_UP:
                 entry->defseq[SEQ_TYPE_STANDARD].set();

@@ -52,7 +52,7 @@ HOST_LD = g++
 HOST_OBJDUMP = objdump
 
 # do it only when linking libosd.a (png error ...)
-XENON_INCDIR = -I$(DEVKITXENON)/usr/include
+XENON_INCDIR = -I$(DEVKITXENON)/usr/include -I$(DEVKITXENON)/usr/include/freetype2
 
 #
 FILE2STR = btools/file2str
@@ -780,7 +780,7 @@ $(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $
 $(EMULATOR): $(VERSIONOBJ) $(EMUINFOOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 #$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
-	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^  -lxenon  -n -T $(LDSCRIPT) -o $@
+	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm  -lpng -lfreetype $^  -lxenon -lpng -lfreetype  -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32
