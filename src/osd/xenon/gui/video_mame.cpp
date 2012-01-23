@@ -57,7 +57,6 @@ typedef struct {
     float p1, p2; // 32
 } __attribute__((packed, aligned(32))) MameVerticeFormats;
 
-
 struct xe_tex {
     xe_tex *next;
     void *addr;
@@ -71,12 +70,12 @@ struct _line_aa_step {
     float xoffs, yoffs; // X/Y deltas
     float weight; // weight contribution
 };
-static const line_aa_step line_aa_1step[] ={
+static const line_aa_step line_aa_1step[] = {
     { 0.00f, 0.00f, 1.00f},
     { 0}
 };
 
-static const line_aa_step line_aa_4step[] ={
+static const line_aa_step line_aa_4step[] = {
     { -0.25f, 0.00f, 0.25f},
     { 0.25f, 0.00f, 0.25f},
     { 0.00f, -0.25f, 0.25f},
@@ -92,6 +91,7 @@ struct XenosSurface * screen_texture = NULL;
 static struct XenosSurface * CreateSurface(int w, int h, int fmt) {
 
     struct XenosSurface * s = Xe_CreateTexture(g_pVideoDevice, w, h, 1, fmt, 0);
+    memset(s->base, 0, s->hpitch * s->wpitch);
     return s;
 }
 
@@ -231,13 +231,12 @@ static xe_tex *create_texture(render_primitive *prim) {
 
             if (newTex->surface == NULL) {
                 newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
-                memset(newTex->surface->base, 0, newTex->surface->hpitch * newTex->surface->wpitch);
             }
 #if 1            
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
             u32 * src32;
-            u32 * dst_limit = xe_dest+((newTex->surface->wpitch/4)*newTex->surface->hpitch);
+            u32 * dst_limit = xe_dest + ((newTex->surface->wpitch / 4) * newTex->surface->hpitch);
             int hpitch, wpitch;
 
             for (hpitch = 0; hpitch < newTex->surface->hpitch; hpitch += newTex->surface->height) {
@@ -261,8 +260,8 @@ static xe_tex *create_texture(render_primitive *prim) {
                             }
 
                             src32 = (u32 *) data + ((nx)+(ny * prim->texture.rowpixels));
-                            if(dst<dst_limit)
-                            dst[0] = src32[0];
+                            if (dst < dst_limit)
+                                dst[0] = src32[0];
                         }
                         if (y >= newTex->surface->hpitch)
                             break;
@@ -359,6 +358,7 @@ void DrawQuad(render_primitive * prim) {
     XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
     float TargetWidth = fb->width;
     float TargetHeight = fb->height;
+
     float RawWidth = prim->texture.width;
     float RawHeight = prim->texture.height;
 
@@ -437,94 +437,61 @@ void DrawLine(render_primitive * prim) {
     XenosSurface * fb = Xe_GetFramebufferSurface(g_pVideoDevice);
     float TargetWidth = fb->width;
     float TargetHeight = fb->height;
-    float RawWidth = prim->texture.width;
-    float RawHeight = prim->texture.height;
 
     float PostPass = 0.f;
 
-    float WidthRatio = 1;
-    float HeightRatio = 1;
-
     XeColor color;
 
-    float effwidth;
-    // compute the effective width based on the direction of the line
-    effwidth = prim->width;
-    if (effwidth < 0.5f)
-        effwidth = 0.5f;
+    MameVerticeFormats* Rect = (MameVerticeFormats*) Xe_VB_Lock(g_pVideoDevice, vb, nb_vertices, 4 * sizeof (MameVerticeFormats), XE_LOCK_WRITE);
+    {
+        Rect[0].x = prim->bounds.x0 - 0.5f;
+        Rect[0].y = prim->bounds.y0 - 0.5f;
+        Rect[1].x = prim->bounds.x1 - 0.5f;
+        Rect[1].y = prim->bounds.y0 - 0.5f;
 
-    prep_texture(prim);
+        Rect[0].u = 0;
+        Rect[0].v = 0;
+        Rect[1].u = 0;
+        Rect[1].v = 1;
 
-    // determine the bounds of a quad to draw this line
-    render_line_to_quad(&prim->bounds, effwidth, &b0, &b1);
+        // R => B
+        color.a = prim->color.a * 255.f;
+        color.b = prim->color.r * 255.f;
+        color.g = prim->color.g * 255.f;
+        color.r = prim->color.b * 255.f;
 
-    for (step = PRIMFLAG_GET_ANTIALIAS(prim->flags) ? line_aa_4step : line_aa_1step; step->weight != 0; step++) {
-        MameVerticeFormats* Rect = (MameVerticeFormats*) Xe_VB_Lock(g_pVideoDevice, vb, nb_vertices, 4 * sizeof (MameVerticeFormats), XE_LOCK_WRITE);
-        {
-            // rotate the unit vector by 135 degrees and add to point 0
-            Rect[0].x = b0.x0 + step->xoffs;
-            Rect[0].y = b0.y0 + step->yoffs;
-
-            // rotate the unit vector by -135 degrees and add to point 0
-            Rect[1].x = b0.x1 + step->xoffs;
-            Rect[1].y = b0.y1 + step->yoffs;
-
-            // rotate the unit vector by 45 degrees and add to point 1
-            Rect[2].x = b1.x0 + step->xoffs;
-            Rect[2].y = b1.y0 + step->yoffs;
-
-            // rotate the unit vector by -45 degrees and add to point 1
-            Rect[3].x = b1.x1 + step->xoffs;
-            Rect[3].y = b1.y1 + step->yoffs;
-
-            Rect[0].u = 0;
-            Rect[0].v = 0;
-            Rect[1].u = 0;
-            Rect[1].v = 1;
-            Rect[2].u = 1;
-            Rect[2].v = 0;
-            Rect[3].u = 1;
-            Rect[3].v = 1;
-
-            // R => B
-            color.a = prim->color.a * 255.f;
-            color.b = prim->color.r * 255.f;
-            color.g = prim->color.g * 255.f;
-            color.r = prim->color.b * 255.f;
-
-            int i = 0;
-            for (i = 0; i < 4; i++) {
-                Rect[i].z = 0.0;
-                Rect[i].color = color.lcol;
-            }
+        int i = 0;
+        for (i = 0; i < 2; i++) {
+            Rect[i].z = 0.0;
+            Rect[i].color = color.lcol;
         }
-        Xe_VB_Unlock(g_pVideoDevice, vb);
-
-
-        Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, g_pPixelShader, 0);
-        Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, g_pVertexShader, 0);
-
-        // primary.fx
-        // Registers:
-        //
-        //   Name         Reg   Size
-        //   ------------ ----- ----
-        //   TargetWidth  c0       1
-        //   TargetHeight c1       1
-        //   PostPass     c2       1
-
-        Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, (float*) &TargetWidth, 1);
-        Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, (float*) &TargetHeight, 1);
-        Xe_SetVertexShaderConstantF(g_pVideoDevice, 2, (float*) &PostPass, 1);
-
-        SetRS();
-
-        Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_TRIANGLESTRIP, 0, 2);
-        //nb_vertices += 4 * sizeof (DrawVerticeFormats);
-        nb_vertices += 256; // fixe aligement
-
-        nbPrim++;
     }
+    Xe_VB_Unlock(g_pVideoDevice, vb);
+
+
+    Xe_SetShader(g_pVideoDevice, SHADER_TYPE_PIXEL, g_pPixelShader, 0);
+    Xe_SetShader(g_pVideoDevice, SHADER_TYPE_VERTEX, g_pVertexShader, 0);
+
+    // primary.fx
+    // Registers:
+    //
+    //   Name         Reg   Size
+    //   ------------ ----- ----
+    //   TargetWidth  c0       1
+    //   TargetHeight c1       1
+    //   PostPass     c2       1
+
+    Xe_SetVertexShaderConstantF(g_pVideoDevice, 0, (float*) &TargetWidth, 1);
+    Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, (float*) &TargetHeight, 1);
+    Xe_SetVertexShaderConstantF(g_pVideoDevice, 2, (float*) &PostPass, 1);
+
+    SetRS();
+
+    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
+    nb_vertices += 256; // fixe aligement
+
+    nbPrim++;
+    //}
 
 }
 
@@ -561,7 +528,7 @@ void InitMameShaders() {
             float2 TexCoord : TEXCOORD0;
     };
      */
-    
+
     static const struct XenosVBFFormat vbf = {
         4,
         {

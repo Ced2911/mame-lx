@@ -145,14 +145,10 @@ mini_osd_interface::~mini_osd_interface() {
 void mini_osd_interface::init(running_machine &machine) {
     // call our parent
     osd_interface::init(machine);
-    
-    
 
     // initialize the video system by allocating a rendering target
     xenos_target = machine.render().target_alloc();
         
-    //xenos_target->set_max_update_rate(59.94);
-
     osd_xenon_video_hw_init(machine);
     
     // init input
