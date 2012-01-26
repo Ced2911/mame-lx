@@ -45,6 +45,9 @@
 #include "clifront.h"
 #include "osdxenon.h"
 #include "xenon.h"
+#include "ui.h"
+#include "emuopts.h"
+#include "uiinput.h"
 #include <debug.h>
 #include <usb/usbmain.h>
 #include <input/input.h>
@@ -178,7 +181,22 @@ static void ShowFPS() {
     }
 }
 
+int
+WindowPrompt(const char *title, const char *msg, const char *btn1Label, const char *btn2Label) ;
+
+static void check_osd_inputs(running_machine &machine)
+{
+    if (ui_input_pressed(machine, IPT_OSD_1))
+    {
+        // ask exit
+        int mame_exit = WindowPrompt("Return to menu", "Return ?", "Ok", "Cancel");
+        if(mame_exit)
+            machine.schedule_exit();
+    }
+}
+
 void mini_osd_interface::update(bool skip_redraw) {
+    check_osd_inputs(machine());
     // get the list of primitives for the target at the current size
     render_primitive_list &primlist = xenos_target->get_primitives();
 

@@ -86,6 +86,9 @@ static const line_aa_step line_aa_4step[] = {
 static xe_tex *firstTex = NULL;
 static xe_tex *lastTex = NULL;
 
+static xe_tex *screenFirstTex = NULL;
+static xe_tex *screenLastTex = NULL;
+
 struct XenosSurface * screen_texture = NULL;
 
 static struct XenosSurface * CreateSurface(int w, int h, int fmt) {
@@ -151,7 +154,10 @@ static xe_tex *create_texture(render_primitive *prim) {
             // screen tex
         case TEXFORMAT_RGB15:
         {
-            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            if (newTex->surface == NULL) {
+                newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            }
+            //            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
 
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
@@ -166,7 +172,10 @@ static xe_tex *create_texture(render_primitive *prim) {
         }
         case TEXFORMAT_PALETTEA16:
         {
-            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            if (newTex->surface == NULL) {
+                newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            }
+            //            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
 
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
@@ -181,7 +190,10 @@ static xe_tex *create_texture(render_primitive *prim) {
         }
         case TEXFORMAT_PALETTE16:
         {
-            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            if (newTex->surface == NULL) {
+                newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            }
+            //            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
 
@@ -193,9 +205,15 @@ static xe_tex *create_texture(render_primitive *prim) {
             Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
             break;
         }
+            // neogeo system use this one
         case TEXFORMAT_RGB32:
         {
-            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            TR;
+            if (newTex->surface == NULL) {
+                newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            }
+            //            printf("%d - %d\r\n",width,height);
+            //            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
 
@@ -212,7 +230,10 @@ static xe_tex *create_texture(render_primitive *prim) {
             // screen tex
         case TEXFORMAT_YUY16:
         {
-            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            if (newTex->surface == NULL) {
+                newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
+            }
+            //            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
 
@@ -228,10 +249,12 @@ static xe_tex *create_texture(render_primitive *prim) {
             // Small bitmap
         case TEXFORMAT_ARGB32:
         {
+            
 
             if (newTex->surface == NULL) {
                 newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
             }
+            break;
 #if 1            
             u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
             u32 * dst;
@@ -278,7 +301,16 @@ static xe_tex *create_texture(render_primitive *prim) {
     }
     newTex->addr = &(*data);
 
+//    printf("prim->flags = 0x%08x\r\n", prim->flags);
+
     if (PRIMFLAG_GET_SCREENTEX(prim->flags)) {
+        TR;
+        if (screenFirstTex == NULL)
+            screenFirstTex = newTex;
+        else
+            screenLastTex->next = newTex;
+
+        screenLastTex = newTex;
     } else {
         if (firstTex == NULL)
             firstTex = newTex;
@@ -318,8 +350,16 @@ static void prep_texture(render_primitive *prim) {
         return;
     }
 
-    newTex->surface->width = prim->texture.width;
-    newTex->surface->height = prim->texture.height;
+
+//    newTex->surface->width = prim->texture.width;
+//    newTex->surface->height = prim->texture.height;
+
+
+
+    if (newTex->surface == screen_texture) {
+        //        printf("Use screen surf\r\n");
+        //        printf("%d - %d\r\n",newTex->surface->width,newTex->surface->height);
+    }
 
     if (prim->texture.base)
         Xe_SetTexture(g_pVideoDevice, 0, newTex->surface);
@@ -347,6 +387,82 @@ static void clearTexs() {
 
     firstTex = NULL;
     lastTex = NULL;
+}
+
+static void screenClearTexs() {
+    xe_tex *t = screenFirstTex;
+    xe_tex *n;
+
+    int i = 0;
+
+    //TR;
+    while (t != NULL) {
+        n = t->next;
+        //free(t->data);
+        if (t->surface) {
+            //TR;
+            if (t->surface->base)
+                Xe_DestroyTexture(g_pVideoDevice, t->surface);
+            //TR;
+        }
+        free(t);
+        //TR;
+        t = n;
+        i++;
+    }
+    //TR;
+//    if (i)
+//        printf("screenClearTexs %d\r\n", i);
+
+
+    screenFirstTex = NULL;
+    screenLastTex = NULL;
+}
+
+void SetRS(render_primitive * prim) {
+    int blendmode = PRIMFLAG_GET_BLENDMODE(prim->flags);
+
+    int blendenable;
+    int blendop;
+    int blendsrc;
+    int blenddst;
+
+    switch (blendmode) {
+        default:
+        case BLENDMODE_NONE: blendenable = FALSE;
+            blendop = XE_BLENDOP_ADD;
+            blendsrc = XE_BLEND_SRCALPHA;
+            blenddst = XE_BLEND_INVSRCALPHA;
+            break;
+        case BLENDMODE_ALPHA: blendenable = TRUE;
+            blendop = XE_BLENDOP_ADD;
+            blendsrc = XE_BLEND_SRCALPHA;
+            blenddst = XE_BLEND_INVSRCALPHA;
+            break;
+        case BLENDMODE_RGB_MULTIPLY: blendenable = TRUE;
+            blendop = XE_BLENDOP_ADD;
+            blendsrc = XE_BLEND_DESTCOLOR;
+            blenddst = XE_BLEND_ZERO;
+            break;
+        case BLENDMODE_ADD: blendenable = TRUE;
+            blendop = XE_BLENDOP_ADD;
+            blendsrc = XE_BLEND_SRCALPHA;
+            blenddst = XE_BLEND_ONE;
+            break;
+    }
+
+    Xe_SetBlendOp(g_pVideoDevice, blendop);
+    Xe_SetSrcBlend(g_pVideoDevice, blendsrc);
+    Xe_SetDestBlend(g_pVideoDevice, blenddst);
+    Xe_SetAlphaTestEnable(g_pVideoDevice, blendenable);
+
+    //    Xe_SetBlendOp(g_pVideoDevice, XE_BLENDOP_ADD);
+    //    Xe_SetSrcBlend(g_pVideoDevice, XE_BLEND_SRCALPHA);
+    //    Xe_SetDestBlend(g_pVideoDevice, XE_BLEND_INVSRCALPHA);
+    //    Xe_SetAlphaTestEnable(g_pVideoDevice, 1);
+
+    Xe_SetCullMode(g_pVideoDevice, XE_CULL_NONE);
+    Xe_SetStreamSource(g_pVideoDevice, 0, vb, nb_vertices, 12);
 }
 
 /**
@@ -396,7 +512,6 @@ void DrawQuad(render_primitive * prim) {
         Rect[2].v = prim->texcoords.bl.v;
         Rect[3].u = prim->texcoords.br.u;
         Rect[3].v = prim->texcoords.br.v;
-
         int i = 0;
         for (i = 0; i < 4; i++) {
             Rect[i].z = 0.0;
@@ -420,7 +535,7 @@ void DrawQuad(render_primitive * prim) {
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, (float*) &TargetHeight, 1);
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 2, (float*) &PostPass, 1);
 
-    SetRS();
+    SetRS(prim);
 
     Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
     //nb_vertices += 4 * sizeof (DrawVerticeFormats);
@@ -485,9 +600,9 @@ void DrawLine(render_primitive * prim) {
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 1, (float*) &TargetHeight, 1);
     Xe_SetVertexShaderConstantF(g_pVideoDevice, 2, (float*) &PostPass, 1);
 
-    SetRS();
+    SetRS(prim);
 
-    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_RECTLIST, 0, 1);
+    Xe_DrawPrimitive(g_pVideoDevice, XE_PRIMTYPE_LINELIST, 0, 1);
     nb_vertices += 256; // fixe aligement
 
     nbPrim++;
@@ -501,6 +616,8 @@ void MameFrame() {
         // if number of prim changed clear small textures caches
         // clearTexs();
     }
+
+    screenClearTexs();
     oldNbPrim = nbPrim;
     nbPrim = 0;
 }

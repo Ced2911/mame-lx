@@ -46,7 +46,10 @@ static void pre_render() {
 }
 
 static void render() {
+    
     Menu_Render();
+    extern void MameFrame();
+    MameFrame();
 }
 
 static void osd_xenon_video_thread() {
@@ -83,7 +86,7 @@ static void osd_xenon_video_thread() {
                         break;
 
                     case render_primitive::QUAD:
-                        DrawQuad(prim);
+                        DrawQuad(prim);                        
                         break;
 
                     default:
@@ -92,6 +95,7 @@ static void osd_xenon_video_thread() {
 
                 n++;
             }
+//            printf("N:%d\r\n",n);
 
             render();
             currList->release_lock();

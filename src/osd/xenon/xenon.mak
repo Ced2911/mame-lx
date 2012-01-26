@@ -144,7 +144,7 @@ OSDCOREOBJS = \
 	$(XENONOBJ)/xenon_input.o \
 	$(XENONOBJ)/xenon_sound.o \
 	$(XENONOBJ)/xenon.o \
-        $(VIDEOOBJHW) \
+        $(VIDEOOBJ) \
 	
 
 

@@ -60,7 +60,7 @@ enum XINPUTBTN {
 };
 
 static UINT8 joystick_state[4][XINPUT_MAX];
-static signed int joystick_axis[4][XINPUT_MAX];
+static INT32 joystick_axis[4][XINPUT_MAX];
 
 // input devices
 static input_device *joystick_device[4];
@@ -89,18 +89,18 @@ void osd_xenon_input_init(running_machine &machine) {
                 joystick_device[i]->add_item(x360BtnNames[XINPUT_DOWN], (input_item_id) (dir_pos + 3), keyboard_get_state, &joystick_state[i][XINPUT_DOWN]);
          */
 
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_UP], (input_item_id) (ITEM_ID_HAT1UP + (i * 4)), generic_btn_get_state, &joystick_state[i][XINPUT_UP]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_LEFT], (input_item_id) (ITEM_ID_HAT1LEFT + (i * 4)), generic_btn_get_state, &joystick_state[i][XINPUT_LEFT]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_RIGHT], (input_item_id) (ITEM_ID_HAT1RIGHT + (i * 4)), generic_btn_get_state, &joystick_state[i][XINPUT_RIGHT]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_DOWN], (input_item_id) (ITEM_ID_HAT1DOWN + (i * 4)), generic_btn_get_state, &joystick_state[i][XINPUT_DOWN]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_UP], ITEM_ID_BUTTON10, generic_btn_get_state, &joystick_state[i][XINPUT_UP]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_LEFT], ITEM_ID_BUTTON11, generic_btn_get_state, &joystick_state[i][XINPUT_LEFT]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_RIGHT], ITEM_ID_BUTTON12, generic_btn_get_state, &joystick_state[i][XINPUT_RIGHT]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_DOWN], ITEM_ID_BUTTON13, generic_btn_get_state, &joystick_state[i][XINPUT_DOWN]);
 
         // btn 
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_A], (input_item_id) (btn_pos), generic_btn_get_state, &joystick_state[i][XINPUT_A]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_B], (input_item_id) (btn_pos + 1), generic_btn_get_state, &joystick_state[i][XINPUT_B]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_X], (input_item_id) (btn_pos + 2), generic_btn_get_state, &joystick_state[i][XINPUT_X]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_Y], (input_item_id) (btn_pos + 3), generic_btn_get_state, &joystick_state[i][XINPUT_Y]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_RB], (input_item_id) (btn_pos + 4), generic_btn_get_state, &joystick_state[i][XINPUT_RB]);
-        joystick_device[i]->add_item(x360BtnNames[XINPUT_LB], (input_item_id) (btn_pos + 5), generic_btn_get_state, &joystick_state[i][XINPUT_LB]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_A], ITEM_ID_BUTTON1, generic_btn_get_state, &joystick_state[i][XINPUT_A]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_B], ITEM_ID_BUTTON2, generic_btn_get_state, &joystick_state[i][XINPUT_B]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_X], ITEM_ID_BUTTON3, generic_btn_get_state, &joystick_state[i][XINPUT_X]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_Y], ITEM_ID_BUTTON4, generic_btn_get_state, &joystick_state[i][XINPUT_Y]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_RB], ITEM_ID_BUTTON5, generic_btn_get_state, &joystick_state[i][XINPUT_RB]);
+        joystick_device[i]->add_item(x360BtnNames[XINPUT_LB], ITEM_ID_BUTTON6, generic_btn_get_state, &joystick_state[i][XINPUT_LB]);
 
         // axis
         joystick_device[i]->add_item(x360AnalogNames[XINPUT_LX], ITEM_ID_XAXIS, generic_axis_get_state, &joystick_axis[i][XINPUT_LX]);
@@ -115,6 +115,7 @@ void osd_xenon_update_input() {
 
     for (int i = 0; i < 4; i++) {
         //memset(keyboard_state,0,KEY_TOTAL);
+        memset(&ctrl[i], 0, sizeof (controller_data_s));
 
         get_controller_data(&ctrl[i], i);
         /*
@@ -139,10 +140,18 @@ void osd_xenon_update_input() {
         joystick_state[i][XINPUT_LB] = (ctrl[i].lb) ? 0x80 : 0;
 
         //axis
-        joystick_axis[i][XINPUT_LX] = ctrl[i].s1_x;
-        joystick_axis[i][XINPUT_LY] = ctrl[i].s1_y;
-        joystick_axis[i][XINPUT_RX] = ctrl[i].s2_x;
-        joystick_axis[i][XINPUT_RY] = ctrl[i].s2_y;
+#define	STICK_DEAD_ZONE (32768*0.4)
+#define HANDLE_STICK_DEAD_ZONE(x) ((((x)>-STICK_DEAD_ZONE) && (x)<STICK_DEAD_ZONE)?0:(x-x/abs(x)*STICK_DEAD_ZONE))
+
+        joystick_axis[i][XINPUT_LX] = HANDLE_STICK_DEAD_ZONE(ctrl[i].s1_x) * 256;
+        joystick_axis[i][XINPUT_LY] = HANDLE_STICK_DEAD_ZONE(ctrl[i].s1_y) * 256;
+        joystick_axis[i][XINPUT_RX] = HANDLE_STICK_DEAD_ZONE(ctrl[i].s2_x) * 256;
+        joystick_axis[i][XINPUT_RY] = HANDLE_STICK_DEAD_ZONE(ctrl[i].s2_y) * 256;
+
+        /*
+                printf("ctrl[i].s1_x = %d\r\n",joystick_axis[i][XINPUT_LX]);
+                printf("ctrl[i].s1_y = %d\r\n",joystick_axis[i][XINPUT_LY]);
+         */
     }
 }
 
@@ -158,41 +167,53 @@ void osd_xenon_customize_input_type_list(simple_list<input_type_entry> &typelist
             case IPT_UI_CONFIGURE:
                 entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
                 break;
-                
+
             case IPT_UI_UP:
-                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON10);
                 break;
-                
+            case IPT_UI_DOWN:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON13);
+                break;
+            case IPT_UI_LEFT:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON11);
+                break;
+            case IPT_UI_RIGHT:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON12);
+                break;
+
+            case IPT_JOYSTICK_UP:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON10);
+                break;
+            case IPT_JOYSTICK_DOWN:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON13);
+                break;
+            case IPT_JOYSTICK_LEFT:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON11);
+                break;
+            case IPT_JOYSTICK_RIGHT:
+                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON12);
+                break;
+
             case IPT_UI_CANCEL:
                 //entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_START,JOYCODE_SELECT);
                 break;
-            // alt-enter for fullscreen
+                
             case IPT_OSD_1:
                 entry->token = "MAME_UI_EXIT";
                 entry->name = "Exit mame";
                 entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON1, JOYCODE_BUTTON16);
                 break;
-/*                
-            case JOYSTICKRIGHT_UP:
+                
+            case IPT_JOYSTICKRIGHT_UP:
+            case IPT_JOYSTICKRIGHT_DOWN:
+            case IPT_JOYSTICKRIGHT_LEFT:
+            case IPT_JOYSTICKRIGHT_RIGHT:
+            case IPT_JOYSTICKLEFT_UP:
+            case IPT_JOYSTICKLEFT_DOWN:
+            case IPT_JOYSTICKLEFT_LEFT:
+            case IPT_JOYSTICKLEFT_RIGHT:
                 entry->defseq[SEQ_TYPE_STANDARD].set();
                 break;
-
-            case JOYSTICKRIGHT_DOWN:
-                entry->defseq[SEQ_TYPE_STANDARD].set();
-                break;
-                
-            case UI_LEFT:
-                entry->defseq[SEQ_TYPE_STANDARD].set();
-                break;
-                
-            case UI_RIGHT:
-                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
-                break;
-                
-            case UI_SELECT:
-                entry->defseq[SEQ_TYPE_STANDARD].set(JOYCODE_BUTTON16);
-                break;
- */ 
         }
     }
 }
@@ -209,6 +230,6 @@ static INT32 generic_btn_get_state(void *device_internal, void *item_internal) {
 }
 
 static INT32 generic_axis_get_state(void *device_internal, void *item_internal) {
-    INT16 *axisdata = (INT16 *) item_internal;
+    INT32 *axisdata = (INT32 *) item_internal;
     return *axisdata;
 }
