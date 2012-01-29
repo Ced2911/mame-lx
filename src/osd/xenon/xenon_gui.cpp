@@ -35,8 +35,7 @@
 #undef delete
 #undef new
 
-enum
-{
+enum {
     MENU_EXIT = -1,
     MENU_NONE,
     MENU_MAIN,
@@ -107,6 +106,28 @@ _HaltGui() {
 #define ResumeGui(){TR;_ResumeGui();}
 #define HaltGui(){TR;_HaltGui();}
 
+static GuiImage * mameImg = NULL;
+
+void AddMameSurf() {
+    HaltGui();
+    XenosSurface * mame_surf = osd_xenon_get_surface();
+
+    if (mame_surf) {
+        mameImg = new GuiImage(mame_surf, screenwidth, screenheight);
+        mainWindow->Append(mameImg);
+    }
+    ResumeGui();
+}
+
+void RemoveMameSurf() {
+    HaltGui();
+    if (mameImg) {
+        mainWindow->Remove(mameImg);
+        delete mameImg;
+    }
+    ResumeGui();
+}
+
 /****************************************************************************
  * WindowPrompt
  *
@@ -116,6 +137,9 @@ _HaltGui() {
 int
 WindowPrompt(const char *title, const char *msg, const char *btn1Label, const char *btn2Label) {
     int choice = -1;
+
+
+    AddMameSurf();
 
     //    GuiWindow promptWindow(448, 288);
     GuiWindow promptWindow(640, 360);
@@ -193,7 +217,6 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
     ResumeGui();
 
     while (choice == -1) {
-
         UGUI();
         udelay(THREAD_SLEEP);
 
@@ -212,6 +235,9 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
     mainWindow->Remove(&promptWindow);
     mainWindow->SetState(STATE_DEFAULT);
     ResumeGui();
+
+    RemoveMameSurf();
+
     return choice;
 }
 
@@ -377,17 +403,25 @@ static void OnScreenKeyboard(char * var, u16 maxlen) {
  * MenuBrowseDevice
  ***************************************************************************/
 static int MenuBrowseDevice() {
+    /* display something */
+    UGUI();
+    
+    static int first_run = 1;
     char title[100];
     int i;
 
     ShutoffRumble();
 
-    // populate initial directory listing
-    CreateRomList();
+    if(first_run)
+    {
+        // populate initial directory listing
+        CreateRomList();
+        first_run=0;
+    }
 
     int menu = MENU_NONE;
-
-    sprintf(title, "%s - Load Game", "mame.version");
+    extern const char build_version[];
+    sprintf(title, "%s %s  - Load Game", emulator_info::get_applongname(), build_version);
 
     GuiText titleTxt(title, 28, ColorGrey);
     titleTxt.SetAlignment(ALIGN_LEFT, ALIGN_TOP);
@@ -429,47 +463,27 @@ static int MenuBrowseDevice() {
         UGUI();
         udelay(THREAD_SLEEP);
 
-        // update file browser based on arrow xenon_buttons
-        // set MENU_EXIT if A xenon_button pressed on a file
         for (i = 0; i < FILE_PAGESIZE; i++) {
             if (romBrowser.fileList[i]->GetState() == STATE_CLICKED) {
                 romBrowser.fileList[i]->ResetState();
-                // check corresponding browser entry
-                if (romList[rominfo.selIndex].is_clone) {
-                    /*
-                    if (BrowserChangeFolder()) {
-                        romBrowser.ResetState();
-                        romBrowser.fileList[0]->SetState(STATE_SELECTED);
-                        romBrowser.TriggerUpdate();
-                    } else {
-                        menu = MENU_BROWSE_DEVICE;
-                        break;
-                    }
-                     */ 
-                } else {
-                    ShutoffRumble();
-                    romBrowser.ResetState();
-                    //mainWindow->SetState(STATE_DISABLED);
 
-                    menu = MENU_EMULATION;
+                ShutoffRumble();
+                romBrowser.ResetState();
+                menu = MENU_EMULATION;
 
-//                    emu.Initialise();
-//                    emu.OpenRom(rootdir, browser.dir, browserList[browser.selIndex].filename);
-                    //mainWindow->SetState(STATE_DEFAULT);
-                }
-                
+                //InfoPrompt(romList[rominfo.selIndex].romname);
+
                 int argc = 2;
-                char * argv[]=
-                {
+                char * argv[] = {
                     "mame.elf",
                     romList[rominfo.selIndex].romname
                 };
-                
-                for(int ppp=0;ppp<argc;ppp++)
-                    printf("%s\r\n",argv[ppp]);
-                
+
+                for (int ppp = 0; ppp < argc; ppp++)
+                    printf("%s\r\n", argv[ppp]);
+
                 extern int xenon_main(int argc, char * argv[]);
-                xenon_main(argc,argv);
+                xenon_main(argc, argv);
             }
         }
         if (backBtn.GetState() == STATE_CLICKED)
@@ -512,10 +526,10 @@ void MainMenu(int menu) {
     //    bgMusic->Play(); // startup music
 
     while (currentMenu != MENU_EXIT) {
-       currentMenu = MenuBrowseDevice();
+        currentMenu = MenuBrowseDevice();
     }
     ResumeGui();
-//    ExitRequested = 1;
+    //    ExitRequested = 1;
 
     while (1) {
         UGUI();
@@ -537,18 +551,16 @@ void MainMenu(int menu) {
     mainWindow = NULL;
 }
 
-
-
-int main(){
+int main() {
     // init video / usb / thread etc ...
     osd_xenon_init();
-    
+
     InitFreeType((u8*) font_ttf, font_ttf_size); // Initialize font system
-    
+
     InitVideo();
     // run gui
-    
+
     MainMenu(MENU_BROWSE_DEVICE);
-    
+
     return 0;
 }

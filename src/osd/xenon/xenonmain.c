@@ -181,17 +181,27 @@ static void ShowFPS() {
     }
 }
 
-int
-WindowPrompt(const char *title, const char *msg, const char *btn1Label, const char *btn2Label) ;
+static int exit_asked=0;
+
+void ask_exit(){
+    exit_asked=1;
+}
 
 static void check_osd_inputs(running_machine &machine)
 {
-    if (ui_input_pressed(machine, IPT_OSD_1))
+    if (ui_input_pressed(machine, IPT_OSD_1)|exit_asked)
     {
-        // ask exit
-        int mame_exit = WindowPrompt("Return to menu", "Return ?", "Ok", "Cancel");
+        // pause video thread
+        osd_xenon_video_pause();
+        
+         // ask for exit
+        int mame_exit = WindowPrompt("Exit to main menu", "Are you sure you want to exit the game and go back to main menu", "Yes", "No");
         if(mame_exit)
             machine.schedule_exit();
+        else
+            osd_xenon_video_resume();
+        
+        exit_asked=0;
     }
 }
 

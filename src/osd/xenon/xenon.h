@@ -17,6 +17,11 @@ void osd_xenon_update_input();
 void osd_xenon_update_sound(const INT16 *buffer, int samples_this_frame);
 void osd_xenon_sound_init();
 
+int WindowPrompt(const char *title, const char *msg, const char *btn1Label, const char *btn2Label) ;
+void osd_xenon_video_pause();
+void osd_xenon_video_resume();
+struct XenosSurface * osd_xenon_get_surface();
+
 class xe_options : public cli_options
 {
 public:

@@ -81,7 +81,7 @@ static unsigned int * screen = NULL;
 
 static int screen_width;
 static int screen_height;
-static int video_thread_running = 1;
+static int video_thread_running = 0;
 static render_primitive_list * currList;
 static unsigned int thread_lock __attribute__((aligned(128))) = 0;
 
@@ -309,7 +309,6 @@ static void osd_xenon_video_thread() {
 
         if (currList == NULL) {
             udelay(10);
-            continue;
         } else {
             // tmp
             lock(&thread_lock);
@@ -401,7 +400,63 @@ void osd_xenon_update_video(render_primitive_list &primlist) {
     unlock(&thread_lock);
 }
 
-static void osd_xenon_video_cleanup(running_machine &machine) {
+void osd_xenon_video_pause(){
+    video_thread_running = 0;
+    render_primitive_list *primlist = currList;
+    if (primlist) {
+        // tmp
+        lock(&thread_lock);
+
+        primlist->acquire_lock();
+        currList = NULL;
+        primlist->release_lock();
+
+        // tmp 
+        unlock(&thread_lock);
+    }
+
+    // wait a few
+    udelay(10);
+}
+
+/**
+ * @todo copy the fb
+ * @return 
+ */
+struct XenosSurface * osd_xenon_get_surface(){
+//    udelay(1000);
+//    TR;
+//    lock(&thread_lock);
+//    TR;
+//    struct XenosSurface * copy = Xe_CreateTexture(g_pVideoDevice,g_pTexture->width,g_pTexture->height,0,g_pTexture->format,0);
+//    TR;
+//    uint32_t * src =(uint32_t *) Xe_Surface_LockRect(g_pVideoDevice,g_pTexture,0,0,0,0,XE_LOCK_WRITE);
+//    uint32_t * dst =(uint32_t *) Xe_Surface_LockRect(g_pVideoDevice,copy,0,0,0,0,XE_LOCK_WRITE);
+//    
+//    // copy data
+//    for(int y=0;y<g_pTexture->height;y++){
+//        for(int x=0;x<g_pTexture->width;x++){
+//            //dst[((y*copy->wpitch)+x)]=src[((y*g_pTexture->wpitch)+x)];
+//        }
+//    }
+//    TR;
+//    Xe_Surface_Unlock(g_pVideoDevice,g_pTexture);
+//    Xe_Surface_Unlock(g_pVideoDevice,copy);
+//    TR;
+//    unlock(&thread_lock);
+//    TR;
+//    return copy;
+    return g_pTexture;
+}
+
+void osd_xenon_video_resume(){
+    if(video_thread_running==0){
+        // run the video on a new thread
+        xenon_run_thread_task(4, &thread_stack[sizeof (thread_stack) - 0x100], (void*) osd_xenon_video_thread);
+    }
+}
+
+void osd_xenon_video_cleanup(running_machine &machine) {
     video_thread_running = 0;
     render_primitive_list *primlist = currList;
     if (primlist) {
@@ -452,8 +507,7 @@ void osd_xenon_video_hw_init(running_machine &machine) {
 
     Xe_SetClearColor(g_pVideoDevice, 0);
 
-    // run the video on a new thread
-    xenon_run_thread_task(4, &thread_stack[sizeof (thread_stack) - 0x100], (void*) osd_xenon_video_thread);
+    osd_xenon_video_resume();
 
     // on mame exit
     machine.add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(osd_xenon_video_cleanup), &machine));

@@ -21,7 +21,7 @@ CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-flo
 SUFFIX = lto
 
 #xenon cfg
-#PTR64 = 0
+PTR64 = 0
 BIGENDIAN = 1
 OSD = xenon
 AR = @xenon-ar
@@ -53,7 +53,7 @@ HOST_LD = g++
 HOST_OBJDUMP = objdump
 
 # do it only when linking libosd.a (png error ...)
-XENON_INCDIR = -I$(DEVKITXENON)/usr/include
+XENON_INCDIR = -I$(DEVKITXENON)/usr/include -I$(DEVKITXENON)/usr/include/freetype2
 
 #
 FILE2STR = btools/file2str
@@ -758,9 +758,6 @@ checkautodetect:
 	@echo UNAME="$(UNAME)"
 
 run:$(EMULATOR)
-	@echo converting and stripping ... $(EMULATOR)
-	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $(EMULATOR) $(EMULATOR)32
-	xenon-strip $(EMULATOR)32
 	cp $(EMULATOR)32 /var/lib/tftpboot/tftpboot/xenon
 	xenon-strip /var/lib/tftpboot/tftpboot/xenon
 #-------------------------------------------------
@@ -784,7 +781,7 @@ $(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $
 $(EMULATOR): $(VERSIONOBJ) $(EMUINFOOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 #$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
-	$(LD) -Ofast -g $(MACHDEP_LD) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm $^  -lxenon  -n -T $(LDSCRIPT) -o $@
+	$(LD) -g $(MACHDEP_LD) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm -lpng -lfreetype $^  -lxenon  -lpng -lfreetype -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32
@@ -802,6 +799,9 @@ endif
 #-------------------------------------------------
 # generic rules
 #-------------------------------------------------
+$(OBJ)/%.o: $(SRC)/%.cpp | $(OSPREBUILD)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
 
 $(OBJ)/%.o: $(SRC)/%.c | $(OSPREBUILD)
 	@echo Compiling $<...
