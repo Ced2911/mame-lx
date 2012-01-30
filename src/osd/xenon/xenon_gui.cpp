@@ -13,6 +13,13 @@
 #include <input/input.h>
 #include <ppc/timebase.h>
 #include <time/time.h>
+#include <usb/usbmain.h>
+#include <console/console.h>
+#include <usb/usbmain.h>
+#include <xenon_soc/xenon_power.h>
+#include <xenos/xenos.h>
+#include <xenos/xe.h>
+#include <xenos/edram.h>
 
 //gui stuff
 #include "gui/libwiigui/gui.h"
@@ -510,16 +517,26 @@ void MainMenu(int menu) {
     mainWindow = NULL;
 }
 
-int main() {
-    // init video / usb / thread etc ...
+int main() {    
+    xenos_init(VIDEO_MODE_HDMI_720P);
+    console_init();
+    
+    xenon_make_it_faster(XENON_SPEED_FULL);
+    
+    usb_init();
+    usb_do_poll();
+        
     osd_xenon_init();
 
     InitFreeType((u8*) font_ttf, font_ttf_size); // Initialize font system
 
     InitVideo();
+    
+    console_close();
+    
     // run gui
     InitGUIThreads();
-
+    
     MainMenu(MENU_BROWSE_DEVICE);
 
     return 0;

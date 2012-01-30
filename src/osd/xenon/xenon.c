@@ -26,19 +26,12 @@
 int osd_xenon_init() {
     static int firstime =1 ;
     if(firstime){
-    TR;
-    //
-    // init xenon stuff	
-    xenon_make_it_faster(XENON_SPEED_FULL);
-    xenos_init(VIDEO_MODE_HDMI_720P);
-    //console_init();
-    usb_init();
-    usb_do_poll();
+    
     }
-    // init sound
-    osd_xenon_sound_init();
     firstime=0;
     TR;
+    
+    osd_xenon_sound_init();
     return 0;
 }
 
