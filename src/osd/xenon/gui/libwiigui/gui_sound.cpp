@@ -10,6 +10,15 @@
 
 #include "gui.h"
 
+#include "xenon_sound/sound.h"
+
+static int _xenon_sound_init() {
+    static int first_run = 1;
+    if (first_run)
+        xenon_sound_init();
+    first_run = 0;
+}
+
 /**
  * Constructor for the GuiSound class.
  */
@@ -20,6 +29,8 @@ GuiSound::GuiSound(const u8 * s, s32 l, int t) {
     voice = -1;
     volume = 100;
     loop = false;
+    
+    _xenon_sound_init();
 }
 
 /**
@@ -33,6 +44,11 @@ GuiSound::~GuiSound() {
 }
 
 void GuiSound::Play() {
+    switch (type) {
+        case SOUND_PCM:
+            xenon_sound_submit((void*)sound,length);
+            break;
+    }
 #ifndef NO_SOUND
     int vol;
 
@@ -113,7 +129,11 @@ bool GuiSound::IsPlaying() {
     //		return true;
     //	else
     //		return false;
-    return false;
+    //return false;
+    if(xenon_sound_get_free())
+        return true;
+    else
+        return false;
 }
 
 void GuiSound::SetVolume(int vol) {

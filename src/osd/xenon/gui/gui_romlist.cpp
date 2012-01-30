@@ -13,6 +13,8 @@
 ROMLISTINFO rominfo;
 ROMENTRY * romList = NULL;
 
+
+
 static int found_rom(const char * romname){
     int ret = 0;
     char filename[256];
@@ -26,6 +28,8 @@ static int found_rom(const char * romname){
     return ret;
 }
 
+
+void ShowProgress (const char *msg, int done, int total);
 void CreateRomList(){
     if(romList)
         free(romList);
@@ -33,6 +37,7 @@ void CreateRomList(){
     int found = 0;
     int count = driver_list::total();
     
+    char progress_str[200];
     
     romList = (ROMENTRY *) malloc(count * sizeof (ROMENTRY));
     
@@ -40,14 +45,37 @@ void CreateRomList(){
     
     for(int i=0;i<count;i++){
         
+        //ShowProgress("Scanning dir",i,count);
+        
         const game_driver & driver = driver_list::driver(i);
+        
+        snprintf(progress_str,200,"Scaning %s",driver.name);
+        
+        ShowProgress(progress_str,i,count);
        
-        if(found_rom(driver.name)){
+        if(found_rom(driver.name) && (driver.flags & GAME_IS_BIOS_ROOT)==0){
             // add a new game
             strncpy( current_entry[0].displayname, driver.description,MAXDISPLAY);
             strncpy( current_entry[0].romname, driver.name,MAXJOLIET);
-            strncpy( current_entry[0].systemname, driver.source_file,MAXJOLIET);
-            current_entry[0].is_clone = (driver.parent==NULL)?0:1;
+            
+            // unix path
+            const char * source_file = strrchr(driver.source_file,'/');
+            if(source_file==NULL)
+            {
+                //windows path
+                source_file = strrchr(driver.source_file,'\\');
+            }
+            
+            strncpy( current_entry[0].systemname, source_file+1,MAXJOLIET);
+            
+            strncpy( current_entry[0].year, driver.year,MAXDISPLAY);
+            strncpy( current_entry[0].manufacturer, driver.manufacturer,MAXDISPLAY);
+            strncpy( current_entry[0].parent, driver.parent,MAXDISPLAY);
+            
+            if(driver.parent)
+                current_entry[0].is_clone = (driver.parent[0]=='0')?0:1;
+            else
+                current_entry[0].is_clone=0;
 
             //printf("driver.name = %s\r\n",driver.name);
 

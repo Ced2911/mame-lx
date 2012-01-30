@@ -49,63 +49,6 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
     bgFileSelectionEntry = new GuiImageData(xenon_bg_file_selection_entry_png);
     fileFolder = new GuiImageData(folder_png);
 
-    scrollbar = new GuiImageData(xenon_scrollbar_png);
-    scrollbarImg = new GuiImage(scrollbar);
-    scrollbarImg->SetParent(this);
-    scrollbarImg->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-    scrollbarImg->SetPosition(0, 30);
-
-    arrowDown = new GuiImageData(xenon_scrollbar_arrowdown_png);
-    arrowDownImg = new GuiImage(arrowDown);
-    arrowDownOver = new GuiImageData(scrollbar_arrowdown_over_png);
-    arrowDownOverImg = new GuiImage(arrowDownOver);
-    arrowUp = new GuiImageData(xenon_scrollbar_arrowup_png);
-    arrowUpImg = new GuiImage(arrowUp);
-    arrowUpOver = new GuiImageData(scrollbar_arrowup_over_png);
-    arrowUpOverImg = new GuiImage(arrowUpOver);
-    scrollbarBox = new GuiImageData(xenon_scrollbar_box_png);
-    scrollbarBoxImg = new GuiImage(scrollbarBox);
-    scrollbarBoxOver = new GuiImageData(scrollbar_box_over_png);
-    scrollbarBoxOverImg = new GuiImage(scrollbarBoxOver);
-
-    arrowUpBtn = new GuiButton(arrowUpImg->GetWidth(), arrowUpImg->GetHeight());
-    arrowUpBtn->SetParent(this);
-    arrowUpBtn->SetImage(arrowUpImg);
-    arrowUpBtn->SetImageOver(arrowUpOverImg);
-    arrowUpBtn->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-    arrowUpBtn->SetPosition(0, -2);
-    arrowUpBtn->SetSelectable(false);
-    arrowUpBtn->SetClickable(false);
-    arrowUpBtn->SetHoldable(true);
-    arrowUpBtn->SetTrigger(trigHeldA);
-    arrowUpBtn->SetSoundOver(btnSoundOver);
-    arrowUpBtn->SetSoundClick(btnSoundClick);
-
-    arrowDownBtn = new GuiButton(arrowDownImg->GetWidth(), arrowDownImg->GetHeight());
-    arrowDownBtn->SetParent(this);
-    arrowDownBtn->SetImage(arrowDownImg);
-    arrowDownBtn->SetImageOver(arrowDownOverImg);
-    arrowDownBtn->SetAlignment(ALIGN_RIGHT, ALIGN_BOTTOM);
-    arrowDownBtn->SetSelectable(false);
-    arrowDownBtn->SetClickable(false);
-    arrowDownBtn->SetHoldable(true);
-    arrowDownBtn->SetTrigger(trigHeldA);
-    arrowDownBtn->SetSoundOver(btnSoundOver);
-    arrowDownBtn->SetSoundClick(btnSoundClick);
-
-    scrollbarBoxBtn = new GuiButton(scrollbarBoxImg->GetWidth(), scrollbarBoxImg->GetHeight());
-    scrollbarBoxBtn->SetParent(this);
-    scrollbarBoxBtn->SetImage(scrollbarBoxImg);
-    scrollbarBoxBtn->SetImageOver(scrollbarBoxOverImg);
-    scrollbarBoxBtn->SetAlignment(ALIGN_RIGHT, ALIGN_TOP);
-    scrollbarBoxBtn->SetMinY(0);
-//    scrollbarBoxBtn->SetMaxY(130);
-//    scrollbarBoxBtn->SetMaxY(360);
-    scrollbarBoxBtn->SetSelectable(false);
-    scrollbarBoxBtn->SetClickable(false);
-    scrollbarBoxBtn->SetHoldable(true);
-    scrollbarBoxBtn->SetTrigger(trigHeldA);
-
     for (int i = 0; i < FILE_PAGESIZE; ++i) {
 
         fileListText[i] = new GuiText(NULL, 20, (GXColor) {
@@ -126,36 +69,82 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
         fileList[i]->SetTrigger(trigA);
         fileList[i]->SetTrigger(trig2);
         fileList[i]->SetSoundClick(btnSoundClick);
+        fileList[i]->SetSoundOver(btnSoundOver);
     }
+
+    {
+        gameNL = new GuiText(NULL, 20, (GXColor) {
+            0xff, 0xff, 0xff, 0xff
+        });
+        gameNL->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+        gameNL->SetPosition(5, 30);
+        gameNL->SetMaxWidth(100);
+        gameNL->SetText("Game");
+        gameNL->SetParent(this);
+    }
+    {
+        gameNV = new GuiText(NULL, 20, (GXColor) {
+            0xff, 0xff, 0xff, 0xff
+        });
+        gameNV->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+        gameNV->SetPosition(105, 30);
+        gameNV->SetMaxWidth(900);
+        gameNV->SetText("Game");
+        gameNV->SetParent(this);
+    }
+#if 1
+    {
+        gameYL = new GuiText(NULL, 20, (GXColor) {
+            0xff, 0xff, 0xff, 0xff
+        });
+        gameYL->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+        gameYL->SetPosition(5, 50);
+        gameYL->SetMaxWidth(100);
+        gameYL->SetText("Year");
+        gameYL->SetParent(this);
+    }
+    {
+        gameYV = new GuiText(NULL, 20, (GXColor) {
+            0xff, 0xff, 0xff, 0xff
+        });
+        gameYV->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+        gameYV->SetPosition(105, 50);
+        gameYV->SetMaxWidth(900);
+        gameYV->SetText("Game");
+        gameYV->SetParent(this);
+    }
+    {
+        gameSL = new GuiText(NULL, 20, (GXColor) {
+            0xff, 0xff, 0xff, 0xff
+        });
+        gameSL->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+        gameSL->SetPosition(5, 70);
+        gameSL->SetMaxWidth(100);
+        gameSL->SetText("System");
+        gameSL->SetParent(this);
+    }
+    {
+        gameSV = new GuiText(NULL, 20, (GXColor) {
+            0xff, 0xff, 0xff, 0xff
+        });
+        gameSV->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
+        gameSV->SetPosition(105, 70);
+        gameSV->SetMaxWidth(900);
+        gameSV->SetText("Game");
+        gameSV->SetParent(this);
+    }
+#endif
 }
 
 /**
  * Destructor for the GuiFileBrowser class.
  */
 GuiRomBrowser::~GuiRomBrowser() {
-    delete arrowUpBtn;
-    delete arrowDownBtn;
-    delete scrollbarBoxBtn;
-
     delete bgFileSelectionImg;
-    delete scrollbarImg;
-    delete arrowDownImg;
-    delete arrowDownOverImg;
-    delete arrowUpImg;
-    delete arrowUpOverImg;
-    delete scrollbarBoxImg;
-    delete scrollbarBoxOverImg;
 
     delete bgFileSelection;
     delete bgFileSelectionEntry;
     delete fileFolder;
-    delete scrollbar;
-    delete arrowDown;
-    delete arrowDownOver;
-    delete arrowUp;
-    delete arrowUpOver;
-    delete scrollbarBox;
-    delete scrollbarBoxOver;
 
     delete btnSoundOver;
     delete btnSoundClick;
@@ -207,12 +196,16 @@ void GuiRomBrowser::Draw() {
     for (u32 i = 0; i < FILE_PAGESIZE; ++i) {
         fileList[i]->Draw();
     }
-
-    scrollbarImg->Draw();
-    arrowUpBtn->Draw();
-    arrowDownBtn->Draw();
-    scrollbarBoxBtn->Draw();
-
+    
+    gameNL->Draw();
+    gameNV->Draw();
+#if 1
+    gameYL->Draw();
+    gameYV->Draw();
+    
+    gameSL->Draw();
+    gameSV->Draw();
+#endif
     this->UpdateEffects();
 }
 
@@ -225,44 +218,11 @@ void GuiRomBrowser::Update(GuiTrigger * t) {
 
     int position = 0;
     int positionWiimote = 0;
-
-    arrowUpBtn->Update(t);
-    arrowDownBtn->Update(t);
-    scrollbarBoxBtn->Update(t);
-
-    // move the file listing to respond to wiimote cursor movement
-    if (scrollbarBoxBtn->GetState() == STATE_HELD &&
-            scrollbarBoxBtn->GetStateChan() == t->chan &&
-            t->wpad->ir.valid &&
-            rominfo.numEntries > FILE_PAGESIZE
-            ) {
-        scrollbarBoxBtn->SetPosition(0, 0);
-        positionWiimote = t->wpad->ir.y - 60 - scrollbarBoxBtn->GetTop();
-
-        if (positionWiimote < scrollbarBoxBtn->GetMinY())
-            positionWiimote = scrollbarBoxBtn->GetMinY();
-        else if (positionWiimote > scrollbarBoxBtn->GetMaxY())
-            positionWiimote = scrollbarBoxBtn->GetMaxY();
-
-        rominfo.pageIndex = (positionWiimote * rominfo.numEntries) / 130.0 - selectedItem;
-
-        if (rominfo.pageIndex <= 0) {
-            rominfo.pageIndex = 0;
-        } else if (rominfo.pageIndex + FILE_PAGESIZE >= rominfo.numEntries) {
-            rominfo.pageIndex = rominfo.numEntries - FILE_PAGESIZE;
-        }
-        listChanged = true;
-        focus = false;
-    }
-
-    if (arrowDownBtn->GetState() == STATE_HELD && arrowDownBtn->GetStateChan() == t->chan) {
-        t->wpad->btns_d |= WPAD_BUTTON_DOWN;
-        if (!this->IsFocused())
-            ((GuiWindow *)this->GetParent())->ChangeFocus(this);
-    } else if (arrowUpBtn->GetState() == STATE_HELD && arrowUpBtn->GetStateChan() == t->chan) {
-        t->wpad->btns_d |= WPAD_BUTTON_UP;
-        if (!this->IsFocused())
-            ((GuiWindow *)this->GetParent())->ChangeFocus(this);
+    
+    {
+        gameNV->SetText(romList[rominfo.selIndex].displayname);
+        gameYV->SetText(romList[rominfo.selIndex].year);
+        gameSV->SetText(romList[rominfo.selIndex].systemname);
     }
 
     // pad/joystick navigation
@@ -355,25 +315,6 @@ endNavigation:
             fileListText[i]->SetScroll(SCROLL_HORIZONTAL);
         else
             fileListText[i]->SetScroll(SCROLL_NONE);
-    }
-
-    // update the location of the scroll box based on the position in the file list
-    if (positionWiimote > 0) {
-        position = positionWiimote; // follow wiimote cursor
-        scrollbarBoxBtn->SetPosition(0, position + 36);
-    } else if (listChanged || numEntries != rominfo.numEntries) {
-        
-//        if (float((rominfo.pageIndex << 1)) / (float(FILE_PAGESIZE)) < 1.0) {
-        if ((rominfo.pageIndex)==0){
-            position = 0;
-        } else if (rominfo.pageIndex + FILE_PAGESIZE >= rominfo.numEntries) {
-            position = 380;
-        } else {
-            position = 380 * (rominfo.pageIndex + FILE_PAGESIZE / 2) / (float) rominfo.numEntries;
-        } 
-        scrollbarBoxBtn->SetPosition(0, position + 36);
-        
-        scrollbarBoxBtn->SetPosition(0, position + 36);
     }
 
     listChanged = false;

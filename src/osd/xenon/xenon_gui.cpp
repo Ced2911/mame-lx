@@ -57,15 +57,13 @@ static GuiImageData * pointer[4];
 static GuiImage * bgImg = NULL;
 //static GuiSound * bgMusic = NULL;
 static GuiWindow * mainWindow = NULL;
-//static lwp_t guithread = LWP_THREAD_NULL;
 static bool guiHalt = true;
-
-//PTHREAD guithread = NULL;
 
 static void UGUI();
 
 GXColor ColorGrey = {104, 104, 104, 255};
 GXColor ColorGrey2 = {49, 49, 49, 255};
+GXColor ColorWhite = {255, 255, 255, 255};
 
 // emulator option
 OptionList options;
@@ -80,9 +78,7 @@ OptionList options;
 static void
 _ResumeGui() {
     guiHalt = false;
-    //	LWP_ResumeThread (guithread);
-    //    thread_resume(guithread);
-    //    printf("thread_resume %d \r\n",thread_resume(guithread));
+    udelay(THREAD_SLEEP);
 }
 
 /****************************************************************************
@@ -96,11 +92,7 @@ _ResumeGui() {
 static void
 _HaltGui() {
     guiHalt = true;
-    // wait for thread to finish
-    //while (!thread_suspend(guithread))
-    //    while(guithread->SuspendCount==0){
-    //        udelay(50);
-    //    }
+    udelay(THREAD_SLEEP);
 }
 //
 #define ResumeGui(){TR;_ResumeGui();}
@@ -137,7 +129,6 @@ void RemoveMameSurf() {
 int
 WindowPrompt(const char *title, const char *msg, const char *btn1Label, const char *btn2Label) {
     int choice = -1;
-
 
     AddMameSurf();
 
@@ -217,7 +208,6 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
     ResumeGui();
 
     while (choice == -1) {
-        UGUI();
         udelay(THREAD_SLEEP);
 
         if (btn1.GetState() == STATE_CLICKED)
@@ -228,7 +218,6 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
 
     promptWindow.SetEffect(EFFECT_SLIDE_TOP | EFFECT_SLIDE_OUT, 50);
     while (promptWindow.GetEffect() > 0) {
-        UGUI();
         udelay(THREAD_SLEEP);
     }
     HaltGui();
@@ -254,25 +243,16 @@ void InfoPrompt(const char *msg) {
  *
  * Primary thread to allow GUI to respond to state changes, and draws GUI
  ***************************************************************************/
-
-void UGUI() {
+void TH_UGUI() {
     int i;
+    
     UpdatePads();
     mainWindow->Draw();
-
-#ifdef HW_RVL
-    for (i = 3; i >= 0; i--) // so that player 1's cursor appears on top!
-    {
-        if (userInput[i].wpad->ir.valid)
-            Menu_DrawImg(userInput[i].wpad->ir.x - 48, userInput[i].wpad->ir.y - 48,
-                96, 96, pointer[i]->GetImage(), userInput[i].wpad->ir.angle, 1, 1, 255);
-        DoRumble(i);
-    }
-#endif
     Menu_Render();
 
     for (i = 0; i < 4; i++)
         mainWindow->Update(&userInput[i]);
+
 #if 0
     if (ExitRequested) {
         for (i = 0; i <= 255; i += 15) {
@@ -288,20 +268,12 @@ void UGUI() {
 #endif
 }
 
-static void *
-UpdateGUI(void *arg) {
-    int i;
-
-    TR;
+static void * UpdateGUI() {
     while (1) {
-        //TR;
         if (guiHalt) {
-
-            //            thread_sleep(THREAD_SLEEP);
-            //            printf("thread_suspend %d \r\n",thread_suspend(guithread));
+            udelay(THREAD_SLEEP);
         } else {
-            TR;
-            UGUI();
+            TH_UGUI();
         }
     }
     return NULL;
@@ -312,12 +284,10 @@ UpdateGUI(void *arg) {
  *
  * Startup GUI threads
  ***************************************************************************/
-void
-InitGUIThreads() {
-    //    threading_init();
-    //    guithread = thread_create((void*) UpdateGUI, 0, NULL, THREAD_FLAG_CREATE_SUSPENDED);
-    //    thread_set_processor(guithread,2);
-    //    thread_resume(guithread);
+static unsigned char gui_thread_stack[0x10000];
+
+void InitGUIThreads() {
+    xenon_run_thread_task(5, &gui_thread_stack[sizeof (gui_thread_stack) - 0x100], (void*) UpdateGUI);
 }
 
 /****************************************************************************
@@ -380,7 +350,6 @@ static void OnScreenKeyboard(char * var, u16 maxlen) {
     ResumeGui();
 
     while (save == -1) {
-        UGUI();
         udelay(THREAD_SLEEP);
 
         if (okBtn.GetState() == STATE_CLICKED)
@@ -399,25 +368,29 @@ static void OnScreenKeyboard(char * var, u16 maxlen) {
     ResumeGui();
 }
 
+static int progress_done = 0;
+static int progress_total = 0;
+static char progress_str[200];
+int ShowProgress (const char *msg, int done, int total){
+    progress_done = done;
+    progress_total = total;
+    snprintf(progress_str,200,"%s %d/%d",msg,done,total);
+}
+
+static void ProgressUpdateCallback(void * e){
+    GuiText * _this = (GuiText *)e;
+    _this->SetText(progress_str);
+}
+
 /****************************************************************************
  * MenuBrowseDevice
  ***************************************************************************/
 static int MenuBrowseDevice() {
-    /* display something */
-    UGUI();
-    
     static int first_run = 1;
     char title[100];
     int i;
 
     ShutoffRumble();
-
-    if(first_run)
-    {
-        // populate initial directory listing
-        CreateRomList();
-        first_run=0;
-    }
 
     int menu = MENU_NONE;
     extern const char build_version[];
@@ -428,39 +401,35 @@ static int MenuBrowseDevice() {
     titleTxt.SetPosition(50, 50);
 
     GuiTrigger trigA;
-    //	trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
     trigA.SetSimpleTrigger(-1, 0, PAD_BUTTON_A);
 
     GuiRomBrowser romBrowser(1080, 496);
     romBrowser.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
     romBrowser.SetPosition(0, 100);
-
-    GuiImageData btnOutline(xenon_button_png);
-    GuiImageData btnOutlineOver(xenon_button_over_png);
-
-    GuiText backBtnTxt("Go Back", 18, ColorGrey2);
-    GuiImage backBtnImg(&btnOutline);
-    GuiImage backBtnImgOver(&btnOutlineOver);
-    GuiButton backBtn(btnOutline.GetWidth(), btnOutline.GetHeight());
-    backBtn.SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
-    backBtn.SetPosition(100, -35);
-    backBtn.SetLabel(&backBtnTxt);
-    backBtn.SetImage(&backBtnImg);
-    backBtn.SetImageOver(&backBtnImgOver);
-    backBtn.SetTrigger(&trigA);
-    backBtn.SetEffectGrow();
-
-    GuiWindow xenon_buttonWindow(screenwidth, screenheight);
-    xenon_buttonWindow.Append(&backBtn);
+    
+    GuiText progressTxt("progress ...", 20, ColorWhite);
+    progressTxt.SetAlignment(ALIGN_CENTRE, ALIGN_MIDDLE);
+    progressTxt.SetPosition(0, 0);
+    progressTxt.SetUpdateCallback(ProgressUpdateCallback);
+    
+    HaltGui();
+    mainWindow->Append(&progressTxt);
+    mainWindow->Append(&titleTxt);
+    ResumeGui();
+    
+    if (first_run) {
+        // populate initial directory listing
+        CreateRomList();
+        first_run = 0;
+    }
 
     HaltGui();
-    mainWindow->Append(&titleTxt);
+    mainWindow->Remove(&progressTxt);
     mainWindow->Append(&romBrowser);
-    mainWindow->Append(&xenon_buttonWindow);
     ResumeGui();
-
+    
+    
     while (menu == MENU_NONE) {
-        UGUI();
         udelay(THREAD_SLEEP);
 
         for (i = 0; i < FILE_PAGESIZE; i++) {
@@ -470,8 +439,6 @@ static int MenuBrowseDevice() {
                 ShutoffRumble();
                 romBrowser.ResetState();
                 menu = MENU_EMULATION;
-
-                //InfoPrompt(romList[rominfo.selIndex].romname);
 
                 int argc = 2;
                 char * argv[] = {
@@ -483,15 +450,14 @@ static int MenuBrowseDevice() {
                     printf("%s\r\n", argv[ppp]);
 
                 extern int xenon_main(int argc, char * argv[]);
+                HaltGui();
                 xenon_main(argc, argv);
+                ResumeGui();
             }
         }
-        if (backBtn.GetState() == STATE_CLICKED)
-            menu = MENU_SETTINGS;
     }
     HaltGui();
     mainWindow->Remove(&titleTxt);
-    mainWindow->Remove(&xenon_buttonWindow);
     mainWindow->Remove(&romBrowser);
     return menu;
 }
@@ -509,14 +475,9 @@ void MainMenu(int menu) {
 
     bgImg = new GuiImage(background);
 
-    //    bgImg = new GuiImage(screenwidth, screenheight, (GXColor) {
-    //        50, 50, 50, 255
-    //    });
-    //    bgImg->ColorStripe(30);
     mainWindow->Append(bgImg);
 
     GuiTrigger trigA;
-    //	trigA.SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
     trigA.SetSimpleTrigger(-1, 0, PAD_BUTTON_A);
 
     ResumeGui();
@@ -529,10 +490,8 @@ void MainMenu(int menu) {
         currentMenu = MenuBrowseDevice();
     }
     ResumeGui();
-    //    ExitRequested = 1;
 
     while (1) {
-        UGUI();
         udelay(THREAD_SLEEP);
     }
 
@@ -559,6 +518,7 @@ int main() {
 
     InitVideo();
     // run gui
+    InitGUIThreads();
 
     MainMenu(MENU_BROWSE_DEVICE);
 

@@ -1088,33 +1088,25 @@ public:
     void Update(GuiTrigger * t);
     GuiButton * fileList[ROM_PAGESIZE];
 protected:
+    // bottom
+    GuiText * gameNL;
+    GuiText * gameNV;
+    
+    GuiText * gameYL;
+    GuiText * gameYV;
+    
+    GuiText * gameSL;
+    GuiText * gameSV;
+    
     GuiText * fileListText[ROM_PAGESIZE];
     GuiImage * fileListBg[ROM_PAGESIZE];
     GuiImage * fileListFolder[ROM_PAGESIZE];
 
-    GuiButton * arrowUpBtn;
-    GuiButton * arrowDownBtn;
-    GuiButton * scrollbarBoxBtn;
-
     GuiImage * bgFileSelectionImg;
-    GuiImage * scrollbarImg;
-    GuiImage * arrowDownImg;
-    GuiImage * arrowDownOverImg;
-    GuiImage * arrowUpImg;
-    GuiImage * arrowUpOverImg;
-    GuiImage * scrollbarBoxImg;
-    GuiImage * scrollbarBoxOverImg;
 
     GuiImageData * bgFileSelection;
     GuiImageData * bgFileSelectionEntry;
     GuiImageData * fileFolder;
-    GuiImageData * scrollbar;
-    GuiImageData * arrowDown;
-    GuiImageData * arrowDownOver;
-    GuiImageData * arrowUp;
-    GuiImageData * arrowUpOver;
-    GuiImageData * scrollbarBox;
-    GuiImageData * scrollbarBoxOver;
 
     GuiSound * btnSoundOver;
     GuiSound * btnSoundClick;

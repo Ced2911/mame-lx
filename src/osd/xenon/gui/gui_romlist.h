@@ -9,6 +9,9 @@ typedef struct {
     char systemname[MAXJOLIET + 1];
     char romname[MAXJOLIET + 1]; // full filename
     char displayname[MAXDISPLAY + 1]; // name for browser display
+    char year[MAXDISPLAY];
+    char manufacturer[MAXDISPLAY];
+    char parent[MAXDISPLAY];
 } ROMENTRY;
 
 typedef struct {
