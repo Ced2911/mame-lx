@@ -21,7 +21,7 @@
 #include "input.h"
 #include "libwiigui/gui.h"
 
-extern "C" void enableCapture();
+void enableCapture();
 
 #define MAX_INPUTS 4
 
@@ -312,6 +312,8 @@ static uint16_t PAD_ButtonsDown(int ictrl) {
     }
     return btn;
 }
+
+
 
 static uint16_t PAD_ButtonsUp(int ictrl) {
     uint16_t btn = 0;

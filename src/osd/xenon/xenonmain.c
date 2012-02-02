@@ -223,8 +223,6 @@ void mini_osd_interface::update(bool skip_redraw) {
 //  update_audio_stream
 //============================================================
 void mini_osd_interface::update_audio_stream(const INT16 *buffer, int samples_this_frame) {
-    // if we had actual sound output, we would copy the
-    // interleaved stereo samples to our sound stream
     osd_xenon_update_sound(buffer,samples_this_frame);
 }
 

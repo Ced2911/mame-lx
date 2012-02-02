@@ -8,7 +8,6 @@
 #include <console/console.h>
 #include <usb/usbmain.h>
 #include <xenon_soc/xenon_power.h>
-#include <newlib/malloc_lock.h>
 #include <time/time.h>
 #include <ppc/atomic.h>
 #include <xenos/xenos.h>
@@ -313,7 +312,7 @@ static void osd_xenon_video_thread() {
             // tmp
             lock(&thread_lock);
             // lock them, and then render them
-            currList->acquire_lock();
+            //currList->acquire_lock();
 
             pre_render();
 
@@ -383,7 +382,8 @@ static void osd_xenon_video_thread() {
 
             // tmp
             unlock(&thread_lock);
-            currList->release_lock();
+           // currList->release_lock();
+            currList=NULL;
         }
     }
 }

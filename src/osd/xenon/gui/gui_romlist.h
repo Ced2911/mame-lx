@@ -12,6 +12,7 @@ typedef struct {
     char year[MAXDISPLAY];
     char manufacturer[MAXDISPLAY];
     char parent[MAXDISPLAY];
+    char artname[10]; // name of the art (snap/arwork/flyers filename)
 } ROMENTRY;
 
 typedef struct {

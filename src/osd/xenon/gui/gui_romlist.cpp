@@ -72,10 +72,21 @@ void CreateRomList(){
             strncpy( current_entry[0].manufacturer, driver.manufacturer,MAXDISPLAY);
             strncpy( current_entry[0].parent, driver.parent,MAXDISPLAY);
             
-            if(driver.parent)
+            if(driver.parent){
                 current_entry[0].is_clone = (driver.parent[0]=='0')?0:1;
+            }
             else
+            {
                 current_entry[0].is_clone=0;
+            }
+            if(current_entry[0].is_clone)
+            {
+                strncpy(current_entry[0].artname,driver.parent,10);
+            }
+            else
+            {
+                strncpy(current_entry[0].artname,driver.name,10);
+            }
 
             //printf("driver.name = %s\r\n",driver.name);
 

@@ -318,8 +318,6 @@ void StopGX() {
     //    VIDEO_Flush();
 }
 
-extern "C" void doScreenCapture();
-
 /****************************************************************************
  * Menu_Render
  *
@@ -335,13 +333,9 @@ void Menu_Render() {
 
     Xe_Sync(g_pVideoDevice);
 
-    //doScreenCapture();
-
     Xe_InvalidateState(g_pVideoDevice);
 
     nb_vertices = 0;
-
-
 }
 
 void SetRS() {

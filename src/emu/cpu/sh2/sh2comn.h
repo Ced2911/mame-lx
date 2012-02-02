@@ -12,7 +12,7 @@
 #define __SH2COMN_H__
 
 
-#define USE_SH2DRC
+//#define USE_SH2DRC
 
 // do we use a timer for the DMA, or have it in CPU_EXECUTE
 #define USE_TIMER_FOR_DMA

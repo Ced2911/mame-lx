@@ -117,6 +117,94 @@ struct XenosSurface *loadPNGFromMemory(unsigned char *PNGdata) {
     return surface;
 }
 
+
+
+int loadPNGFromMemory(struct XenosSurface * dst, unsigned char *PNGdata) {
+    int y = 0;
+    int width, height;
+    png_byte color_type;
+    png_byte bit_depth;
+
+    png_structp png_ptr;
+    png_infop info_ptr;
+    //        int number_of_passes;
+    png_bytep * row_pointers;
+
+    offset = 0;
+
+    struct file_buffer_t *file;
+    file = (struct file_buffer_t *) malloc(sizeof (struct file_buffer_t));
+    file->length = 1024 * 1024 * 5;
+    file->data = (unsigned char *) malloc(file->length); //5mo ...
+    file->offset = 0;
+    memcpy(file->data, PNGdata, file->length);
+
+    /* initialize stuff */
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+    if (!png_ptr) {
+        printf("[read_png_file] png_create_read_struct failed\n");
+        return 0;
+    }
+
+    info_ptr = png_create_info_struct(png_ptr);
+    if (!info_ptr) {
+        printf("[read_png_file] png_create_info_struct failed\n");
+        return 0;
+    }
+
+    png_set_read_fn(png_ptr, (png_voidp *) file, png_mem_read); //permet de lire à  partir de pngfile buff
+
+    //png_set_sig_bytes(png_ptr, 8);//on avance de 8 ?
+
+    png_read_info(png_ptr, info_ptr);
+
+    width = info_ptr->width;
+    height = info_ptr->height;
+    color_type = info_ptr->color_type;
+    bit_depth = info_ptr->bit_depth;
+
+    //        number_of_passes = png_set_interlace_handling(png_ptr);
+
+
+    if (color_type != PNG_COLOR_TYPE_RGB && color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
+        printf("no support :( \n bit_depth = %08x\n", bit_depth);
+        return 0;
+    }
+
+    if (color_type == PNG_COLOR_TYPE_RGB)
+        png_set_filler(png_ptr, 0xFF, PNG_FILLER_BEFORE);
+
+    png_set_swap_alpha(png_ptr);
+
+    png_read_update_info(png_ptr, info_ptr);
+
+    //On créer la surface
+    struct XenosSurface *surface = dst;
+    
+    surface->width = width;
+    surface->height = height;
+
+    uint8_t *data = (uint8_t*) Xe_Surface_LockRect(g_pVideoDevice, surface, 0, 0, 0, 0, XE_LOCK_WRITE);
+
+    row_pointers = (png_bytep*) malloc(sizeof (png_bytep) * surface->height);
+    for (y = 0; y < surface->height; y++)
+        row_pointers[y] = data + surface->wpitch * y;
+
+    png_read_image(png_ptr, row_pointers);
+
+
+    Xe_Surface_Unlock(g_pVideoDevice, surface);
+    
+    
+
+    free(file->data);
+    free(file);
+    free(row_pointers);
+
+    return 1;
+}
+
 int LoadFile(const char* strFileName, void** ppFileData, unsigned int * pdwFileSize) {
     if (pdwFileSize)
         *pdwFileSize = 0L;
@@ -165,16 +253,19 @@ int LoadFile(const char* strFileName, void** ppFileData, unsigned int * pdwFileS
 }
 
 int LoadTextureFromFile(char * pSrcFile, XenosSurface **ppTexture) {
-
+    XenosSurface * dest = NULL;
+    
     unsigned char * PNGdata = NULL;
     unsigned int size = 0;
     LoadFile(pSrcFile, (void**) &PNGdata, &size);
     if (PNGdata != NULL) {
-        *ppTexture = loadPNGFromMemory(PNGdata);
-        return 0;
+        dest = loadPNGFromMemory(PNGdata);
+        ppTexture[0]=dest;
+    }
+    else{
+        printf("Error reading %s\r\n", pSrcFile);
     }
     free(PNGdata);
-    printf("Can't find %s\r\n", pSrcFile);
-    return 1;
-
+    
+    return dest==NULL?1:0;
 }

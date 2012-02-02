@@ -494,12 +494,14 @@ uint16_t FreeTypeGX::drawText(int16_t x, int16_t y, wchar_t *text, GXColor color
                 FT_Get_Kerning(ftFace, this->fontData[text[i - 1]].glyphIndex, glyphData->glyphIndex, FT_KERNING_DEFAULT, &pairDelta);
                 x_pos += pairDelta.x >> 6;
             }
+            
+            
 
             //GX_InitTexObj(&glyphTexture, glyphData->glyphDataTexture, glyphData->textureWidth, glyphData->textureHeight, GX_TF_RGBA8, GX_CLAMP, GX_CLAMP, GX_FALSE);
 
             //this->copyTextureToFramebuffer(&glyphTexture, glyphData->textureWidth, glyphData->textureHeight, x_pos + glyphData->renderOffsetX + x_offset, y - glyphData->renderOffsetY + y_offset, color);
-            if (glyphData->glyphDataTexture) {
-                int RenderOffsetY = glyphData->be.horiBearingY>> 6;
+            if (glyphData->glyphDataTexture) {                
+                int RenderOffsetY = (glyphData->be.horiBearingY>> 6);
                 int RenderOffsetX = glyphData->renderOffsetX; // - dx;
                 
                 XeColor c;

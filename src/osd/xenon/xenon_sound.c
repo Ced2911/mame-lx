@@ -176,15 +176,20 @@ void osd_xenon_sound_init() {
     printf("xenos_is_hdmi = %d\r\n", xenos_is_hdmi);
 
     xenon_sound_init();
+    static int first_run = 1;
     // start sound thread
-    run_xenon_sound_thread();
+    if(first_run)
+        run_xenon_sound_thread();
+    first_run=0;
 }
 
 void osd_xenon_update_sound(const INT16 *buffer, int samples_this_frame) {
     for (int i = 0; i < samples_this_frame; i++) {
         audio_buffer[i] = bswap_16(buffer[i]);
     }
-    //xenon_sound_submit(audio_buffer, samples_this_frame * 4);
-    //thread_enqueue(stream, length);
+    xenon_sound_submit(audio_buffer, samples_this_frame * 4);
+/*
+    thread_enqueue((void*)buffer, samples_this_frame * 4);
     add_to_buffer((void*)buffer, samples_this_frame * 4);
+*/
 }

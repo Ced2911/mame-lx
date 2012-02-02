@@ -30,8 +30,6 @@ int osd_xenon_init() {
     }
     firstime=0;
     TR;
-    
-    osd_xenon_sound_init();
     return 0;
 }
 

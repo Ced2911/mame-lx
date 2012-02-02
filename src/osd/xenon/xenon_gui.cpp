@@ -19,7 +19,10 @@
 #include <xenon_soc/xenon_power.h>
 #include <xenos/xenos.h>
 #include <xenos/xe.h>
+#include <xenon_sound/sound.h>
 #include <xenos/edram.h>
+
+#include <newlib/malloc_lock.h>
 
 //gui stuff
 #include "gui/libwiigui/gui.h"
@@ -106,6 +109,16 @@ _HaltGui() {
 #define HaltGui(){TR;_HaltGui();}
 
 static GuiImage * mameImg = NULL;
+
+void GuiScreenCapture();
+
+void GuiScreenCaps(){
+    HaltGui();
+    // wait for vblank
+    while (!Xe_IsVBlank(g_pVideoDevice));
+    GuiScreenCapture();
+    ResumeGui();
+}
 
 void AddMameSurf() {
     HaltGui();
@@ -233,7 +246,7 @@ WindowPrompt(const char *title, const char *msg, const char *btn1Label, const ch
     ResumeGui();
 
     RemoveMameSurf();
-
+    HaltGui();
     return choice;
 }
 
@@ -277,8 +290,9 @@ void TH_UGUI() {
 
 static void * UpdateGUI() {
     while (1) {
+        udelay(THREAD_SLEEP);
         if (guiHalt) {
-            udelay(THREAD_SLEEP);
+            
         } else {
             TH_UGUI();
         }
@@ -378,6 +392,7 @@ static void OnScreenKeyboard(char * var, u16 maxlen) {
 static int progress_done = 0;
 static int progress_total = 0;
 static char progress_str[200];
+
 int ShowProgress (const char *msg, int done, int total){
     progress_done = done;
     progress_total = total;
@@ -409,7 +424,15 @@ static int MenuBrowseDevice() {
 
     GuiTrigger trigA;
     trigA.SetSimpleTrigger(-1, 0, PAD_BUTTON_A);
-
+    
+    GuiTrigger trigScreenshot;
+    trigScreenshot.SetButtonOnlyTrigger(-1,0,PAD_BUTTON_BACK);
+    
+    
+    GuiButton screenshot;
+    screenshot.SetTrigger(&trigScreenshot);
+    
+    
     GuiRomBrowser romBrowser(1080, 496);
     romBrowser.SetAlignment(ALIGN_CENTRE, ALIGN_TOP);
     romBrowser.SetPosition(0, 100);
@@ -422,6 +445,7 @@ static int MenuBrowseDevice() {
     HaltGui();
     mainWindow->Append(&progressTxt);
     mainWindow->Append(&titleTxt);
+    mainWindow->Append(&screenshot);
     ResumeGui();
     
     if (first_run) {
@@ -435,9 +459,19 @@ static int MenuBrowseDevice() {
     mainWindow->Append(&romBrowser);
     ResumeGui();
     
+    uint32_t lastScreen = mftb();
     
     while (menu == MENU_NONE) {
         udelay(THREAD_SLEEP);
+                
+        if(screenshot.GetState()==STATE_CLICKED){
+            uint32_t now = mftb();
+            // 2 sec
+            if(tb_diff_sec(now,lastScreen)>2){
+                GuiScreenCaps();
+                lastScreen = now;
+            }
+        }
 
         for (i = 0; i < FILE_PAGESIZE; i++) {
             if (romBrowser.fileList[i]->GetState() == STATE_CLICKED) {
@@ -466,6 +500,7 @@ static int MenuBrowseDevice() {
     HaltGui();
     mainWindow->Remove(&titleTxt);
     mainWindow->Remove(&romBrowser);
+    mainWindow->Remove(&screenshot);
     return menu;
 }
 
@@ -482,11 +517,9 @@ void MainMenu(int menu) {
 
     bgImg = new GuiImage(background);
 
+        
+    HaltGui();
     mainWindow->Append(bgImg);
-
-    GuiTrigger trigA;
-    trigA.SetSimpleTrigger(-1, 0, PAD_BUTTON_A);
-
     ResumeGui();
 
     //    bgMusic = new GuiSound(bg_music_ogg, bg_music_ogg_size, SOUND_OGG);
@@ -519,6 +552,7 @@ void MainMenu(int menu) {
 
 int main() {    
     xenos_init(VIDEO_MODE_HDMI_720P);
+    xenon_sound_init();
     console_init();
     
     xenon_make_it_faster(XENON_SPEED_FULL);

@@ -13,7 +13,21 @@
 #include "../w_input.h"
 #include "../gui_debug.h"
 
-//#define FILE_PAGESIZE 20
+#include <stdio.h>
+#include <stdlib.h>
+
+// gui_tuils.cpp
+int loadPNGFromMemory(struct XenosSurface * dst, unsigned char *PNGdata);
+
+static GXColor color_white = {
+    0xff, 0xff, 0xff, 0xff
+};
+
+static GXColor color_filename = {
+    0xff, 0xff, 0xff, 0xff
+};
+
+static XenosSurface * preview_surf = NULL;
 
 /**
  * Constructor for the GuiRomBrowser class.
@@ -28,14 +42,11 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
     focus = 0; // allow focus
 
     trigA = new GuiTrigger;
-    //	trigA->SetSimpleTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
     trigA->SetSimpleTrigger(-1, 0, PAD_BUTTON_A);
     trig2 = new GuiTrigger;
-    //	trig2->SetSimpleTrigger(-1, WPAD_BUTTON_2, 0);
     trig2->SetSimpleTrigger(-1, 0, 0);
 
     trigHeldA = new GuiTrigger;
-    //	trigHeldA->SetHeldTrigger(-1, WPAD_BUTTON_A | WPAD_CLASSIC_BUTTON_A, PAD_BUTTON_A);
     trigHeldA->SetHeldTrigger(-1, 0, PAD_BUTTON_A);
 
     btnSoundOver = new GuiSound(button_over_pcm, button_over_pcm_size, SOUND_PCM);
@@ -49,17 +60,25 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
     bgFileSelectionEntry = new GuiImageData(xenon_bg_file_selection_entry_png);
     fileFolder = new GuiImageData(folder_png);
 
-    for (int i = 0; i < FILE_PAGESIZE; ++i) {
+    /*
+     * preview image
+     */
+    preview_surf = Xe_CreateTexture(g_pVideoDevice, 1024, 1024, 0, XE_FMT_8888 | XE_FMT_ARGB, 0);
+    previewImage = new GuiImage(preview_surf, 320, 240);
+    previewImage->SetParent(this);
+    previewImage->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
 
-        fileListText[i] = new GuiText(NULL, 20, (GXColor) {
-            0, 0, 0, 0xff
-        });
+    for (int i = 0; i < ROM_PAGESIZE; ++i) {
+
+        fileListText[i] = new GuiText(NULL, 20, color_filename);
         fileListText[i]->SetAlignment(ALIGN_LEFT, ALIGN_MIDDLE);
         fileListText[i]->SetPosition(5, 0);
         fileListText[i]->SetMaxWidth(1050);
 
         fileListBg[i] = new GuiImage(bgFileSelectionEntry);
         fileListFolder[i] = new GuiImage(fileFolder);
+
+        fileListIcon[i] = new GuiImage();
 
         fileList[i] = new GuiButton(1050, 30);
         fileList[i]->SetParent(this);
@@ -73,9 +92,7 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
     }
 
     {
-        gameNL = new GuiText(NULL, 20, (GXColor) {
-            0xff, 0xff, 0xff, 0xff
-        });
+        gameNL = new GuiText(NULL, 20, color_white);
         gameNL->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
         gameNL->SetPosition(5, 30);
         gameNL->SetMaxWidth(100);
@@ -83,20 +100,15 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
         gameNL->SetParent(this);
     }
     {
-        gameNV = new GuiText(NULL, 20, (GXColor) {
-            0xff, 0xff, 0xff, 0xff
-        });
+        gameNV = new GuiText(NULL, 20, color_white);
         gameNV->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
         gameNV->SetPosition(105, 30);
         gameNV->SetMaxWidth(900);
-        gameNV->SetText("Game");
+        gameNV->SetText("");
         gameNV->SetParent(this);
     }
-#if 1
     {
-        gameYL = new GuiText(NULL, 20, (GXColor) {
-            0xff, 0xff, 0xff, 0xff
-        });
+        gameYL = new GuiText(NULL, 20, color_white);
         gameYL->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
         gameYL->SetPosition(5, 50);
         gameYL->SetMaxWidth(100);
@@ -104,19 +116,15 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
         gameYL->SetParent(this);
     }
     {
-        gameYV = new GuiText(NULL, 20, (GXColor) {
-            0xff, 0xff, 0xff, 0xff
-        });
+        gameYV = new GuiText(NULL, 20, color_white);
         gameYV->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
         gameYV->SetPosition(105, 50);
         gameYV->SetMaxWidth(900);
-        gameYV->SetText("Game");
+        gameYV->SetText("");
         gameYV->SetParent(this);
     }
     {
-        gameSL = new GuiText(NULL, 20, (GXColor) {
-            0xff, 0xff, 0xff, 0xff
-        });
+        gameSL = new GuiText(NULL, 20, color_white);
         gameSL->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
         gameSL->SetPosition(5, 70);
         gameSL->SetMaxWidth(100);
@@ -124,16 +132,13 @@ GuiRomBrowser::GuiRomBrowser(int w, int h) {
         gameSL->SetParent(this);
     }
     {
-        gameSV = new GuiText(NULL, 20, (GXColor) {
-            0xff, 0xff, 0xff, 0xff
-        });
+        gameSV = new GuiText(NULL, 20, color_white);
         gameSV->SetAlignment(ALIGN_LEFT, ALIGN_BOTTOM);
         gameSV->SetPosition(105, 70);
         gameSV->SetMaxWidth(900);
-        gameSV->SetText("Game");
+        gameSV->SetText("");
         gameSV->SetParent(this);
     }
-#endif
 }
 
 /**
@@ -152,18 +157,22 @@ GuiRomBrowser::~GuiRomBrowser() {
     delete trigA;
     delete trig2;
 
-    for (int i = 0; i < FILE_PAGESIZE; i++) {
+    for (int i = 0; i < ROM_PAGESIZE; i++) {
         delete fileListText[i];
         delete fileList[i];
         delete fileListBg[i];
         delete fileListFolder[i];
+        delete fileListIcon[i];
     }
+
+    delete previewImage;
+    Xe_DestroyTexture(g_pVideoDevice, preview_surf);
 }
 
 void GuiRomBrowser::SetFocus(int f) {
     focus = f;
 
-    for (int i = 0; i < FILE_PAGESIZE; i++)
+    for (int i = 0; i < ROM_PAGESIZE; i++)
         fileList[i]->ResetState();
 
     if (f == 1)
@@ -175,7 +184,7 @@ void GuiRomBrowser::ResetState() {
     stateChan = -1;
     selectedItem = 0;
 
-    for (int i = 0; i < FILE_PAGESIZE; i++) {
+    for (int i = 0; i < ROM_PAGESIZE; i++) {
         fileList[i]->ResetState();
     }
 }
@@ -193,19 +202,21 @@ void GuiRomBrowser::Draw() {
 
     bgFileSelectionImg->Draw();
 
-    for (u32 i = 0; i < FILE_PAGESIZE; ++i) {
+    previewImage->Draw();
+
+    for (u32 i = 0; i < ROM_PAGESIZE; ++i) {
         fileList[i]->Draw();
     }
-    
+
     gameNL->Draw();
     gameNV->Draw();
-#if 1
+
     gameYL->Draw();
     gameYV->Draw();
-    
+
     gameSL->Draw();
     gameSV->Draw();
-#endif
+
     this->UpdateEffects();
 }
 
@@ -216,9 +227,6 @@ void GuiRomBrowser::Update(GuiTrigger * t) {
     if (state == STATE_DISABLED || !t)
         return;
 
-    int position = 0;
-    int positionWiimote = 0;
-    
     {
         gameNV->SetText(romList[rominfo.selIndex].displayname);
         gameYV->SetText(romList[rominfo.selIndex].year);
@@ -232,22 +240,22 @@ void GuiRomBrowser::Update(GuiTrigger * t) {
     }
 
     if (t->Right()) {
-        if (rominfo.pageIndex < rominfo.numEntries && rominfo.numEntries > FILE_PAGESIZE) {
-            rominfo.pageIndex += FILE_PAGESIZE;
-            if (rominfo.pageIndex + FILE_PAGESIZE >= rominfo.numEntries)
-                rominfo.pageIndex = rominfo.numEntries - FILE_PAGESIZE;
+        if (rominfo.pageIndex < rominfo.numEntries && rominfo.numEntries > ROM_PAGESIZE) {
+            rominfo.pageIndex += ROM_PAGESIZE;
+            if (rominfo.pageIndex + ROM_PAGESIZE >= rominfo.numEntries)
+                rominfo.pageIndex = rominfo.numEntries - ROM_PAGESIZE;
             listChanged = true;
         }
     } else if (t->Left()) {
         if (rominfo.pageIndex > 0) {
-            rominfo.pageIndex -= FILE_PAGESIZE;
+            rominfo.pageIndex -= ROM_PAGESIZE;
             if (rominfo.pageIndex < 0)
                 rominfo.pageIndex = 0;
             listChanged = true;
         }
     } else if (t->Down()) {
         if (rominfo.pageIndex + selectedItem + 1 < rominfo.numEntries) {
-            if (selectedItem == FILE_PAGESIZE - 1) {
+            if (selectedItem == ROM_PAGESIZE - 1) {
                 // move list down by 1
                 ++rominfo.pageIndex;
                 listChanged = true;
@@ -269,7 +277,7 @@ void GuiRomBrowser::Update(GuiTrigger * t) {
 
 endNavigation:
 
-    for (int i = 0; i < FILE_PAGESIZE; ++i) {
+    for (int i = 0; i < ROM_PAGESIZE; ++i) {
         if (listChanged || numEntries != rominfo.numEntries) {
             if (rominfo.pageIndex + i < rominfo.numEntries) {
                 if (fileList[i]->GetState() == STATE_DISABLED)
@@ -279,8 +287,7 @@ endNavigation:
 
                 fileListText[i]->SetText(romList[rominfo.pageIndex + i].displayname);
 
-                if (romList[rominfo.pageIndex + i].is_clone) // directory
-                {
+                if (romList[rominfo.pageIndex + i].is_clone) {
                     fileList[i]->SetIcon(fileListFolder[i]);
                     fileListText[i]->SetPosition(30, 0);
                 } else {
@@ -316,6 +323,26 @@ endNavigation:
         else
             fileListText[i]->SetScroll(SCROLL_NONE);
     }
+
+    static int lastSelIndex = -1;
+
+    if (lastSelIndex != rominfo.selIndex) {
+        char fname[200];
+        sprintf(fname, "uda:/snap/%s.png", romList[rominfo.selIndex].artname);
+        printf("%s\r\n",fname);
+        FILE *fd = fopen(fname, "rb");
+        if (fd) {
+            u8 * data = NULL;
+            fseek(fd, 0, SEEK_END);
+            int size = ftell(fd);
+            fseek(fd, 0, SEEK_SET);
+            data = (u8*) malloc(size);
+            fread(data, 1, size, fd);
+            loadPNGFromMemory(preview_surf,data);
+            fclose(fd);
+        }
+    }
+    lastSelIndex = rominfo.selIndex;
 
     listChanged = false;
     numEntries = rominfo.numEntries;

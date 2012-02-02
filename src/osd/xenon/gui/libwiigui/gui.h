@@ -1101,6 +1101,8 @@ protected:
     GuiText * fileListText[ROM_PAGESIZE];
     GuiImage * fileListBg[ROM_PAGESIZE];
     GuiImage * fileListFolder[ROM_PAGESIZE];
+    GuiImage * fileListIcon[ROM_PAGESIZE];
+    GuiImage * previewImage;
 
     GuiImage * bgFileSelectionImg;
 
