@@ -17,7 +17,7 @@ jchan  : "1995/05/24 The kung-Fu Master Jackie Chan   "
 jchan2 : "1995/10/24 Fists Of Fire"
 
 
- main2sub comunication is done within $400000-$403fff (mainsub_shared_ram):
+ main2sub communication is done within $400000-$403fff (mainsub_shared_ram):
  - $403C02(W) : ]
  - $403C04(W) : ] main68k sets parameters before calling subcpu routine, when required
  - $403C06(W) : ]
@@ -183,8 +183,8 @@ public:
 		m_subcpu(*this,"sub")
 		{ }
 
-	bitmap_t *m_sprite_bitmap_1;
-	bitmap_t *m_sprite_bitmap_2;
+	bitmap_ind16 *m_sprite_bitmap_1;
+	bitmap_ind16 *m_sprite_bitmap_2;
 	UINT32* m_sprite_ram32_1;
 	UINT32* m_sprite_ram32_2;
 	UINT32* m_sprite_regs32_1;
@@ -339,8 +339,8 @@ static VIDEO_START(jchan)
 	state->m_sprite_regs32_1 = auto_alloc_array(machine, UINT32, 0x40/4);
 	state->m_sprite_regs32_2 = auto_alloc_array(machine, UINT32, 0x40/4);
 
-	state->m_sprite_bitmap_1 = auto_bitmap_alloc(machine,1024,1024,BITMAP_FORMAT_INDEXED16);
-	state->m_sprite_bitmap_2 = auto_bitmap_alloc(machine,1024,1024,BITMAP_FORMAT_INDEXED16);
+	state->m_sprite_bitmap_1 = auto_bitmap_ind16_alloc(machine,1024,1024);
+	state->m_sprite_bitmap_2 = auto_bitmap_ind16_alloc(machine,1024,1024);
 
 	state->m_spritegen1 = machine.device<sknsspr_device>("spritegen1");
 	state->m_spritegen2 = machine.device<sknsspr_device>("spritegen2");
@@ -358,9 +358,9 @@ static VIDEO_START(jchan)
 
 
 
-static SCREEN_UPDATE(jchan)
+static SCREEN_UPDATE_IND16(jchan)
 {
-	jchan_state *state = screen->machine().driver_data<jchan_state>();
+	jchan_state *state = screen.machine().driver_data<jchan_state>();
 	int x,y;
 	UINT16* src1;
 	UINT16* src2;
@@ -368,22 +368,22 @@ static SCREEN_UPDATE(jchan)
 	UINT16 pixdata1;
 	UINT16 pixdata2;
 
-	bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine()));
+	bitmap.fill(get_black_pen(screen.machine()), cliprect);
 
-	SCREEN_UPDATE_CALL(jchan_view2);
+	SCREEN_UPDATE16_CALL(jchan_view2);
 
-	bitmap_fill(state->m_sprite_bitmap_1, cliprect, 0x0000);
-	bitmap_fill(state->m_sprite_bitmap_2, cliprect, 0x0000);
+	state->m_sprite_bitmap_1->fill(0x0000, cliprect);
+	state->m_sprite_bitmap_2->fill(0x0000, cliprect);
 
-	state->m_spritegen1->skns_draw_sprites(screen->machine(), state->m_sprite_bitmap_1, cliprect, state->m_sprite_ram32_1, 0x4000, screen->machine().region("gfx1")->base(), screen->machine().region ("gfx1")->bytes(), state->m_sprite_regs32_1 );
-	state->m_spritegen2->skns_draw_sprites(screen->machine(), state->m_sprite_bitmap_2, cliprect, state->m_sprite_ram32_2, 0x4000, screen->machine().region("gfx2")->base(), screen->machine().region ("gfx2")->bytes(), state->m_sprite_regs32_2 );
+	state->m_spritegen1->skns_draw_sprites(screen.machine(), *state->m_sprite_bitmap_1, cliprect, state->m_sprite_ram32_1, 0x4000, screen.machine().region("gfx1")->base(), screen.machine().region ("gfx1")->bytes(), state->m_sprite_regs32_1 );
+	state->m_spritegen2->skns_draw_sprites(screen.machine(), *state->m_sprite_bitmap_2, cliprect, state->m_sprite_ram32_2, 0x4000, screen.machine().region("gfx2")->base(), screen.machine().region ("gfx2")->bytes(), state->m_sprite_regs32_2 );
 
 	// ignoring priority bits for now - might use alpha too, check 0x8000 of palette writes
 	for (y=0;y<240;y++)
 	{
-		src1 = BITMAP_ADDR16(state->m_sprite_bitmap_1, y, 0);
-		src2 = BITMAP_ADDR16(state->m_sprite_bitmap_2, y, 0);
-		dst =  BITMAP_ADDR16(bitmap, y, 0);
+		src1 = &state->m_sprite_bitmap_1->pix16(y);
+		src2 = &state->m_sprite_bitmap_2->pix16(y);
+		dst =  &bitmap.pix16(y);
 
 		for (x=0;x<320;x++)
 		{
@@ -669,10 +669,9 @@ static MACHINE_CONFIG_START( jchan, jchan_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 64*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
-	MCFG_SCREEN_UPDATE(jchan)
+	MCFG_SCREEN_UPDATE_STATIC(jchan)
 
 	MCFG_PALETTE_LENGTH(0x10000)
 

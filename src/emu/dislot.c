@@ -22,7 +22,7 @@ void device_slot_interface::static_set_slot_info(device_t &device, const slot_in
 	device_slot_interface *slot;
 	if (!device.interface(slot))
 		throw emu_fatalerror("set_default_slot_card called on device '%s' with no slot interface", device.tag());
-
+	
 	slot->m_slot_interfaces = slots_info;
 	slot->m_default_card = default_card;
 	slot->m_input_defaults = default_input;
@@ -32,12 +32,12 @@ device_t* device_slot_interface::get_card_device()
 {
 	const char *subtag;
 	device_t *dev = NULL;
-	if (!device().mconfig().options().exists(device().tag())) {
+	if (!device().mconfig().options().exists(device().tag()+1)) {
 		subtag = m_default_card;
 	} else {
-		subtag = device().mconfig().options().value(device().tag());
+		subtag = device().mconfig().options().value(device().tag()+1);
 	}
-	if (subtag) {
+	if (subtag && strlen(subtag)>0) {
 		device_slot_card_interface *intf = NULL;
 		dev = device().subdevice(subtag);
 		if (dev!=NULL && !dev->interface(intf))

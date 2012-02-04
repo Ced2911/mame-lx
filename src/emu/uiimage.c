@@ -25,6 +25,7 @@
 #include "uiimage.h"
 #include "zippath.h"
 #include "unicode.h"
+#include "imagedev/floppy.h"
 #include "imagedev/cassette.h"
 #include "imagedev/bitbngr.h"
 
@@ -149,9 +150,10 @@ static void extra_text_render(render_container *container, float top, float bott
     confirm save as menu
 -------------------------------------------------*/
 
-ui_menu_confirm_save_as::ui_menu_confirm_save_as(running_machine &machine, render_container *container, int *_yes) : ui_menu(machine, container)
+ui_menu_confirm_save_as::ui_menu_confirm_save_as(running_machine &machine, render_container *container, bool *_yes) : ui_menu(machine, container)
 {
 	yes = _yes;
+	*yes = false;
 }
 
 ui_menu_confirm_save_as::~ui_menu_confirm_save_as()
@@ -160,7 +162,7 @@ ui_menu_confirm_save_as::~ui_menu_confirm_save_as()
 
 void ui_menu_confirm_save_as::populate()
 {
-	item_append("File Already Exists - Overide?", NULL, MENU_FLAG_DISABLE, NULL);
+	item_append("File Already Exists - Override?", NULL, MENU_FLAG_DISABLE, NULL);
 	item_append(MENU_SEPARATOR_ITEM, NULL, MENU_FLAG_DISABLE, NULL);
 	item_append("No", NULL, 0, ITEMREF_NO);
 	item_append("Yes", NULL, 0, ITEMREF_YES);
@@ -179,7 +181,7 @@ void ui_menu_confirm_save_as::handle()
 	if ((event != NULL) && (event->iptkey == IPT_UI_SELECT))
 	{
 		if (event->itemref == ITEMREF_YES)
-			*yes = TRUE;
+			*yes = true;
 
 		/* no matter what, pop out */
 		ui_menu::stack_pop(machine());
@@ -224,7 +226,7 @@ static int is_valid_filename_char(unicode_char unichar)
 void ui_menu_file_create::custom_render(void *selectedref, float top, float bottom, float origx1, float origy1, float origx2, float origy2)
 {
 	extra_text_render(container, top, bottom, origx1, origy1, origx2, origy2,
-		astring_c(manager->current_directory),
+		current_directory,
 		NULL);
 }
 
@@ -235,9 +237,9 @@ void ui_menu_file_create::custom_render(void *selectedref, float top, float bott
     creator menu
 -------------------------------------------------*/
 
-ui_menu_file_create::ui_menu_file_create(running_machine &machine, render_container *container, ui_menu_file_manager *parent) : ui_menu(machine, container)
+ui_menu_file_create::ui_menu_file_create(running_machine &machine, render_container *container, device_image_interface *_image, astring &_current_directory, astring &_current_file) : ui_menu(machine, container), current_directory(_current_directory), current_file(_current_file)
 {
-	manager = parent;
+	image = _image;
 }
 
 ui_menu_file_create::~ui_menu_file_create()
@@ -247,15 +249,14 @@ ui_menu_file_create::~ui_menu_file_create()
 void ui_menu_file_create::populate()
 {
 	astring buffer;
-	device_image_interface *device = manager->selected_device;
 	const image_device_format *format;
 	const char *new_image_name;
 
 	/* append the "New Image Name" item */
 	if (get_selection() == ITEMREF_NEW_IMAGE_NAME)
 	{
-		astring_assemble_2(&buffer, filename_buffer, "_");
-		new_image_name = astring_c(&buffer);
+		buffer.cat(filename_buffer).cat("_");
+		new_image_name = buffer;
 	}
 	else
 	{
@@ -264,10 +265,10 @@ void ui_menu_file_create::populate()
 	item_append("New Image Name:", new_image_name, 0, ITEMREF_NEW_IMAGE_NAME);
 
 	/* do we support multiple formats? */
-	format = device->device_get_creatable_formats();
+	format = image->device_get_creatable_formats();
 	if (ENABLE_FORMATS && (format != NULL))
 	{
-		item_append("Image Format:", current_format->m_description, 0, ITEMREF_FORMAT);
+		item_append(_("Image Format:"), current_format->m_description, 0, ITEMREF_FORMAT);
 		current_format = format;
 	}
 
@@ -279,97 +280,14 @@ void ui_menu_file_create::populate()
 }
 
 
-
-/*-------------------------------------------------
-    create_new_image - creates a new disk image
--------------------------------------------------*/
-
-int ui_menu_file_create::create_new_image(device_image_interface *image, const char *directory, const char *filename, int *yes)
-{
-	astring *path;
-	osd_directory_entry *entry;
-	osd_dir_entry_type file_type;
-	int do_create, err;
-	int result = FALSE;
-
-	/* assemble the full path */
-	path = zippath_combine(astring_alloc(), directory, filename);
-
-	/* does a file or a directory exist at the path */
-	entry = osd_stat(astring_c(path));
-	file_type = (entry != NULL) ? entry->type : ENTTYPE_NONE;
-	if (entry != NULL)
-		free(entry);
-
-	/* special case */
-	if ((file_type == ENTTYPE_FILE) && *yes)
-		file_type = ENTTYPE_NONE;
-
-	switch(file_type)
-	{
-		case ENTTYPE_NONE:
-			/* no file/dir here - always create */
-			do_create = TRUE;
-			break;
-
-		case ENTTYPE_FILE:
-			/* a file exists here - ask for permission from the user */
-			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_confirm_save_as(machine(), container, yes)));
-			do_create = FALSE;
-			break;
-
-		case ENTTYPE_DIR:
-			/* a directory exists here - we can't save over it */
-			ui_popup_time(ERROR_MESSAGE_TIME, "Cannot save over directory");
-			do_create = FALSE;
-			break;
-
-		default:
-			fatalerror("Unexpected");
-			do_create = FALSE;
-			break;
-	}
-
-	/* create the image, if appropriate */
-	if (do_create)
-	{
-		err = image->create(astring_c(path), 0, NULL);
-		if (err != 0)
-			popmessage("Error: %s", image->error());
-		else
-			result = TRUE;
-	}
-
-	/* free the path */
-	astring_free(path);
-
-	return result;
-}
-
-
-
 /*-------------------------------------------------
     menu_file_create - file creator menu
 -------------------------------------------------*/
 
 void ui_menu_file_create::handle()
 {
-	const ui_menu_event *event;
-	ui_menu_event fake_event;
-
-	if (confirm_save_as_yes)
-	{
-		/* we just returned from a "confirm save as" dialog and the user said "yes" - fake an event */
-		memset(&fake_event, 0, sizeof(fake_event));
-		fake_event.iptkey = IPT_UI_SELECT;
-		fake_event.itemref = ITEMREF_CREATE;
-		event = &fake_event;
-	}
-	else
-	{
-		/* process the menu */
-		event = process(0);
-	}
+	/* process the menu */
+	const ui_menu_event *event = process(0);
 
 	/* process the event */
 	if (event != NULL)
@@ -380,16 +298,8 @@ void ui_menu_file_create::handle()
 			case IPT_UI_SELECT:
 				if ((event->itemref == ITEMREF_CREATE) || (event->itemref == ITEMREF_NEW_IMAGE_NAME))
 				{
-					if (create_new_image(
-						manager->selected_device,
-						astring_c(manager->current_directory),
-						filename_buffer,
-						&confirm_save_as_yes))
-					{
-						/* success - pop out twice to device view */
-						ui_menu::stack_pop(machine());
-						ui_menu::stack_pop(machine());
-					}
+					current_file.cpy(filename_buffer);
+					ui_menu::stack_pop(machine());
 				}
 				break;
 
@@ -401,6 +311,7 @@ void ui_menu_file_create::handle()
 						ARRAY_LENGTH(filename_buffer),
 						event->unichar,
 						is_valid_filename_char);
+					reset(UI_MENU_RESET_REMEMBER_POSITION);
 				}
 				break;
 		}
@@ -422,7 +333,7 @@ void ui_menu_file_selector::custom_render(void *selectedref, float top, float bo
 {
 	extra_text_render(container, top, bottom,
 		origx1, origy1, origx2, origy2,
-		astring_c(manager->current_directory),
+		current_directory,
 		NULL);
 }
 
@@ -506,7 +417,7 @@ ui_menu_file_selector::file_selector_entry *ui_menu_file_selector::append_entry(
 
 ui_menu_file_selector::file_selector_entry *ui_menu_file_selector::append_dirent_entry(const osd_directory_entry *dirent)
 {
-	astring *buffer;
+	astring buffer;
 	file_selector_entry_type entry_type;
 	file_selector_entry *entry;
 
@@ -526,18 +437,14 @@ ui_menu_file_selector::file_selector_entry *ui_menu_file_selector::append_dirent
 	}
 
 	/* determine the full path */
-	buffer = zippath_combine(
-		astring_alloc(),
-		astring_c(manager->current_directory),
-		dirent->name);
+	zippath_combine(buffer, current_directory, dirent->name);
 
 	/* create the file selector entry */
 	entry = append_entry(
 		entry_type,
 		dirent->name,
-		astring_c(buffer));
+		buffer);
 
-	astring_free(buffer);
 	return entry;
 }
 
@@ -591,9 +498,13 @@ void ui_menu_file_selector::append_entry_menu_item(const file_selector_entry *en
     allocates all menu items for a directory
 -------------------------------------------------*/
 
-ui_menu_file_selector::ui_menu_file_selector(running_machine &machine, render_container *container, ui_menu_file_manager *parent) : ui_menu(machine, container)
+ui_menu_file_selector::ui_menu_file_selector(running_machine &machine, render_container *container, device_image_interface *_image, astring &_current_directory, astring &_current_file, bool _has_empty, bool _has_softlist, bool _has_create, int *_result) : ui_menu(machine, container), current_directory(_current_directory), current_file(_current_file)
 {
-	manager = parent;
+	image = _image;
+	has_empty = _has_empty;
+	has_softlist = _has_softlist;
+	has_create = _has_create;
+	result = _result;
 }
 
 ui_menu_file_selector::~ui_menu_file_selector()
@@ -609,8 +520,7 @@ void ui_menu_file_selector::populate()
 	const file_selector_entry *selected_entry = NULL;
 	int i;
 	const char *volume_name;
-	device_image_interface *device = manager->selected_device;
-	const char *path = astring_c(manager->current_directory);
+	const char *path = current_directory;
 
 	/* open the directory */
 	err = zippath_opendir(path, &directory);
@@ -620,17 +530,21 @@ void ui_menu_file_selector::populate()
 	/* clear out the menu entries */
 	entrylist = NULL;
 
-	/* add the "[empty slot]" entry */
-	append_entry(SELECTOR_ENTRY_TYPE_EMPTY, NULL, NULL);
+	if (has_empty)
+	{
+		/* add the "[empty slot]" entry */
+		append_entry(SELECTOR_ENTRY_TYPE_EMPTY, NULL, NULL);
+	}
 
-	if (device->is_creatable() && !zippath_is_zip(directory))
+	if (has_create)
 	{
 		/* add the "[create]" entry */
 		append_entry(SELECTOR_ENTRY_TYPE_CREATE, NULL, NULL);
 	}
 
-	/* add the "[software list]" entry */
-	append_entry(SELECTOR_ENTRY_TYPE_SOFTWARE_LIST, NULL, NULL);
+	if (has_softlist)
+		/* add the "[software list]" entry */
+		append_entry(SELECTOR_ENTRY_TYPE_SOFTWARE_LIST, NULL, NULL);
 
 	/* add the drives */
 	i = 0;
@@ -654,7 +568,7 @@ void ui_menu_file_selector::populate()
 				selected_entry = entry;
 
 			/* do we have to select this file? */
-			if (!mame_stricmp(astring_c(manager->current_file), dirent->name))
+			if (!mame_stricmp(current_file, dirent->name))
 				selected_entry = entry;
 		}
 	}
@@ -674,17 +588,6 @@ done:
 	if (directory != NULL)
 		zippath_closedir(directory);
 }
-
-/*-------------------------------------------------
-    check_path - performs a quick check to see if
-    a path exists
--------------------------------------------------*/
-
-static file_error check_path(const char *path)
-{
-	return zippath_opendir(path, NULL);
-}
-
 
 
 /*-------------------------------------------------
@@ -710,34 +613,37 @@ void ui_menu_file_selector::handle()
 			{
 				case SELECTOR_ENTRY_TYPE_EMPTY:
 					/* empty slot - unload */
-					manager->selected_device->unload();
+					*result = R_EMPTY;
 					ui_menu::stack_pop(machine());
 					break;
 
 				case SELECTOR_ENTRY_TYPE_CREATE:
 					/* create */
-					ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_file_create(machine(), container, manager)));
+					*result = R_CREATE;
+					ui_menu::stack_pop(machine());
 					break;
 				case SELECTOR_ENTRY_TYPE_SOFTWARE_LIST:
-					ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_software(machine(), container, manager->selected_device)));
+					*result = R_SOFTLIST;
+					ui_menu::stack_pop(machine());
 					break;
 				case SELECTOR_ENTRY_TYPE_DRIVE:
 				case SELECTOR_ENTRY_TYPE_DIRECTORY:
 					/* drive/directory - first check the path */
-					err = check_path(entry->fullpath);
+					err = zippath_opendir(entry->fullpath, NULL);
 					if (err != FILERR_NONE)
 					{
 						/* this path is problematic; present the user with an error and bail */
 						ui_popup_time(1, "Error accessing %s", entry->fullpath);
 						break;
 					}
-					astring_cpyc(manager->current_directory, entry->fullpath);
+					current_directory.cpy(entry->fullpath);
 					reset((ui_menu_reset_options)0);
 					break;
 
 				case SELECTOR_ENTRY_TYPE_FILE:
 					/* file */
-					manager->selected_device->load(entry->fullpath);
+					current_file.cpy(entry->fullpath);
+					*result = R_FILE;
 					ui_menu::stack_pop(machine());
 					break;
 			}
@@ -834,29 +740,6 @@ void ui_menu_file_selector::handle()
     FILE MANAGER
 ***************************************************************************/
 
-/*-------------------------------------------------
-    fix_working_directory - checks the working
-    directory for this device to ensure that it
-    "makes sense"
--------------------------------------------------*/
-
-void ui_menu_file_manager::fix_working_directory(device_image_interface *image)
-{
-	/* if the image exists, set the working directory to the parent directory */
-	if (image->exists())
-	{
-		astring *astr = astring_alloc();
-		zippath_parent(astr, image->filename());
-		image->set_working_directory(astring_c(astr));
-		astring_free(astr);
-	}
-
-	/* check to see if the path exists; if not clear it */
-	if (check_path(image->working_directory()) != FILERR_NONE)
-		image->set_working_directory("");
-}
-
-
 
 /*-------------------------------------------------
     file_manager_render_extra - perform our
@@ -870,7 +753,7 @@ void ui_menu_file_manager::custom_render(void *selectedref, float top, float bot
 	/* access the path */
 	path = selected_device ? selected_device->filename() : NULL;
 	extra_text_render(container, top, bottom,
-					  origx1, origy1, origx2, origy2, NULL, path);
+		origx1, origy1, origx2, origy2, NULL, path);
 }
 
 
@@ -882,18 +765,16 @@ void ui_menu_file_manager::custom_render(void *selectedref, float top, float bot
 
 ui_menu_file_manager::ui_menu_file_manager(running_machine &machine, render_container *container) : ui_menu(machine, container)
 {
-	current_directory = astring_alloc();
-	current_file = astring_alloc();
 }
 
 void ui_menu_file_manager::populate()
 {
 	char buffer[2048];
-	device_image_interface *image = NULL;
 	astring tmp_name;
 
 	/* cycle through all devices for this system */
-	for (bool gotone = machine().devicelist().first(image); gotone; gotone = image->next(image))
+	image_interface_iterator iter(machine().root_device());
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 	{
 		/* get the image type/id */
 		snprintf(buffer, ARRAY_LENGTH(buffer),
@@ -941,8 +822,6 @@ void ui_menu_file_manager::populate()
 
 ui_menu_file_manager::~ui_menu_file_manager()
 {
-	astring_free(current_directory);
-	astring_free(current_file);
 }
 
 
@@ -963,18 +842,10 @@ void ui_menu_file_manager::handle()
 		selected_device = (device_image_interface *) event->itemref;
 		if (selected_device != NULL)
 		{
-			/* ensure that the working directory for this device exists */
-			fix_working_directory(selected_device);
-
-			/* set up current_directory and current_file - depends on whether we have an image */
-			astring_cpyc(current_directory, selected_device->working_directory());
-			astring_cpyc(current_file, selected_device->exists() ? selected_device->basename() : "");
+			ui_menu::stack_push(selected_device->get_selection_menu(machine(), container));
 
 			/* reset the existing menu */
 			reset(UI_MENU_RESET_REMEMBER_POSITION);
-
-			/* push the menu */
-			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_file_selector(machine(), container, this)));
 		}
 	}
 }
@@ -990,9 +861,8 @@ ui_menu_image_info::ui_menu_image_info(running_machine &machine, render_containe
 
 void ui_menu_image_info::populate()
 {
-	astring *tempstring = image_info_astring(machine(), astring_alloc());
-	item_append(astring_c(tempstring), NULL, MENU_FLAG_MULTILINE, NULL);
-	astring_free(tempstring);
+	astring tempstring;
+	item_append(image_info_astring(machine(), tempstring), NULL, MENU_FLAG_MULTILINE, NULL);
 }
 
 ui_menu_image_info::~ui_menu_image_info()
@@ -1003,6 +873,86 @@ void ui_menu_image_info::handle()
 {
 	/* process the menu */
 	process(0);
+}
+
+/*-------------------------------------------------
+    ui_menu_select_format - floppy image format
+    selection menu
+-------------------------------------------------*/
+
+ui_menu_select_format::ui_menu_select_format(running_machine &machine, render_container *container,
+											 floppy_image_format_t **_formats, int _ext_match, int _total_usable, int *_result)
+	: ui_menu(machine, container)
+{
+	formats = _formats;
+	ext_match = _ext_match;
+	total_usable = _total_usable;
+	result = _result;
+}
+
+void ui_menu_select_format::populate()
+{
+	item_append(_("Select image format"), NULL, MENU_FLAG_DISABLE, NULL);
+	for(int i=0; i<total_usable; i++) {
+		const floppy_image_format_t *fmt = formats[i];
+
+		if(i && i == ext_match)
+			item_append(MENU_SEPARATOR_ITEM, NULL, 0, NULL);
+		item_append(fmt->description(), fmt->name(), 0, (void *)(FPTR)i);
+	}
+}
+
+ui_menu_select_format::~ui_menu_select_format()
+{
+}
+
+void ui_menu_select_format::handle()
+{
+	/* process the menu */
+	const ui_menu_event *event = process(0);
+	if (event != NULL && event->iptkey == IPT_UI_SELECT)
+	{
+		*result = int(FPTR(event->itemref));
+		ui_menu::stack_pop(machine());
+	}
+}
+
+/*-------------------------------------------------
+    ui_menu_select_rw - floppy read/write
+    selection menu
+-------------------------------------------------*/
+
+ui_menu_select_rw::ui_menu_select_rw(running_machine &machine, render_container *container,
+									 bool _can_in_place, int *_result)
+	: ui_menu(machine, container)
+{
+	can_in_place = _can_in_place;
+	result = _result;
+}
+
+void ui_menu_select_rw::populate()
+{
+	item_append("Select access mode", NULL, MENU_FLAG_DISABLE, NULL);
+	item_append("Read-only", 0, 0, (void *)READONLY);
+	if(can_in_place)
+		item_append("Read-write", 0, 0, (void *)READWRITE);
+	item_append("Read this image, write to another image", 0, 0, (void *)WRITE_OTHER);
+	item_append("Read this image, write to diff", 0, 0, (void *)WRITE_DIFF);
+}
+
+ui_menu_select_rw::~ui_menu_select_rw()
+{
+}
+
+void ui_menu_select_rw::handle()
+{
+	/* process the menu */
+	const ui_menu_event *event = process(0);
+	if (event != NULL && event->iptkey == IPT_UI_SELECT)
+	{
+		*result = int(FPTR(event->itemref));
+		ui_menu::stack_pop(machine());
+	}
 }
 
 /***************************************************************************
@@ -1050,15 +1000,8 @@ ui_menu_mess_bitbanger_control::~ui_menu_mess_bitbanger_control()
 
 int ui_menu_mess_tape_control::cassette_count()
 {
-	int count = 0;
-	device_t *device = machine().devicelist().first(CASSETTE);
-
-	while ( device )
-	{
-		count++;
-		device = device->typenext();
-	}
-	return count;
+	cassette_device_iterator iter(machine().root_device());
+	return iter.count();
 }
 
 /*-------------------------------------------------
@@ -1068,15 +1011,8 @@ int ui_menu_mess_tape_control::cassette_count()
 
 int ui_menu_mess_bitbanger_control::bitbanger_count()
 {
-	int count = 0;
-	device_t *device = machine().devicelist().first(BITBANGER);
-
-	while ( device )
-	{
-		count++;
-		device = device->typenext();
-	}
-	return count;
+	bitbanger_device_iterator iter(machine().root_device());
+	return iter.count();
 }
 
 /*-------------------------------------------------
@@ -1084,7 +1020,7 @@ int ui_menu_mess_bitbanger_control::bitbanger_count()
     representation of the time
 -------------------------------------------------*/
 
-astring *tapecontrol_gettime(astring *dest, cassette_image_device *cassette, int *curpos, int *endpos)
+astring &tapecontrol_gettime(astring &dest, cassette_image_device *cassette, int *curpos, int *endpos)
 {
 	double t0, t1;
 
@@ -1092,9 +1028,9 @@ astring *tapecontrol_gettime(astring *dest, cassette_image_device *cassette, int
 	t1 = cassette->get_length();
 
 	if (t1)
-		astring_printf(dest, "%04d/%04d", (int) t0, (int) t1);
+		dest.printf("%04d/%04d", (int) t0, (int) t1);
 	else
-		astring_printf(dest, "%04d/%04d", 0, (int) t1);
+		dest.printf("%04d/%04d", 0, (int) t1);
 
 	if (curpos != NULL)
 		*curpos = t0;
@@ -1147,38 +1083,38 @@ void ui_menu_mess_tape_control::populate()
 		item_append(device->device().name(), device->filename(), flags, TAPECMD_SELECT);
 
 		/* state */
-		tapecontrol_gettime(&timepos, cassette, NULL, NULL);
+		tapecontrol_gettime(timepos, cassette, NULL, NULL);
 		state = cassette->get_state();
 		item_append(
 			(state & CASSETTE_MASK_UISTATE) == CASSETTE_STOPPED
-				?	"stopped"
+				?	_("stopped")
 				:	((state & CASSETTE_MASK_UISTATE) == CASSETTE_PLAY
 					? ((state & CASSETTE_MASK_MOTOR) == CASSETTE_MOTOR_ENABLED ? "playing" : "(playing)")
 					: ((state & CASSETTE_MASK_MOTOR) == CASSETTE_MOTOR_ENABLED ? "recording" : "(recording)")
 					),
-			astring_c(&timepos),
+			timepos,
 			tapeflags,
 			TAPECMD_SLIDER);
 
 		/* pause or stop */
-		item_append("Pause/Stop", NULL, 0, TAPECMD_STOP);
+		item_append(_("Pause/Stop"), NULL, 0, TAPECMD_STOP);
 
 		/* play */
-		item_append("Play", NULL, 0, TAPECMD_PLAY);
+		item_append(_("Play"), NULL, 0, TAPECMD_PLAY);
 
 		/* record */
-		item_append("Record", NULL, 0, TAPECMD_RECORD);
+		item_append(_("Record"), NULL, 0, TAPECMD_RECORD);
 
 		/* rewind */
-		item_append("Rewind", NULL, 0, TAPECMD_REWIND);
+		item_append(_("Rewind"), NULL, 0, TAPECMD_REWIND);
 
 		/* fast forward */
-		item_append("Fast Forward", NULL, 0, TAPECMD_FAST_FORWARD);
+		item_append(_("Fast Forward"), NULL, 0, TAPECMD_FAST_FORWARD);
 	}
 	else
 	{
 		/* no tape loaded */
-		item_append("No Tape Image loaded", NULL, flags, NULL);
+		item_append(_("No Tape Image loaded"), NULL, flags, NULL);
 	}
 }
 
@@ -1225,15 +1161,15 @@ void ui_menu_mess_bitbanger_control::populate()
 
 		/* name of bitbanger file */
 		item_append(device->device().name(), device->filename(), flags, BITBANGERCMD_SELECT);
-		item_append("Device Mode:", bitbanger->mode_string(), mode_flags, BITBANGERCMD_MODE);
-		item_append("Baud:", bitbanger->baud_string(), baud_flags, BITBANGERCMD_BAUD);
-		item_append("Baud Tune:", bitbanger->tune_string(), tune_flags, BITBANGERCMD_TUNE);
-		item_append("Protocol:", "8-1-N", 0, NULL);
+		item_append(_("Device Mode:"), bitbanger->mode_string(), mode_flags, BITBANGERCMD_MODE);
+		item_append(_("Baud:"), bitbanger->baud_string(), baud_flags, BITBANGERCMD_BAUD);
+		item_append(_("Baud Tune:"), bitbanger->tune_string(), tune_flags, BITBANGERCMD_TUNE);
+		item_append(_("Protocol:"), "8-1-N", 0, NULL);
 	}
 	else
 	{
 		/* no tape loaded */
-		item_append("No Bitbanger Image loaded", NULL, flags, NULL);
+		item_append(_("No Bitbanger Image loaded"), NULL, flags, NULL);
 	}
 }
 
@@ -1247,14 +1183,8 @@ void ui_menu_mess_tape_control::handle()
 	/* do we have to load the device? */
 	if (device == NULL)
 	{
-		int cindex = index;
-		for (bool gotone = machine().devicelist().first(device); gotone; gotone = device->next(device))
-		{
-			if(device->device().type() == CASSETTE) {
-				if (cindex==0) break;
-				cindex--;
-			}
-		}
+		cassette_device_iterator iter(machine().root_device());
+		device = iter.byindex(index);
 		reset((ui_menu_reset_options)0);
 	}
 
@@ -1263,7 +1193,7 @@ void ui_menu_mess_tape_control::handle()
 	populate();
 
 	cassette_image_device* cassette = dynamic_cast<cassette_image_device*>(&device->device());
-
+	
 	/* process the menu */
 	const ui_menu_event *event = process(UI_MENU_PROCESS_LR_REPEAT);
 	if (event != NULL)
@@ -1336,14 +1266,8 @@ void ui_menu_mess_bitbanger_control::handle()
 	/* do we have to load the device? */
 	if (device == NULL)
 	{
-		int cindex = index;
-		for (bool gotone = machine().devicelist().first(device); gotone; gotone = device->next(device))
-		{
-			if(device->device().type() == BITBANGER) {
-				if (cindex==0) break;
-				cindex--;
-			}
-		}
+		bitbanger_device_iterator iter(machine().root_device());
+		device = iter.byindex(index);
 		reset((ui_menu_reset_options)0);
 	}
 

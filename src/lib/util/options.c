@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include "options.h"
 #include "astring.h"
+#include "uilang.h"
 
 
 
@@ -475,6 +476,25 @@ void core_options::revert(int priority)
 		curentry->revert(priority);
 }
 
+/*-------------------------------------------------
+    translate_description - translate description
+    by UI_MSG_MAME or UI_MSG_OSD0
+-------------------------------------------------*/
+
+const char *core_options::translate_description(const char *description)
+{
+	const char *desc = _(description);
+
+	// osd/windows
+	if (desc == description)
+		desc = lang_message(UI_MSG_OSD0, desc);
+
+	// osd/winui
+	if (desc == description)
+		return lang_message(UI_MSG_OSD1, desc);
+
+	return desc;
+}
 
 //-------------------------------------------------
 //  output_ini - output the options in INI format,
@@ -507,7 +527,7 @@ const char *core_options::output_ini(astring &buffer, const core_options *diff)
 
 		// header: record description
 		if (curentry->is_header())
-			last_header = curentry->description();
+			last_header = translate_description(curentry->description());
 
 		// otherwise, output entries for all non-command items
 		else if (!curentry->is_command())
@@ -553,11 +573,11 @@ const char *core_options::output_help(astring &buffer)
 	{
 		// header: just print
 		if (curentry->is_header())
-			buffer.catprintf("\n#\n# %s\n#\n", curentry->description());
+			buffer.catprintf("\n#\n# %s\n#\n", translate_description(curentry->description()));
 
 		// otherwise, output entries for all non-deprecated items
 		else if (curentry->description() != NULL)
-			buffer.catprintf("-%-20s%s\n", curentry->name(), curentry->description());
+			buffer.catprintf("-%-20s%s\n", curentry->name(), translate_description(curentry->description()));
 	}
 	return buffer;
 }

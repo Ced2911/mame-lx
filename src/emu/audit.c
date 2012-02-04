@@ -76,7 +76,7 @@ media_auditor::summary media_auditor::audit_media(const char *validation)
 
 // temporary hack until romload is update: get the driver path and support it for
 // all searches
-const char *driverpath = m_enumerator.config().devicelist().find("root")->searchpath();
+const char *driverpath = m_enumerator.config().root_device().searchpath();
 
 	// iterate over ROM sources and regions
 	int found = 0;
@@ -88,7 +88,7 @@ const char *driverpath = m_enumerator.config().devicelist().find("root")->search
 	{
 		// determine the search path for this source and iterate through the regions
 		m_searchpath = source->searchpath();
-
+		
 		// now iterate over regions and ROMs within
 		for (const rom_entry *region = rom_first_region(*source); region != NULL; region = rom_next_region(region))
 		{
@@ -115,7 +115,7 @@ m_searchpath = combinedpath;
 						sharedRequired++;
 					}
 				}
-
+				
 				// audit a file
 				audit_record *record = NULL;
 				if (ROMREGION_ISROMDATA(region))
@@ -124,11 +124,11 @@ m_searchpath = combinedpath;
 				// audit a disk
 				else if (ROMREGION_ISDISKDATA(region))
 					record = audit_one_disk(rom);
-
+				
 				if (record != NULL)
 				{
 					// count the number of files that are found.
-					if (record->status() == audit_record::STATUS_GOOD || (record->status() == audit_record::STATUS_FOUND_INVALID && find_shared_source(source, record->actual_hashes(), record->actual_length()) == NULL))
+					if (record->status() == audit_record::STATUS_GOOD || (record->status() == audit_record::STATUS_FOUND_INVALID && find_shared_source(source,record->actual_hashes(), record->actual_length()) == NULL))
 					{
 						found++;
 						if (shared_source != NULL)
@@ -153,14 +153,14 @@ m_searchpath = combinedpath;
 	{
 		return NONE_NEEDED;
 	}
-
+	
 	// return a summary
 	return summarize(m_enumerator.driver().name);
 }
 
 
 //-------------------------------------------------
-//  audit_device - audit the device
+//  audit_device - audit the device 
 //-------------------------------------------------
 
 media_auditor::summary media_auditor::audit_device(device_t *device, const char *validation)
@@ -234,50 +234,50 @@ media_auditor::summary media_auditor::audit_samples()
 	int found = 0;
 
 	// iterate over sample entries
-	for (const device_t *device = m_enumerator.config().first_device(); device != NULL; device = device->next())
-		if (device->type() == SAMPLES)
+	samples_device_iterator iter(m_enumerator.config().root_device()); 
+	for (samples_device *device = iter.first(); device != NULL; device = iter.next())
+	{
+		const samples_interface *intf = reinterpret_cast<const samples_interface *>(device->static_config());
+		if (intf->samplenames != NULL)
 		{
-			const samples_interface *intf = reinterpret_cast<const samples_interface *>(device->static_config());
-			if (intf->samplenames != NULL)
+			// by default we just search using the driver name
+			astring searchpath(m_enumerator.driver().name);
+
+			// iterate over samples in this entry
+			for (int sampnum = 0; intf->samplenames[sampnum] != NULL; sampnum++)
 			{
-				// by default we just search using the driver name
-				astring searchpath(m_enumerator.driver().name);
-
-				// iterate over samples in this entry
-				for (int sampnum = 0; intf->samplenames[sampnum] != NULL; sampnum++)
+				// starred entries indicate an additional searchpath
+				if (intf->samplenames[sampnum][0] == '*')
 				{
-					// starred entries indicate an additional searchpath
-					if (intf->samplenames[sampnum][0] == '*')
+					searchpath.cat(";").cat(&intf->samplenames[sampnum][1]);
+					continue;
+				}
+
+				required++;
+
+				// create a new record
+				audit_record &record = m_record_list.append(*global_alloc(audit_record(intf->samplenames[sampnum], audit_record::MEDIA_SAMPLE)));
+
+				// look for the files
+				emu_file file(m_enumerator.options().sample_path(), OPEN_FLAG_READ | OPEN_FLAG_NO_PRELOAD);
+				path_iterator path(searchpath);
+				astring curpath;
+				while (path.next(curpath, intf->samplenames[sampnum]))
+				{
+					// attempt to access the file
+					file_error filerr = file.open(curpath);
+					if (filerr == FILERR_NONE)
 					{
-						searchpath.cat(";").cat(&intf->samplenames[sampnum][1]);
-						continue;
+						record.set_status(audit_record::STATUS_GOOD, audit_record::SUBSTATUS_GOOD);
+						found++;
 					}
-
-					required++;
-
-					// create a new record
-					audit_record &record = m_record_list.append(*global_alloc(audit_record(intf->samplenames[sampnum], audit_record::MEDIA_SAMPLE)));
-
-					// look for the files
-					emu_file file(m_enumerator.options().sample_path(), OPEN_FLAG_READ | OPEN_FLAG_NO_PRELOAD);
-					path_iterator path(searchpath);
-					astring curpath;
-					while (path.next(curpath, intf->samplenames[sampnum]))
-					{
-						// attempt to access the file
-						file_error filerr = file.open(curpath);
-						if (filerr == FILERR_NONE)
-						{
-							record.set_status(audit_record::STATUS_GOOD, audit_record::SUBSTATUS_GOOD);
-							found++;
-						}
-						else
-							record.set_status(audit_record::STATUS_NOT_FOUND, audit_record::SUBSTATUS_NOT_FOUND);
-					}
+					else
+						record.set_status(audit_record::STATUS_NOT_FOUND, audit_record::SUBSTATUS_NOT_FOUND);
 				}
 			}
 		}
-
+	}
+	
 	if (found == 0 && required > 0)
 	{
 		m_record_list.reset();
@@ -315,7 +315,7 @@ media_auditor::summary media_auditor::summarize(const char *name, astring *strin
 		{
 			string->catprintf("%-12s: %s", name, record->name());
 			if (record->expected_length() > 0)
-				string->catprintf(" (%d bytes)", record->expected_length());
+				string->catprintf(_(" (%d bytes)"), record->expected_length());
 			string->catprintf(" - ");
 		}
 
@@ -323,12 +323,12 @@ media_auditor::summary media_auditor::summarize(const char *name, astring *strin
 		switch (record->substatus())
 		{
 			case audit_record::SUBSTATUS_GOOD_NEEDS_REDUMP:
-				if (string != NULL) string->catprintf("NEEDS REDUMP\n");
+				if (string != NULL) string->catprintf(_("NEEDS REDUMP\n"));
 				best_new_status = BEST_AVAILABLE;
 				break;
 
 			case audit_record::SUBSTATUS_FOUND_NODUMP:
-				if (string != NULL) string->catprintf("NO GOOD DUMP KNOWN\n");
+				if (string != NULL) string->catprintf(_("NO GOOD DUMP KNOWN\n"));
 				best_new_status = BEST_AVAILABLE;
 				break;
 
@@ -336,32 +336,32 @@ media_auditor::summary media_auditor::summarize(const char *name, astring *strin
 				if (string != NULL)
 				{
 					astring tempstr;
-					string->catprintf("INCORRECT CHECKSUM:\n");
-					string->catprintf("EXPECTED: %s\n", record->expected_hashes().macro_string(tempstr));
-					string->catprintf("   FOUND: %s\n", record->actual_hashes().macro_string(tempstr));
+					string->catprintf(_("INCORRECT CHECKSUM:\n"));
+					string->catprintf(_("EXPECTED: %s\n"), record->expected_hashes().macro_string(tempstr));
+					string->catprintf(_("   FOUND: %s\n"), record->actual_hashes().macro_string(tempstr));
 				}
 				break;
 
 			case audit_record::SUBSTATUS_FOUND_WRONG_LENGTH:
-				if (string != NULL) string->catprintf("INCORRECT LENGTH: %d bytes\n", record->actual_length());
+				if (string != NULL) string->catprintf(_("INCORRECT LENGTH: %d bytes\n"), record->actual_length());
 				break;
 
 			case audit_record::SUBSTATUS_NOT_FOUND:
 				if (string != NULL)
 				{
 					const rom_source *shared_source = record->shared_source();
-					if (shared_source == NULL) string->catprintf("NOT FOUND\n");
-					else string->catprintf("NOT FOUND (%s)\n", shared_source->shortname());
+					if (shared_source == NULL) string->catprintf(_("NOT FOUND\n"));
+					else string->catprintf(_("NOT FOUND (%s)\n"), shared_source->shortname());
 				}
 				break;
 
 			case audit_record::SUBSTATUS_NOT_FOUND_NODUMP:
-				if (string != NULL) string->catprintf("NOT FOUND - NO GOOD DUMP KNOWN\n");
+				if (string != NULL) string->catprintf(_("NOT FOUND - NO GOOD DUMP KNOWN\n"));
 				best_new_status = BEST_AVAILABLE;
 				break;
 
 			case audit_record::SUBSTATUS_NOT_FOUND_OPTIONAL:
-				if (string != NULL) string->catprintf("NOT FOUND BUT OPTIONAL\n");
+				if (string != NULL) string->catprintf(_("NOT FOUND BUT OPTIONAL\n"));
 				best_new_status = BEST_AVAILABLE;
 				break;
 
@@ -401,7 +401,7 @@ audit_record *media_auditor::audit_one_rom(const rom_entry *rom)
 			filerr = file.open(curpath, crc);
 		else
 			filerr = file.open(curpath);
-
+		
 		// if it worked, get the actual length and hashes, then stop
 		if (filerr == FILERR_NONE)
 		{
@@ -429,7 +429,7 @@ audit_record *media_auditor::audit_one_disk(const rom_entry *rom)
 	emu_file *source_file;
 	chd_file *source;
 	chd_error err = open_disk_image(m_enumerator.options(), &m_enumerator.driver(), rom, &source_file, &source, NULL);
-
+	
 	// if we succeeded, get the hashes
 	if (err == CHDERR_NONE)
 	{
@@ -440,7 +440,7 @@ audit_record *media_auditor::audit_one_disk(const rom_entry *rom)
 		// if there's a SHA1 hash, add them to the output hash
 		if (memcmp(nullhash, header.sha1, sizeof(header.sha1)) != 0)
 			hashes.add_from_buffer(hash_collection::HASH_SHA1, header.sha1, sizeof(header.sha1));
-
+		
 		// update the actual values
 		record.set_actual(hashes);
 
@@ -448,7 +448,7 @@ audit_record *media_auditor::audit_one_disk(const rom_entry *rom)
 		chd_close(source);
 		global_free(source_file);
 	}
-
+	
 	// compute the final status
 	compute_status(record, rom, err == CHDERR_NONE);
 	return &record;

@@ -178,29 +178,29 @@ static void update_palette( running_machine &machine )
 	}
 } /* update_palette */
 
-static SCREEN_UPDATE(gal3)
+static SCREEN_UPDATE_RGB32(gal3)
 {
-	gal3_state *state = screen->machine().driver_data<gal3_state>();
+	gal3_state *state = screen.machine().driver_data<gal3_state>();
 	int i;
 	char mst[18], slv[18];
 	static int pivot = 15;
 	int pri;
 
-	update_palette(screen->machine());
+	update_palette(screen.machine());
 
-	if( screen->machine().input().code_pressed_once(KEYCODE_H)&&(pivot<15) )	pivot+=1;
-	if( screen->machine().input().code_pressed_once(KEYCODE_J)&&(pivot>0) )	pivot-=1;
+	if( screen.machine().input().code_pressed_once(KEYCODE_H)&&(pivot<15) )	pivot+=1;
+	if( screen.machine().input().code_pressed_once(KEYCODE_J)&&(pivot>0) )	pivot-=1;
 
 	for( pri=0; pri<pivot; pri++ )
 	{
-		namco_obj_draw(screen->machine(), bitmap, cliprect, pri );
+		namco_obj_draw(screen.machine(), bitmap, cliprect, pri );
 	}
 
 /*  CopyVisiblePolyFrameBuffer( bitmap, cliprect,0,0x7fbf );
 
     for( pri=pivot; pri<15; pri++ )
     {
-        namco_obj_draw(screen->machine(), bitmap, cliprect, pri );
+        namco_obj_draw(screen.machine(), bitmap, cliprect, pri );
     }*/
 
 	// CPU Diag LEDs
@@ -654,18 +654,16 @@ static MACHINE_CONFIG_START( gal3, gal3_state )
 	MCFG_SCREEN_ADD("lscreen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(64*8, 64*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 512-1, 0*8, 512-1)
-	MCFG_SCREEN_UPDATE(gal3)
+	MCFG_SCREEN_UPDATE_STATIC(gal3)
 
 	MCFG_SCREEN_ADD("rscreen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(64*8, 64*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 512-1, 0*8, 512-1)
-	MCFG_SCREEN_UPDATE(gal3)
+	MCFG_SCREEN_UPDATE_STATIC(gal3)
 
 	MCFG_GFXDECODE(namcos21)
 	MCFG_PALETTE_LENGTH(NAMCOS21_NUM_COLORS)

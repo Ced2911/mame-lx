@@ -1177,8 +1177,28 @@ static const gfx_layout cps1_layout8x8_2 =
 	64*8
 };
 
-static GFXLAYOUT_RAW( layout16x16, 4, 16, 16, 8*8, 128*8 )
-static GFXLAYOUT_RAW( layout32x32, 4, 32, 32, 16*8, 512*8 )
+static const gfx_layout layout16x16 =
+{
+	16,16,
+	RGN_FRAC(1,1),
+	4,
+	{ STEP4(0,1) },
+	{ 1*4, 0*4, 3*4, 2*4, 5*4, 4*4, 7*4, 6*4, 9*4, 8*4, 11*4, 10*4, 13*4, 12*4, 15*4, 14*4 },
+	{ STEP16(0,4*16) },
+	4*16*16
+};
+
+static const gfx_layout layout32x32 =
+{
+	32,32,
+	RGN_FRAC(1,1),
+	4,
+	{ STEP4(0,1) },
+	{ 1*4, 0*4, 3*4, 2*4, 5*4, 4*4, 7*4, 6*4, 9*4, 8*4, 11*4, 10*4, 13*4, 12*4, 15*4, 14*4,
+	  17*4, 16*4, 19*4, 18*4, 21*4, 20*4, 23*4, 22*4, 25*4, 24*4, 27*4, 26*4, 29*4, 28*4, 31*4, 30*4 },
+	{ STEP32(0,4*32) },
+	4*32*32
+};
 
 static GFXDECODE_START( cps2 )
 	GFXDECODE_ENTRY( "gfx", 0, cps1_layout8x8,   0, 0x100 )
@@ -1225,10 +1245,9 @@ static MACHINE_CONFIG_START( cps2, cps_state )
 	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_8MHz, 518, 64, 448, 259, 16, 240)
-	MCFG_SCREEN_UPDATE(cps1)
-	MCFG_SCREEN_EOF(cps1)
+	MCFG_SCREEN_UPDATE_STATIC(cps1)
+	MCFG_SCREEN_VBLANK_STATIC(cps1)
 /*
     Measured clocks:
         V = 59.6376Hz

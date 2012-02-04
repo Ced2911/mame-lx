@@ -82,39 +82,39 @@ static VIDEO_START( itgambl2 )
 }
 
 /* (dirty) debug code for looking 8bpps blitter-based gfxs */
-static SCREEN_UPDATE( itgambl2 )
+static SCREEN_UPDATE_RGB32( itgambl2 )
 {
-	itgambl2_state *state = screen->machine().driver_data<itgambl2_state>();
+	itgambl2_state *state = screen.machine().driver_data<itgambl2_state>();
 	int x,y,count;
-	const UINT8 *blit_ram = screen->machine().region("gfx1")->base();
+	const UINT8 *blit_ram = screen.machine().region("gfx1")->base();
 
-	if(screen->machine().input().code_pressed(KEYCODE_Z))
+	if(screen.machine().input().code_pressed(KEYCODE_Z))
 		state->m_test_x++;
 
-	if(screen->machine().input().code_pressed(KEYCODE_X))
+	if(screen.machine().input().code_pressed(KEYCODE_X))
 		state->m_test_x--;
 
-	if(screen->machine().input().code_pressed(KEYCODE_A))
+	if(screen.machine().input().code_pressed(KEYCODE_A))
 		state->m_test_y++;
 
-	if(screen->machine().input().code_pressed(KEYCODE_S))
+	if(screen.machine().input().code_pressed(KEYCODE_S))
 		state->m_test_y--;
 
-	if(screen->machine().input().code_pressed(KEYCODE_Q))
+	if(screen.machine().input().code_pressed(KEYCODE_Q))
 		state->m_start_offs+=0x200;
 
-	if(screen->machine().input().code_pressed(KEYCODE_W))
+	if(screen.machine().input().code_pressed(KEYCODE_W))
 		state->m_start_offs-=0x200;
 
-	if(screen->machine().input().code_pressed(KEYCODE_E))
+	if(screen.machine().input().code_pressed(KEYCODE_E))
 		state->m_start_offs++;
 
-	if(screen->machine().input().code_pressed(KEYCODE_R))
+	if(screen.machine().input().code_pressed(KEYCODE_R))
 		state->m_start_offs--;
 
 	popmessage("%d %d %04x",state->m_test_x,state->m_test_y,state->m_start_offs);
 
-	bitmap_fill(bitmap,cliprect,get_black_pen(screen->machine()));
+	bitmap.fill(get_black_pen(screen.machine()), cliprect);
 
 	count = (state->m_start_offs);
 
@@ -126,8 +126,8 @@ static SCREEN_UPDATE( itgambl2 )
 
 			color = (blit_ram[count] & 0xff)>>0;
 
-			if((x)<screen->visible_area().max_x && ((y)+0)<screen->visible_area().max_y)
-				*BITMAP_ADDR32(bitmap, y, x) = screen->machine().pens[color];
+			if(cliprect.contains(x, y))
+				bitmap.pix32(y, x) = screen.machine().pens[color];
 
 			count++;
 		}
@@ -269,10 +269,9 @@ static MACHINE_CONFIG_START( itgambl2, itgambl2_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(512, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
-	MCFG_SCREEN_UPDATE( itgambl2 )
+	MCFG_SCREEN_UPDATE_STATIC( itgambl2 )
 
 	MCFG_MACHINE_RESET( itgambl2 )
 	MCFG_PALETTE_INIT( itgambl2 )

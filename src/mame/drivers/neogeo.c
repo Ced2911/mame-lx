@@ -27,8 +27,8 @@
     It comes in many different cabinets but basically consists of an add on board that can be linked to a standard Jamma system.
     The system was discontinued in 2004.
     Source (modified): http://en.wikipedia.org/wiki/Neo_Geo
-
-
+    
+    
     MVS motherboards were produced in 1 / 2 / 4 and 6 Slot versions.
 
     Known motherboards:
@@ -45,19 +45,19 @@
     NEO-MVH MV1FT
     NEO-MVH MV1FZ
     NEO-MVH MV1FZS
-
+    
     2 Slot:
     NEO-MVH MV2
     NEO-MVH MV2F
     NEO-MVH MV2F-01
-
+    
     4 Slot:
     NEO-MVH MV4
     NEO-MVH MV4F
     NEO-MVH MV4FS
     NEO-MVH MV4FT
     NEO-MVH MV4FT2
-
+    
     6 Slot:
     NEO-MVH MV6
     NEO-MVH MV6F
@@ -1062,6 +1062,9 @@ static MACHINE_RESET( neogeo )
 
 	machine.device("maincpu")->reset();
 
+	// mamep: Hack for AES BIOS
+	neogeo_set_fixed_layer_source(space->machine(), 1);
+
 	neogeo_reset_rng(machine);
 
 	start_interrupt_timers(machine);
@@ -1381,9 +1384,8 @@ static MACHINE_CONFIG_START( neogeo, neogeo_state )
 	MCFG_DEFAULT_LAYOUT(layout_neogeo)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(NEOGEO_PIXEL_CLOCK, NEOGEO_HTOTAL, NEOGEO_HBEND, NEOGEO_HBSTART, NEOGEO_VTOTAL, NEOGEO_VBEND, NEOGEO_VBSTART)
-	MCFG_SCREEN_UPDATE(neogeo)
+	MCFG_SCREEN_UPDATE_STATIC(neogeo)
 
 	/* audio hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")

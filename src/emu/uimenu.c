@@ -33,7 +33,7 @@
 
 ui_menu *ui_menu::menu_stack;
 ui_menu *ui_menu::menu_free;
-bitmap_t *ui_menu::hilight_bitmap;
+bitmap_rgb32 *ui_menu::hilight_bitmap;
 render_texture *ui_menu::hilight_texture;
 render_texture *ui_menu::arrow_texture;
 
@@ -86,16 +86,16 @@ void ui_menu::init(running_machine &machine)
 	ui_menu::stack_reset(machine);
 
 	/* create a texture for hilighting items */
-	hilight_bitmap = auto_bitmap_alloc(machine, 256, 1, BITMAP_FORMAT_ARGB32);
+	hilight_bitmap = auto_bitmap_rgb32_alloc(machine, 256, 1);
 	for (x = 0; x < 256; x++)
 	{
 		int alpha = 0xff;
 		if (x < 25) alpha = 0xff * x / 25;
 		if (x > 256 - 25) alpha = 0xff * (255 - x) / 25;
-		*BITMAP_ADDR32(hilight_bitmap, 0, x) = MAKE_ARGB(alpha,0xff,0xff,0xff);
+		hilight_bitmap->pix32(0, x) = MAKE_ARGB(alpha,0xff,0xff,0xff);
 	}
 	hilight_texture = machine.render().texture_alloc();
-	hilight_texture->set_bitmap(hilight_bitmap, NULL, TEXFORMAT_ARGB32);
+	hilight_texture->set_bitmap(*hilight_bitmap, hilight_bitmap->cliprect(), TEXFORMAT_ARGB32);
 
 	/* create a texture for arrow icons */
 	arrow_texture = machine.render().texture_alloc(render_triangle);
@@ -180,15 +180,15 @@ void ui_menu::reset(ui_menu_reset_options options)
 	visitems = 0;
 	selected = 0;
 	astring backtext;
-	backtext.printf("Return to %s",emulator_info::get_capstartgamenoun());
+	backtext.printf(_("Return to %s"),emulator_info::get_capstartgamenoun());
 
 	/* add an item to return */
 	if (parent == NULL)
 		item_append(backtext.cstr(), NULL, 0, NULL);
 	else if (parent->is_special_main_menu())
-		item_append("Exit", NULL, 0, NULL);
+		item_append(_("Exit"), NULL, 0, NULL);
 	else
-		item_append("Return to Prior Menu", NULL, 0, NULL);
+		item_append(_("Return to Prior Menu"), NULL, 0, NULL);
 }
 
 
@@ -522,8 +522,15 @@ void ui_menu::draw(bool customonly)
 			/* if we're selected, draw with a different background */
 			if (itemnum == selected)
 			{
+#ifdef UI_COLOR_DISPLAY
+				rgb_t fgcolor0 = ui_get_rgb_color(CURSOR_SELECTED_TEXT);
+				rgb_t bgcolor0 = ui_get_rgb_color(CURSOR_SELECTED_BG);
+				fgcolor = MAKE_ARGB(0xe0, RGB_RED(fgcolor0), RGB_GREEN(fgcolor0), RGB_BLUE(fgcolor0));
+				bgcolor = MAKE_ARGB(0xe0, RGB_RED(bgcolor0), RGB_GREEN(bgcolor0), RGB_BLUE(bgcolor0));
+#else /* UI_COLOR_DISPLAY */
 				fgcolor = UI_SELECTED_COLOR;
 				bgcolor = UI_SELECTED_BG_COLOR;
+#endif /* UI_COLOR_DISPLAY */
 				fgcolor2 = UI_SELECTED_COLOR;
 				fgcolor3 = UI_SELECTED_COLOR;
 			}
@@ -531,8 +538,15 @@ void ui_menu::draw(bool customonly)
 			/* else if the mouse is over this item, draw with a different background */
 			else if (itemnum == hover)
 			{
+#ifdef UI_COLOR_DISPLAY
+				rgb_t fgcolor0 = ui_get_rgb_color(CURSOR_HOVER_TEXT);
+				rgb_t bgcolor0 = ui_get_rgb_color(CURSOR_HOVER_BG);
+				fgcolor = MAKE_ARGB(0xe0, RGB_RED(fgcolor0), RGB_GREEN(fgcolor0), RGB_BLUE(fgcolor0));
+				bgcolor = MAKE_ARGB(0xe0, RGB_RED(bgcolor0), RGB_GREEN(bgcolor0), RGB_BLUE(bgcolor0));
+#else /* UI_COLOR_DISPLAY */
 				fgcolor = UI_MOUSEOVER_COLOR;
 				bgcolor = UI_MOUSEOVER_BG_COLOR;
+#endif /* UI_COLOR_DISPLAY */
 				fgcolor2 = UI_MOUSEOVER_COLOR;
 				fgcolor3 = UI_MOUSEOVER_COLOR;
 			}
@@ -1063,23 +1077,23 @@ UINT32 ui_menu::ui_handler(running_machine &machine, render_container *container
     indicators
 -------------------------------------------------*/
 
-void ui_menu::render_triangle(bitmap_t &dest, const bitmap_t &source, const rectangle &sbounds, void *param)
+void ui_menu::render_triangle(bitmap_argb32 &dest, bitmap_argb32 &source, const rectangle &sbounds, void *param)
 {
-	int halfwidth = dest.width / 2;
-	int height = dest.height;
+	int halfwidth = dest.width() / 2;
+	int height = dest.height();
 	int x, y;
 
 	/* start with all-transparent */
-	bitmap_fill(&dest, NULL, MAKE_ARGB(0x00,0x00,0x00,0x00));
+	dest.fill(MAKE_ARGB(0x00,0x00,0x00,0x00));
 
 	/* render from the tip to the bottom */
 	for (y = 0; y < height; y++)
 	{
 		int linewidth = (y * (halfwidth - 1) + (height / 2)) * 255 * 2 / height;
-		UINT32 *target = BITMAP_ADDR32(&dest, y, halfwidth);
+		UINT32 *target = &dest.pix32(y, halfwidth);
 
 		/* don't antialias if height < 12 */
-		if (dest.height < 12)
+		if (dest.height() < 12)
 		{
 			int pixels = (linewidth + 254) / 255;
 			if (pixels % 2 == 0) pixels++;

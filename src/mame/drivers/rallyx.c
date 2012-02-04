@@ -247,7 +247,7 @@ static WRITE8_HANDLER( rallyx_latch_w )
 
 		case 0x03:	/* FLIP */
 			flip_screen_set_no_update(space->machine(), bit);
-			tilemap_set_flip_all(space->machine(), bit * (TILEMAP_FLIPX | TILEMAP_FLIPY));
+			space->machine().tilemap().set_flip_all(bit * (TILEMAP_FLIPX | TILEMAP_FLIPY));
 			break;
 
 		case 0x04:
@@ -290,7 +290,7 @@ static WRITE8_HANDLER( locomotn_latch_w )
 
 		case 0x03:	/* FLIP */
 			flip_screen_set_no_update(space->machine(), bit);
-			tilemap_set_flip_all(space->machine(), bit * (TILEMAP_FLIPX | TILEMAP_FLIPY));
+			space->machine().tilemap().set_flip_all(bit * (TILEMAP_FLIPX | TILEMAP_FLIPY));
 			break;
 
 		case 0x04:	/* OUT1 */
@@ -927,10 +927,9 @@ static MACHINE_CONFIG_START( rallyx, rallyx_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60.606060)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(36*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE(rallyx)
+	MCFG_SCREEN_UPDATE_STATIC(rallyx)
 
 	MCFG_GFXDECODE(rallyx)
 	MCFG_PALETTE_LENGTH(64*4+4)
@@ -967,10 +966,9 @@ static MACHINE_CONFIG_START( jungler, rallyx_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0)	/* frames per second, vblank duration */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(36*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE(jungler)
+	MCFG_SCREEN_UPDATE_STATIC(jungler)
 
 	MCFG_GFXDECODE(jungler)
 	MCFG_PALETTE_LENGTH(64*4+4+64)
@@ -990,7 +988,7 @@ static MACHINE_CONFIG_DERIVED( tactcian, jungler )
 	/* video hardware */
 	MCFG_VIDEO_START(locomotn)
 	MCFG_SCREEN_MODIFY("screen")
-	MCFG_SCREEN_UPDATE(locomotn)
+	MCFG_SCREEN_UPDATE_STATIC(locomotn)
 MACHINE_CONFIG_END
 
 
@@ -1001,7 +999,7 @@ static MACHINE_CONFIG_DERIVED( locomotn, jungler )
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE(locomotn)
+	MCFG_SCREEN_UPDATE_STATIC(locomotn)
 	MCFG_VIDEO_START(locomotn)
 MACHINE_CONFIG_END
 
@@ -1013,7 +1011,7 @@ static MACHINE_CONFIG_DERIVED( commsega, jungler )
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE(locomotn)
+	MCFG_SCREEN_UPDATE_STATIC(locomotn)
 	MCFG_VIDEO_START(commsega)
 MACHINE_CONFIG_END
 

@@ -102,7 +102,7 @@ struct game_driver
 	const char *		year;						/* year the game was released */
 	const char *		manufacturer;				/* manufacturer of the game */
 	machine_config_constructor machine_config;		/* machine driver tokens */
-	ioport_constructor	ipt;					/* pointer to array of input port tokens */
+	ioport_constructor 	ipt;					/* pointer to array of input port tokens */
 	void				(*driver_init)(running_machine &machine); /* DRIVER_INIT callback */
 	const rom_entry *	rom;						/* pointer to list of ROMs for the game */
 	const char *		compatible_with;
@@ -116,6 +116,10 @@ class driver_list
 {
 	DISABLE_COPYING(driver_list);
 
+#ifdef DRIVER_SWITCH
+	friend class driver_switch;
+#endif /* DRIVER_SWITCH */
+
 protected:
 	// construction/destruction
 	driver_list();
@@ -123,7 +127,7 @@ protected:
 public:
 	// getters
 	static int total() { return s_driver_count; }
-
+	
 	// any item by index
 	static const game_driver &driver(int index) { assert(index >= 0 && index < s_driver_count); return *s_drivers_sorted[index]; }
 	static int clone(int index) { return find(driver(index).parent); }
@@ -149,7 +153,11 @@ protected:
 
 	// internal state
 	static int							s_driver_count;
-	static const game_driver * const	s_drivers_sorted[];
+#ifdef DRIVER_SWITCH
+	static const game_driver *			s_drivers_sorted[];
+#else
+	static const game_driver * const 	s_drivers_sorted[];
+#endif /* DRIVER_SWITCH */
 };
 
 
@@ -164,12 +172,12 @@ public:
 	driver_enumerator(emu_options &options, const char *filter);
 	driver_enumerator(emu_options &options, const game_driver &filter);
 	~driver_enumerator();
-
+	
 	// getters
 	int count() const { return m_filtered_count; }
 	int current() const { return m_current; }
 	emu_options &options() const { return m_options; }
-
+	
 	// current item
 	const game_driver &driver() const { return driver_list::driver(m_current); }
 	machine_config &config() const { return config(m_current, m_options); }
@@ -209,24 +217,24 @@ private:
 	struct config_entry
 	{
 		friend class simple_list<config_entry>;
-
+		
 	public:
 		// construction/destruction
 		config_entry(machine_config &config, int index);
 		~config_entry();
-
+		
 		// getters
 		config_entry *next() const { return m_next; }
 		int index() const { return m_index; }
 		machine_config *config() const { return m_config; }
-
+	
 	private:
 		// internal state
 		config_entry *		m_next;
 		machine_config *	m_config;
 		int					m_index;
 	};
-
+	
 	static const int CONFIG_CACHE_COUNT = 100;
 
 	// internal state
@@ -238,6 +246,33 @@ private:
 	mutable simple_list<config_entry> m_config_cache;
 };
 
+#ifdef DRIVER_SWITCH
+class driver_switch
+{
+protected:
+	// construction/destruction
+	driver_switch();
+
+public:
+	static void init_assign_drivers();
+	static void assign_drivers(emu_options &opts);
+	static void free_drivers();
+
+private:
+	// internal state
+#ifndef TINY_BUILD
+	static const game_driver * const mamedrivers[];
+	static const game_driver * const mameplusdrivers[];
+	static const game_driver * const mamehbdrivers[];
+	static const game_driver * const mamedecrypteddrivers[];
+#ifdef MAMEMESS
+	static const game_driver * const messdrivers[];
+#endif /* MAMEMESS */
+#else
+	static const game_driver * const tinydrivers[];
+#endif /* !TINY_BUILD */
+};
+#endif /* DRIVER_SWITCH */
 
 
 /***************************************************************************

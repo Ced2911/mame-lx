@@ -135,9 +135,9 @@ static VIDEO_START(jantotsu)
 	state->save_item(NAME(state->m_bitmap));
 }
 
-static SCREEN_UPDATE(jantotsu)
+static SCREEN_UPDATE_RGB32(jantotsu)
 {
-	jantotsu_state *state = screen->machine().driver_data<jantotsu_state>();
+	jantotsu_state *state = screen.machine().driver_data<jantotsu_state>();
 	int x, y, i;
 	int count = 0;
 	UINT8 pen_i;
@@ -158,8 +158,8 @@ static SCREEN_UPDATE(jantotsu)
 				for(pen_i = 0;pen_i<4;pen_i++)
 					color |= (((state->m_bitmap[count + pen_i*0x2000]) >> (7 - i)) & 1) << pen_i;
 
-				if ((x + i) <= screen->visible_area().max_x && (y + 0) < screen->visible_area().max_y)
-					*BITMAP_ADDR32(bitmap, y, x + i) = screen->machine().pens[color];
+				if (cliprect.contains(x + i, y))
+					bitmap.pix32(y, x + i) = screen.machine().pens[color];
 			}
 
 			count++;
@@ -513,10 +513,9 @@ static MACHINE_CONFIG_START( jantotsu, jantotsu_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) //not accurate
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(256, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 240-1)
-	MCFG_SCREEN_UPDATE(jantotsu)
+	MCFG_SCREEN_UPDATE_STATIC(jantotsu)
 
 	MCFG_PALETTE_INIT(jantotsu)
 	MCFG_PALETTE_LENGTH(0x20)

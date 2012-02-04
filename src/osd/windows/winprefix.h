@@ -39,6 +39,16 @@
 //
 //============================================================
 
+// mamep: Visual C++
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define _CRT_NON_CONFORMING_SWPRINTFS 
+#endif
+
+// mamep: windows specific translations
+#ifndef _WINDOWS
+#define _WINDOWS(str)	lang_message(UI_MSG_OSD0, str)
+#endif
+
 #define _WIN32_WINNT 0x0501
 
 #ifdef _MSC_VER
@@ -60,3 +70,22 @@
 #endif
 
 #define PATH_SEPARATOR		"\\"
+
+#ifdef _MSC_VER
+#define snprintf _snprintf
+
+/* Turn off type mismatch warnings */
+#pragma warning(disable:592)		// "variable is used before its value is set"
+#pragma warning(disable:4018)		// "signed/unsigned mismatch"
+#pragma warning(disable:4022)		// "pointer mismatch for actual parameter"
+#pragma warning(disable:4090)		// "different 'const' qualifiers"
+#pragma warning(disable:4142)		// "benign redefinition of type"
+#pragma warning(disable:4146)		// "unary minus operator applied to unsigned type"
+#pragma warning(disable:4244)		// "possible loss of data"
+#pragma warning(disable:4305)		// "truncation from 'type' to 'type'
+#pragma warning(disable:4550)		// "expression evaluates .. missing an argument list"
+#pragma warning(disable:4552)		// "operator has no effect"
+#pragma warning(disable:4761)		// "integral size mismatch in argument"
+#pragma warning(disable:4799)
+#pragma warning(disable:4819)
+#endif /* _MSC_VER */

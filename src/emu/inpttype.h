@@ -79,6 +79,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, BUTTON14,            "P1 Button 14",           input_seq(KEYCODE_SLASH, input_seq::or_code, JOYCODE_BUTTON14_INDEXED(0)) )
 	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, BUTTON15,            "P1 Button 15",           input_seq(KEYCODE_RSHIFT, input_seq::or_code, JOYCODE_BUTTON15_INDEXED(0)) )
 	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, BUTTON16,            "P1 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(0)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, TOGGLE_AUTOFIRE,     "P1 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, CUSTOM1,             "P1 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, CUSTOM2,             "P1 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, CUSTOM3,             "P1 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, CUSTOM4,             "P1 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, START,               "P1 Start",               input_seq(KEYCODE_1, input_seq::or_code, JOYCODE_START_INDEXED(0)) )
 	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, SELECT,              "P1 Select",              input_seq(KEYCODE_5, input_seq::or_code, JOYCODE_SELECT_INDEXED(0)) )
 	INPUT_PORT_DIGITAL_TYPE( 1, PLAYER1, MAHJONG_A,           "P1 Mahjong A",           input_seq(KEYCODE_A) )
@@ -175,6 +184,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, BUTTON14,            "P2 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(1)) )
 	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, BUTTON15,            "P2 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(1)) )
 	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, BUTTON16,            "P2 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(1)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, TOGGLE_AUTOFIRE,     "P2 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, CUSTOM1,             "P2 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, CUSTOM2,             "P2 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, CUSTOM3,             "P2 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, CUSTOM4,             "P2 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, START,               "P2 Start",               input_seq(KEYCODE_2, input_seq::or_code, JOYCODE_START_INDEXED(1)) )
 	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, SELECT,              "P2 Select",              input_seq(KEYCODE_6, input_seq::or_code, JOYCODE_SELECT_INDEXED(1)) )
 	INPUT_PORT_DIGITAL_TYPE( 2, PLAYER2, MAHJONG_A,           "P2 Mahjong A",           input_seq() )
@@ -245,6 +263,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, BUTTON14,            "P3 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(2)) )
 	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, BUTTON15,            "P3 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(2)) )
 	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, BUTTON16,            "P3 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(2)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, TOGGLE_AUTOFIRE,     "P3 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, CUSTOM1,             "P3 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, CUSTOM2,             "P3 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, CUSTOM3,             "P3 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, CUSTOM4,             "P3 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, START,               "P3 Start",               input_seq(KEYCODE_3, input_seq::or_code, JOYCODE_START_INDEXED(2)) )
 	INPUT_PORT_DIGITAL_TYPE( 3, PLAYER3, SELECT,              "P3 Select",              input_seq(KEYCODE_7, input_seq::or_code, JOYCODE_SELECT_INDEXED(2)) )
 
@@ -276,6 +303,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, BUTTON14,            "P4 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(3)) )
 	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, BUTTON15,            "P4 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(3)) )
 	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, BUTTON16,            "P4 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(3)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, TOGGLE_AUTOFIRE,     "P4 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, CUSTOM1,             "P4 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, CUSTOM2,             "P4 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, CUSTOM3,             "P4 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, CUSTOM4,             "P4 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, START,               "P4 Start",               input_seq(KEYCODE_4, input_seq::or_code, JOYCODE_START_INDEXED(3)) )
 	INPUT_PORT_DIGITAL_TYPE( 4, PLAYER4, SELECT,              "P4 Select",              input_seq(KEYCODE_8, input_seq::or_code, JOYCODE_SELECT_INDEXED(3)) )
 
@@ -307,6 +343,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, BUTTON14,            "P5 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(4)) )
 	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, BUTTON15,            "P5 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(4)) )
 	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, BUTTON16,            "P5 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(4)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, TOGGLE_AUTOFIRE,     "P5 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, CUSTOM1,             "P5 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, CUSTOM2,             "P5 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, CUSTOM3,             "P5 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, CUSTOM4,             "P5 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, START,               "P5 Start",               input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 5, PLAYER5, SELECT,              "P5 Select",              input_seq() )
 
@@ -338,6 +383,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, BUTTON14,            "P6 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(5)) )
 	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, BUTTON15,            "P6 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(5)) )
 	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, BUTTON16,            "P6 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(5)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, TOGGLE_AUTOFIRE,     "P6 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, CUSTOM1,             "P6 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, CUSTOM2,             "P6 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, CUSTOM3,             "P6 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, CUSTOM4,             "P6 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, START,               "P6 Start",               input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 6, PLAYER6, SELECT,              "P6 Select",              input_seq() )
 
@@ -369,6 +423,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, BUTTON14,            "P7 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(6)) )
 	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, BUTTON15,            "P7 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(6)) )
 	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, BUTTON16,            "P7 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(6)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, TOGGLE_AUTOFIRE,     "P7 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, CUSTOM1,             "P7 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, CUSTOM2,             "P7 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, CUSTOM3,             "P7 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, CUSTOM4,             "P7 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, START,               "P7 Start",               input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 7, PLAYER7, SELECT,              "P7 Select",              input_seq() )
 
@@ -400,6 +463,15 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, BUTTON14,            "P8 Button 14",           input_seq(JOYCODE_BUTTON14_INDEXED(7)) )
 	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, BUTTON15,            "P8 Button 15",           input_seq(JOYCODE_BUTTON15_INDEXED(7)) )
 	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, BUTTON16,            "P8 Button 16",           input_seq(JOYCODE_BUTTON16_INDEXED(7)) )
+#ifdef USE_AUTOFIRE
+	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, TOGGLE_AUTOFIRE,     "P8 Toggle Autofire",     input_seq() )
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, CUSTOM1,             "P8 Custom 1",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, CUSTOM2,             "P8 Custom 2",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, CUSTOM3,             "P8 Custom 3",            input_seq() )
+	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, CUSTOM4,             "P8 Custom 4",            input_seq() )
+#endif /* USE_CUSTOM_BUTTON */
 	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, START,               "P8 Start",               input_seq() )
 	INPUT_PORT_DIGITAL_TYPE( 8, PLAYER8, SELECT,              "P8 Select",              input_seq() )
 
@@ -622,6 +694,12 @@ void construct_core_types(simple_list<input_type_entry> &typelist)
 	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_SNAPSHOT,         "Save Snapshot",          input_seq(KEYCODE_F12, input_seq::not_code, KEYCODE_LSHIFT) )
 	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_RECORD_MOVIE,     "Record Movie",           input_seq(KEYCODE_F12, KEYCODE_LSHIFT) )
 	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_TOGGLE_CHEAT,     "Toggle Cheat",           input_seq(KEYCODE_F6) )
+#ifdef USE_SHOW_TIME
+	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_TIME,             "Show Current Time",      input_seq() )
+#endif /* USE_SHOW_TIME */
+#ifdef USE_SHOW_INPUT_LOG
+	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_SHOW_INPUT_LOG,   "Show Button Input",      input_seq(KEYCODE_F1, KEYCODE_LSHIFT) )
+#endif /* USE_SHOW_INPUT_LOG */
 	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_UP,               "UI Up",                  input_seq(KEYCODE_UP, input_seq::or_code, JOYCODE_Y_UP_SWITCH_INDEXED(0)) )
 	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_DOWN,             "UI Down",                input_seq(KEYCODE_DOWN, input_seq::or_code, JOYCODE_Y_DOWN_SWITCH_INDEXED(0)) )
 	INPUT_PORT_DIGITAL_TYPE( 0, UI,      UI_LEFT,             "UI Left",                input_seq(KEYCODE_LEFT, input_seq::or_code, JOYCODE_X_LEFT_SWITCH_INDEXED(0)) )

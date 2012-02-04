@@ -141,12 +141,12 @@ void save_manager::register_presave(save_prepost_delegate func)
 {
 	// check for invalid timing
 	if (!m_reg_allowed)
-		fatalerror("Attempt to register callback function after state registration is closed!");
+		fatalerror(_("Attempt to register callback function after state registration is closed!"));
 
 	// scan for duplicates and push through to the end
 	for (state_callback *cb = m_presave_list.first(); cb != NULL; cb = cb->next())
 		if (cb->m_func == func)
-			fatalerror("Duplicate save state function (%s/%s)", cb->m_func.name(), func.name());
+			fatalerror(_("Duplicate save state function (%s/%s)"), cb->m_func.name(), func.name());
 
 	// allocate a new entry
 	m_presave_list.append(*auto_alloc(machine(), state_callback(func)));
@@ -162,12 +162,12 @@ void save_manager::register_postload(save_prepost_delegate func)
 {
 	// check for invalid timing
 	if (!m_reg_allowed)
-		fatalerror("Attempt to register callback function after state registration is closed!");
+		fatalerror(_("Attempt to register callback function after state registration is closed!"));
 
 	// scan for duplicates and push through to the end
 	for (state_callback *cb = m_postload_list.first(); cb != NULL; cb = cb->next())
 		if (cb->m_func == func)
-			fatalerror("Duplicate save state function (%s/%s)", cb->m_func.name(), func.name());
+			fatalerror(_("Duplicate save state function (%s/%s)"), cb->m_func.name(), func.name());
 
 	// allocate a new entry
 	m_postload_list.append(*auto_alloc(machine(), state_callback(func)));
@@ -186,9 +186,9 @@ void save_manager::save_memory(const char *module, const char *tag, UINT32 index
 	// check for invalid timing
 	if (!m_reg_allowed)
 	{
-		logerror("Attempt to register save state entry after state registration is closed!\nModule %s tag %s name %s\n", module, tag, name);
+		logerror(_("Attempt to register save state entry after state registration is closed!\nModule %s tag %s name %s\n"), module, tag, name);
 		if (machine().system().flags & GAME_SUPPORTS_SAVE)
-			fatalerror("Attempt to register save state entry after state registration is closed!\nModule %s tag %s name %s\n", module, tag, name);
+			fatalerror(_("Attempt to register save state entry after state registration is closed!\nModule %s tag %s name %s\n"), module, tag, name);
 		m_illegal_regs++;
 		return;
 	}
@@ -211,7 +211,7 @@ void save_manager::save_memory(const char *module, const char *tag, UINT32 index
 
 		// error if we are equal
 		if (entry->m_name == totalname)
-			fatalerror("Duplicate save state registration entry (%s)", totalname.cstr());
+			fatalerror(_("Duplicate save state registration entry (%s)"), totalname.cstr());
 	}
 
 	// insert us into the list
@@ -237,7 +237,7 @@ save_error save_manager::check_file(running_machine &machine, emu_file &file, co
 	if (file.read(header, sizeof(header)) != sizeof(header))
 	{
 		if (errormsg != NULL)
-			(*errormsg)("Could not read %s save file header",emulator_info::get_appname());
+			(*errormsg)(_("Could not read %s save file header"),emulator_info::get_appname());
 		return STATERR_READ_ERROR;
 	}
 
@@ -381,7 +381,7 @@ save_error save_manager::validate_header(const UINT8 *header, const char *gamena
 	if (memcmp(header, emulator_info::get_state_magic_num(), 8))
 	{
 		if (errormsg != NULL)
-			(*errormsg)("%sThis is not a %s save file", error_prefix,emulator_info::get_appname());
+			(*errormsg)(_("%sThis is not a %s save file"), error_prefix,emulator_info::get_appname());
 		return STATERR_INVALID_HEADER;
 	}
 
@@ -389,7 +389,7 @@ save_error save_manager::validate_header(const UINT8 *header, const char *gamena
 	if (header[8] != SAVE_VERSION)
 	{
 		if (errormsg != NULL)
-			(*errormsg)("%sWrong version in save file (version %d, expected %d)", error_prefix, header[8], SAVE_VERSION);
+			(*errormsg)(_("%sWrong version in save file (version %d, expected %d)"), error_prefix, header[8], SAVE_VERSION);
 		return STATERR_INVALID_HEADER;
 	}
 
@@ -397,7 +397,7 @@ save_error save_manager::validate_header(const UINT8 *header, const char *gamena
 	if (gamename != NULL && strncmp(gamename, (const char *)&header[0x0a], 0x1c - 0x0a))
 	{
 		if (errormsg != NULL)
-			(*errormsg)("%s'File is not a valid savestate file for game '%s'.", error_prefix, gamename);
+			(*errormsg)(_("%s'File is not a valid savestate file for game '%s'."), error_prefix, gamename);
 		return STATERR_INVALID_HEADER;
 	}
 
@@ -408,7 +408,7 @@ save_error save_manager::validate_header(const UINT8 *header, const char *gamena
 		if (signature != LITTLE_ENDIANIZE_INT32(rawsig))
 		{
 			if (errormsg != NULL)
-				(*errormsg)("%sIncompatible save file (signature %08x, expected %08x)", error_prefix, LITTLE_ENDIANIZE_INT32(rawsig), signature);
+				(*errormsg)(_("%sIncompatible save file (signature %08x, expected %08x)"), error_prefix, LITTLE_ENDIANIZE_INT32(rawsig), signature);
 			return STATERR_INVALID_HEADER;
 		}
 	}

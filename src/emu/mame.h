@@ -49,7 +49,7 @@ enum
 //**************************************************************************
 
 // output channel callback
-typedef void (*output_callback_func)(void *param, const char *format, va_list argptr);
+typedef delegate<void (const char *, va_list)> output_delegate;
 
 class emulator_info
 {
@@ -75,6 +75,8 @@ public:
 	static const char * get_state_magic_num();
 	static void printf_usage(const char *par1, const char *par2);
 };
+
+
 
 //**************************************************************************
 //  GLOBAL VARIABLES
@@ -102,28 +104,18 @@ int mame_is_valid_machine(running_machine &machine);
 /* ----- output management ----- */
 
 /* set the output handler for a channel, returns the current one */
-void mame_set_output_channel(output_channel channel, output_callback_func callback, void *param, output_callback_func *prevcb, void **prevparam);
+output_delegate mame_set_output_channel(output_channel channel, output_delegate callback);
 
 /* built-in default callbacks */
-void mame_file_output_callback(void *param, const char *format, va_list argptr);
-void mame_null_output_callback(void *param, const char *format, va_list argptr);
+void mame_file_output_callback(FILE *file, const char *format, va_list argptr);
+void mame_null_output_callback(FILE *param, const char *format, va_list argptr);
 
-#ifndef XENON
 /* calls to be used by the code */
 void mame_printf_error(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_warning(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_info(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_verbose(const char *format, ...) ATTR_PRINTF(1,2);
 void mame_printf_debug(const char *format, ...) ATTR_PRINTF(1,2);
-#else
-#define mame_printf_error(...)
-#define mame_printf_warning(...)
-#define mame_printf_info(...)
-#define mame_printf_verbose(...)
-#define mame_printf_debug(...)
-
-
-#endif
 
 /* discourage the use of printf directly */
 /* sadly, can't do this because of the ATTR_PRINTF under GCC */
@@ -138,17 +130,9 @@ void mame_printf_debug(const char *format, ...) ATTR_PRINTF(1,2);
 // pop-up a user visible message
 void CLIB_DECL popmessage(const char *format,...) ATTR_PRINTF(1,2);
 
-#ifndef XENON
 // log to the standard error.log file
 void CLIB_DECL logerror(const char *format,...) ATTR_PRINTF(1,2);
 void CLIB_DECL vlogerror(const char *format, va_list arg);
-#else
-static inline void logerror(const char *format,...){
-    
-}
-static inline void vlogerror(const char *format,...){
-    
-}
-#endif
+
 
 #endif	/* __MAME_H__ */

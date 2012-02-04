@@ -43,6 +43,8 @@ public:
 
 	UINT16 *m_vram;
 
+	UINT32 screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
+
 protected:
 
 	// devices
@@ -51,7 +53,6 @@ protected:
 
 	// driver_device overrides
 	virtual void video_start();
-	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 };
 
@@ -60,11 +61,11 @@ void cesclassic_state::video_start()
 {
 }
 
-bool cesclassic_state::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
+UINT32 cesclassic_state::screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
 	int x,y,xi;
 
-	bitmap_fill(&bitmap,&cliprect,get_black_pen(machine()));
+	bitmap.fill(get_black_pen(machine()), cliprect);
 
 	{
 		for(y=0;y<64;y++)
@@ -79,7 +80,7 @@ bool cesclassic_state::screen_update(screen_device &screen, bitmap_t &bitmap, co
 					color |= (((m_vram[x+y*16])>>(15-xi)) & 1)<<1;
 
 					if((x*16+xi)<256 && ((y)+0)<256)
-						*BITMAP_ADDR32(&bitmap, y, x*16+xi) = machine().pens[color];
+						bitmap.pix32(y, x*16+xi) = machine().pens[color];
 				}
 			}
 		}
@@ -253,7 +254,7 @@ static MACHINE_CONFIG_START( cesclassic, cesclassic_state )
 	MCFG_SCREEN_ADD("l_lcd", LCD)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_UPDATE_DRIVER(cesclassic_state, screen_update)
 	MCFG_SCREEN_SIZE(8*16*2, 8*8+3*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 8*16*2-1, 0*8, 8*8-1)
 	MCFG_DEFAULT_LAYOUT( layout_lcd )

@@ -1,0 +1,32 @@
+# 2762
+CP Graphics
+Graphismes CP
+
+# 2776
+Inst. Card
+Carte Inst.
+
+# 3511
+Lamps or LEDs
+Lampes ou LEDs
+
+# 3786
+Overlay
+Transparence
+
+# Title
+Artwork
+
+
+# 1688
+Backdrop
+
+
+# 1733
+Bezel
+
+
+# 3570
+Marquee
+
+

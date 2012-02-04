@@ -154,25 +154,29 @@ static VIDEO_START( hvyunit )
 	state->m_bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 16, 16, 32, 32);
 }
 
-static SCREEN_UPDATE( hvyunit )
+static SCREEN_UPDATE_IND16( hvyunit )
 {
 #define SX_POS	96
 #define SY_POS	0
-	hvyunit_state *state = screen->machine().driver_data<hvyunit_state>();
+	hvyunit_state *state = screen.machine().driver_data<hvyunit_state>();
 
-	tilemap_set_scrollx(state->m_bg_tilemap, 0, ((state->m_port0_data & 0x40) << 2) + state->m_scrollx + SX_POS); // TODO
-	tilemap_set_scrolly(state->m_bg_tilemap, 0, ((state->m_port0_data & 0x80) << 1) + state->m_scrolly + SY_POS); // TODO
-	bitmap_fill(bitmap,cliprect,get_black_pen(screen->machine()));
-	tilemap_draw(bitmap, cliprect, state->m_bg_tilemap, 0, 0);
+	state->m_bg_tilemap->set_scrollx(0, ((state->m_port0_data & 0x40) << 2) + state->m_scrollx + SX_POS); // TODO
+	state->m_bg_tilemap->set_scrolly(0, ((state->m_port0_data & 0x80) << 1) + state->m_scrolly + SY_POS); // TODO
+	bitmap.fill(get_black_pen(screen.machine()), cliprect);
+	state->m_bg_tilemap->draw(bitmap, cliprect, 0, 0);
 	pandora_update(state->m_pandora, bitmap, cliprect);
 
 	return 0;
 }
 
-static SCREEN_EOF( hvyunit )
+static SCREEN_VBLANK( hvyunit )
 {
-	hvyunit_state *state = machine.driver_data<hvyunit_state>();
-	pandora_eof(state->m_pandora);
+	// rising edge
+	if (vblank_on)
+	{
+		hvyunit_state *state = screen.machine().driver_data<hvyunit_state>();
+		pandora_eof(state->m_pandora);
+	}
 }
 
 
@@ -241,7 +245,7 @@ static WRITE8_HANDLER( hu_videoram_w )
 	hvyunit_state *state = space->machine().driver_data<hvyunit_state>();
 
 	state->m_videoram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_bg_tilemap, offset);
+	state->m_bg_tilemap->mark_tile_dirty(offset);
 }
 
 static WRITE8_HANDLER( hu_colorram_w )
@@ -249,7 +253,7 @@ static WRITE8_HANDLER( hu_colorram_w )
 	hvyunit_state *state = space->machine().driver_data<hvyunit_state>();
 
 	state->m_colorram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_bg_tilemap, offset);
+	state->m_bg_tilemap->mark_tile_dirty(offset);
 }
 
 static WRITE8_HANDLER( slave_bankswitch_w )
@@ -669,11 +673,10 @@ static MACHINE_CONFIG_START( hvyunit, hvyunit_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(58)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(256, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 240-1)
-	MCFG_SCREEN_UPDATE(hvyunit)
-	MCFG_SCREEN_EOF(hvyunit)
+	MCFG_SCREEN_UPDATE_STATIC(hvyunit)
+	MCFG_SCREEN_VBLANK_STATIC(hvyunit)
 
 	MCFG_GFXDECODE(hvyunit)
 	MCFG_PALETTE_LENGTH(0x800)

@@ -24,8 +24,8 @@ public:
 
 class ui_menu_file_manager : public ui_menu {
 public:
-	astring *current_directory;
-	astring *current_file;
+	astring current_directory;
+	astring current_file;
 	device_image_interface *selected_device;
 
 	ui_menu_file_manager(running_machine &machine, render_container *container);
@@ -33,9 +33,6 @@ public:
 	virtual void populate();
 	virtual void handle();
 	virtual void custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2);
-
-private:
-	void fix_working_directory(device_image_interface *image);
 };
 
 class ui_menu_mess_tape_control : public ui_menu {
@@ -66,35 +63,35 @@ private:
 
 class ui_menu_confirm_save_as : public ui_menu {
 public:
-	ui_menu_confirm_save_as(running_machine &machine, render_container *container, int *yes);
+	ui_menu_confirm_save_as(running_machine &machine, render_container *container, bool *yes);
 	virtual ~ui_menu_confirm_save_as();
 	virtual void populate();
 	virtual void handle();
 
 private:
-	int *yes;
+	bool *yes;
 };
 
 class ui_menu_file_create : public ui_menu {
 public:
-	ui_menu_file_create(running_machine &machine, render_container *container, ui_menu_file_manager *parent);
+	ui_menu_file_create(running_machine &machine, render_container *container, device_image_interface *image, astring &current_directory, astring &current_file);
 	virtual ~ui_menu_file_create();
 	virtual void populate();
 	virtual void handle();
 	virtual void custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2);
 
 private:
-	ui_menu_file_manager *manager;
+	device_image_interface *image;
+	astring &current_directory, &current_file;
 	const image_device_format *current_format;
 	int confirm_save_as_yes;
 	char filename_buffer[1024];
-
-	int create_new_image(device_image_interface *image, const char *directory, const char *filename, int *yes);
 };
 
 class ui_menu_file_selector : public ui_menu {
 public:
-	ui_menu_file_selector(running_machine &machine, render_container *container, ui_menu_file_manager *parent);
+	enum { R_EMPTY, R_SOFTLIST, R_CREATE, R_FILE };
+	ui_menu_file_selector(running_machine &machine, render_container *container, device_image_interface *image, astring &current_directory, astring &current_file, bool has_empty, bool has_softlist, bool has_create, int *result);
 	virtual ~ui_menu_file_selector();
 	virtual void populate();
 	virtual void handle();
@@ -118,7 +115,11 @@ private:
 		const char *fullpath;
 	};
 
-	ui_menu_file_manager *manager;
+	device_image_interface *image;
+	astring &current_directory, &current_file;
+	bool has_empty, has_softlist, has_create;
+	int *result;
+
 	file_selector_entry *entrylist;
 	char filename_buffer[1024];
 
@@ -126,6 +127,34 @@ private:
 	file_selector_entry *append_entry(file_selector_entry_type entry_type, const char *entry_basename, const char *entry_fullpath);
 	file_selector_entry *append_dirent_entry(const osd_directory_entry *dirent);
 	void append_entry_menu_item(const file_selector_entry *entry);
+};
+
+class ui_menu_select_format : public ui_menu {
+public:
+	ui_menu_select_format(running_machine &machine, render_container *container,
+						  class floppy_image_format_t **formats, int ext_match, int total_usable, int *result);
+	virtual ~ui_menu_select_format();
+	virtual void populate();
+	virtual void handle();
+
+private:
+	floppy_image_format_t **formats;
+	int ext_match, total_usable;
+	int *result;
+};
+
+class ui_menu_select_rw : public ui_menu {
+public:
+	enum { READONLY, READWRITE, WRITE_OTHER, WRITE_DIFF };
+	ui_menu_select_rw(running_machine &machine, render_container *container,
+					  bool can_in_place, int *result);
+	virtual ~ui_menu_select_rw();
+	virtual void populate();
+	virtual void handle();
+
+private:
+	bool can_in_place;
+	int *result;
 };
 
 #endif	/* __UIIMAGE_H__ */

@@ -15,7 +15,7 @@ struct _decocomn_state
 	screen_device *screen;
 	UINT16 *raster_display_list;
 	UINT8 *dirty_palette;
-	bitmap_t *sprite_priority_bitmap;
+	bitmap_ind8 *sprite_priority_bitmap;
 	UINT16 priority;
 	int raster_display_position;
 };
@@ -120,20 +120,20 @@ void decocomn_clear_sprite_priority_bitmap( device_t *device )
 	decocomn_state *decocomn = get_safe_token(device);
 
 	if (decocomn->sprite_priority_bitmap)
-		bitmap_fill(decocomn->sprite_priority_bitmap, NULL, 0);
+		decocomn->sprite_priority_bitmap->fill(0);
 }
 
 /* A special pdrawgfx z-buffered sprite renderer that is needed to properly draw multiple sprite sources with alpha */
 void decocomn_pdrawgfx(
 		device_t *device,
-		bitmap_t *dest, const rectangle *clip, const gfx_element *gfx,
+		bitmap_rgb32 &dest, const rectangle &clip, const gfx_element *gfx,
 		UINT32 code, UINT32 color, int flipx, int flipy, int sx, int sy,
 		int transparent_color, UINT32 pri_mask, UINT32 sprite_mask, UINT8 write_pri, UINT8 alpha)
 {
 	decocomn_state *decocomn = get_safe_token(device);
 	int ox, oy, cx, cy;
 	int x_index, y_index, x, y;
-	bitmap_t *priority_bitmap = gfx->machine().priority_bitmap;
+	bitmap_ind8 &priority_bitmap = gfx->machine().priority_bitmap;
 	const pen_t *pal = &gfx->machine().pens[gfx->color_base + gfx->color_granularity * (color % gfx->total_colors)];
 	const UINT8 *code_base = gfx_element_get_data(gfx, code % gfx->total_elements);
 
@@ -157,9 +157,9 @@ void decocomn_pdrawgfx(
 	for (y = 0; y < 16 - cy; y++)
 	{
 		const UINT8 *source = code_base + (y_index * gfx->line_modulo);
-		UINT32 *destb = BITMAP_ADDR32(dest, sy, 0);
-		UINT8 *pri = BITMAP_ADDR8(priority_bitmap, sy, 0);
-		UINT8 *spri = BITMAP_ADDR8(decocomn->sprite_priority_bitmap, sy, 0);
+		UINT32 *destb = &dest.pix32(sy);
+		UINT8 *pri = &priority_bitmap.pix8(sy);
+		UINT8 *spri = &decocomn->sprite_priority_bitmap->pix8(sy);
 
 		if (sy >= 0 && sy < 248)
 		{
@@ -209,7 +209,7 @@ static DEVICE_START( decocomn )
 	width = decocomn->screen->width();
 	height = decocomn->screen->height();
 
-	decocomn->sprite_priority_bitmap = auto_bitmap_alloc(device->machine(), width, height, BITMAP_FORMAT_INDEXED8);
+	decocomn->sprite_priority_bitmap = auto_bitmap_ind8_alloc(device->machine(), width, height);
 
 	decocomn->dirty_palette = auto_alloc_array_clear(device->machine(), UINT8, 4096);
 	decocomn->raster_display_list = auto_alloc_array_clear(device->machine(), UINT16, 20 * 256 / 2);

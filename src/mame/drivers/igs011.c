@@ -157,9 +157,9 @@ static VIDEO_START( igs011 )
 	state->m_lhb2_pen_hi = 0;
 }
 
-static SCREEN_UPDATE( igs011 )
+static SCREEN_UPDATE_IND16( igs011 )
 {
-	igs011_state *state = screen->machine().driver_data<igs011_state>();
+	igs011_state *state = screen.machine().driver_data<igs011_state>();
 #ifdef MAME_DEBUG
 	int layer_enable = -1;
 #endif
@@ -168,26 +168,26 @@ static SCREEN_UPDATE( igs011 )
 	UINT16 *pri_ram;
 
 #ifdef MAME_DEBUG
-	if (screen->machine().input().code_pressed(KEYCODE_Z))
+	if (screen.machine().input().code_pressed(KEYCODE_Z))
 	{
 		int mask = 0;
-		if (screen->machine().input().code_pressed(KEYCODE_Q))	mask |= 0x01;
-		if (screen->machine().input().code_pressed(KEYCODE_W))	mask |= 0x02;
-		if (screen->machine().input().code_pressed(KEYCODE_E))	mask |= 0x04;
-		if (screen->machine().input().code_pressed(KEYCODE_R))	mask |= 0x08;
-		if (screen->machine().input().code_pressed(KEYCODE_A))	mask |= 0x10;
-		if (screen->machine().input().code_pressed(KEYCODE_S))	mask |= 0x20;
-		if (screen->machine().input().code_pressed(KEYCODE_D))	mask |= 0x40;
-		if (screen->machine().input().code_pressed(KEYCODE_F))	mask |= 0x80;
+		if (screen.machine().input().code_pressed(KEYCODE_Q))	mask |= 0x01;
+		if (screen.machine().input().code_pressed(KEYCODE_W))	mask |= 0x02;
+		if (screen.machine().input().code_pressed(KEYCODE_E))	mask |= 0x04;
+		if (screen.machine().input().code_pressed(KEYCODE_R))	mask |= 0x08;
+		if (screen.machine().input().code_pressed(KEYCODE_A))	mask |= 0x10;
+		if (screen.machine().input().code_pressed(KEYCODE_S))	mask |= 0x20;
+		if (screen.machine().input().code_pressed(KEYCODE_D))	mask |= 0x40;
+		if (screen.machine().input().code_pressed(KEYCODE_F))	mask |= 0x80;
 		if (mask)	layer_enable &= mask;
 	}
 #endif
 
 	pri_ram = &state->m_priority_ram[(state->m_priority & 7) * 512/2];
 
-	for (y = cliprect->min_y; y <= cliprect->max_y; y++)
+	for (y = cliprect.min_y; y <= cliprect.max_y; y++)
 	{
-		for (x = cliprect->min_x; x <= cliprect->max_x; x++)
+		for (x = cliprect.min_x; x <= cliprect.max_x; x++)
 		{
 			scr_addr = x + y * 512;
 			pri_addr = 0xff;
@@ -207,10 +207,10 @@ static SCREEN_UPDATE( igs011 )
 
 #ifdef MAME_DEBUG
 			if ((layer_enable != -1) && (pri_addr == 0xff))
-				*BITMAP_ADDR16(bitmap, y, x) = get_black_pen(screen->machine());
+				bitmap.pix16(y, x) = get_black_pen(screen.machine());
 			else
 #endif
-				*BITMAP_ADDR16(bitmap, y, x) = state->m_layer[l][scr_addr] | (l << 8);
+				bitmap.pix16(y, x) = state->m_layer[l][scr_addr] | (l << 8);
 		}
 	}
 	return 0;
@@ -436,7 +436,7 @@ static WRITE16_HANDLER( igs011_blit_flags_w )
 			}
 
 			// plot it
-			if (x >= clip.min_x && x <= clip.max_x && y >= clip.min_y && y <= clip.max_y)
+			if (clip.contains(x, y))
 			{
 				if      (clear)				dest[x + y * 512] = clear_pen;
 				else if (pen != trans_pen)	dest[x + y * 512] = pen | pen_hi;
@@ -2388,11 +2388,15 @@ static READ16_HANDLER( vbowl_unk_r )
 	return 0xffff;
 }
 
-static SCREEN_EOF( vbowl )
+static SCREEN_VBLANK( vbowl )
 {
-	igs011_state *state = machine.driver_data<igs011_state>();
-	state->m_vbowl_trackball[0] = state->m_vbowl_trackball[1];
-	state->m_vbowl_trackball[1] = (input_port_read(machine, "AN1") << 8) | input_port_read(machine, "AN0");
+	// rising edge
+	if (vblank_on)
+	{
+		igs011_state *state = screen.machine().driver_data<igs011_state>();
+		state->m_vbowl_trackball[0] = state->m_vbowl_trackball[1];
+		state->m_vbowl_trackball[1] = (input_port_read(screen.machine(), "AN1") << 8) | input_port_read(screen.machine(), "AN0");
+	}
 }
 
 static WRITE16_HANDLER( vbowl_pen_hi_w )
@@ -3574,10 +3578,9 @@ static MACHINE_CONFIG_START( igs011_base, igs011_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(512, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 240-1)
-	MCFG_SCREEN_UPDATE( igs011 )
+	MCFG_SCREEN_UPDATE_STATIC( igs011 )
 
 	MCFG_PALETTE_LENGTH(0x800)
 //  MCFG_GFXDECODE(igs011)
@@ -3697,7 +3700,7 @@ static MACHINE_CONFIG_DERIVED( vbowl, igs011_base )
 	// irq 4 points to an apparently unneeded routine
 
 	MCFG_SCREEN_MODIFY("screen")
-	MCFG_SCREEN_EOF(vbowl)	// trackball
+	MCFG_SCREEN_VBLANK_STATIC(vbowl)	// trackball
 //  MCFG_GFXDECODE(igs011_hi)
 
 	MCFG_DEVICE_REMOVE("oki")

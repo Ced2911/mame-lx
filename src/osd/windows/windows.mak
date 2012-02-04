@@ -247,10 +247,10 @@ endif
 # ensure we statically link the gcc runtime lib
 LDFLAGS += -static-libgcc
 TEST_GCC = $(shell gcc --version)
-ifeq ($(findstring 4.4,$(TEST_GCC)),)
+ifeq ($(findstring 4.4,$(TEST_GCC)),) 
 	#if we use new tools
 	LDFLAGS += -static-libstdc++
-endif
+endif 
 
 # add the windows libraries
 LIBS += -luser32 -lgdi32 -ldsound -ldxguid -lwinmm -ladvapi32 -lcomctl32 -lshlwapi -ldinput8 -lwsock32
@@ -309,7 +309,7 @@ OSDOBJS += \
 	$(WINOBJ)/netdev.o \
 	$(WINOBJ)/netdev_pcap.o
 endif
-
+	
 ifeq ($(DIRECT3D),9)
 CCOMFLAGS += -DDIRECT3D_VERSION=0x0900
 else
@@ -325,7 +325,18 @@ OSDOBJS += \
 	$(WINOBJ)/debugwin.o
 
 # add a stub resource file
-RESFILE = $(WINOBJ)/mame.res
+CLIRESFILE = $(WINOBJ)/mame.res
+VERSIONRES = $(WINOBJ)/version.res
+
+
+
+#-------------------------------------------------
+# For building Scale Effects include scale.mak
+#-------------------------------------------------
+
+ifneq ($(USE_SCALE_EFFECTS),)
+include $(SRC)/osd/windows/scale/scale.mak
+endif
 
 
 
@@ -369,8 +380,19 @@ $(WINOBJ)/%.res: $(WINSRC)/%.rc | $(OSPREBUILD)
 # rules for resource file
 #-------------------------------------------------
 
-$(RESFILE): $(WINSRC)/mame.rc $(WINOBJ)/mamevers.rc
+$(CLIRESFILE): $(WINSRC)/mame.rc $(WINOBJ)/mamevers.rc
+$(VERSIONRES): $(WINOBJ)/mamevers.rc
 
 $(WINOBJ)/mamevers.rc: $(BUILDOUT)/verinfo$(BUILD_EXE) $(SRC)/version.c
 	@echo Emitting $@...
 	@"$(BUILDOUT)/verinfo$(BUILD_EXE)" -b windows $(SRC)/version.c > $@
+
+
+
+#-------------------------------------------------
+# For building UI include ui.mak
+#-------------------------------------------------
+
+ifneq ($(WINUI),)
+include $(SRC)/osd/winui/winui.mak
+endif

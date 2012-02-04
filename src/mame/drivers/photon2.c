@@ -100,25 +100,29 @@ INLINE unsigned char get_display_color (unsigned char color, int invert)
 
 /* Code to change the FLASH status every 25 frames. Note this must be
    independent of frame skip etc. */
-static SCREEN_EOF( spectrum )
+static SCREEN_VBLANK( spectrum )
 {
-	photon2_state *state = machine.driver_data<photon2_state>();
-    state->m_spectrum_frame_number++;
-    if (state->m_spectrum_frame_number >= 25)
-    {
-        state->m_spectrum_frame_number = 0;
-        state->m_spectrum_flash_invert = !state->m_spectrum_flash_invert;
-    }
+	// rising edge
+	if (vblank_on)
+	{
+		photon2_state *state = screen.machine().driver_data<photon2_state>();
+	    state->m_spectrum_frame_number++;
+	    if (state->m_spectrum_frame_number >= 25)
+	    {
+	        state->m_spectrum_frame_number = 0;
+	        state->m_spectrum_flash_invert = !state->m_spectrum_flash_invert;
+	    }
+	}
 }
 
-INLINE void spectrum_plot_pixel(bitmap_t *bitmap, int x, int y, UINT32 color)
+INLINE void spectrum_plot_pixel(bitmap_ind16 &bitmap, int x, int y, UINT32 color)
 {
-	*BITMAP_ADDR16(bitmap, y, x) = (UINT16)color;
+	bitmap.pix16(y, x) = (UINT16)color;
 }
 
-static SCREEN_UPDATE( spectrum )
+static SCREEN_UPDATE_IND16( spectrum )
 {
-	photon2_state *state = screen->machine().driver_data<photon2_state>();
+	photon2_state *state = screen.machine().driver_data<photon2_state>();
     /* for now do a full-refresh */
     int x, y, b, scrx, scry;
     unsigned short ink, pap;
@@ -127,7 +131,7 @@ static SCREEN_UPDATE( spectrum )
 
     scr=state->m_spectrum_video_ram;
 
-	bitmap_fill(bitmap, cliprect, state->m_spectrum_port_fe & 0x07);
+	bitmap.fill(state->m_spectrum_port_fe & 0x07, cliprect);
 
     for (y=0; y<192; y++)
     {
@@ -322,11 +326,10 @@ static MACHINE_CONFIG_START( photon2, photon2_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(50.08)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(SPEC_SCREEN_WIDTH, SPEC_SCREEN_HEIGHT)
 	MCFG_SCREEN_VISIBLE_AREA(0, SPEC_SCREEN_WIDTH-1, 0, SPEC_SCREEN_HEIGHT-1)
-	MCFG_SCREEN_UPDATE( spectrum )
-	MCFG_SCREEN_EOF( spectrum )
+	MCFG_SCREEN_UPDATE_STATIC( spectrum )
+	MCFG_SCREEN_VBLANK_STATIC( spectrum )
 
 	MCFG_PALETTE_LENGTH(16)
 	MCFG_PALETTE_INIT( spectrum )

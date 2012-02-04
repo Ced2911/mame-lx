@@ -34,7 +34,7 @@ public:
 	UINT32 m_ss_bank_base;
 	UINT32 m_screenwidth;
 	UINT32* m_mame_colours;
-	bitmap_t *m_renderbuffer_bitmap;
+	bitmap_rgb32 m_renderbuffer_bitmap;
 	rectangle m_renderbuffer_clip;
 	UINT8* m_user4region;
 	UINT32 m_key1;
@@ -58,6 +58,9 @@ public:
 	unsigned short m_lastb2;
 	UINT32* m_mainram;
 	UINT8* m_user5region;
+
+	int m_use_fastboot;
+	emu_timer* m_fastboot_timer;
 };
 
 

@@ -268,7 +268,7 @@ void neogeo_set_fixed_layer_source( running_machine &machine, UINT8 data )
 }
 
 
-static void draw_fixed_layer( running_machine &machine, bitmap_t *bitmap, int scanline )
+static void draw_fixed_layer( running_machine &machine, bitmap_rgb32 &bitmap, int scanline )
 {
 	neogeo_state *state = machine.driver_data<neogeo_state>();
 	int x;
@@ -276,7 +276,7 @@ static void draw_fixed_layer( running_machine &machine, bitmap_t *bitmap, int sc
 	UINT8* gfx_base = machine.region(state->m_fixed_layer_source ? "fixed" : "fixedbios")->base();
 	UINT32 addr_mask = machine.region(state->m_fixed_layer_source ? "fixed" : "fixedbios")->bytes() - 1;
 	UINT16 *video_data = &state->m_videoram[0x7000 | (scanline >> 3)];
-	UINT32 *pixel_addr = BITMAP_ADDR32(bitmap, scanline, NEOGEO_HBEND);
+	UINT32 *pixel_addr = &bitmap.pix32(scanline, NEOGEO_HBEND);
 
 	int garouoffsets[32];
 	int banked = state->m_fixed_layer_source && (addr_mask > 0x1ffff);
@@ -401,7 +401,7 @@ INLINE int sprite_on_scanline(int scanline, int y, int rows)
 }
 
 
-static void draw_sprites( running_machine &machine, bitmap_t *bitmap, int scanline )
+static void draw_sprites( running_machine &machine, bitmap_rgb32 &bitmap, int scanline )
 {
 	neogeo_state *state = machine.driver_data<neogeo_state>();
 	int sprite_index;
@@ -504,7 +504,8 @@ static void draw_sprites( running_machine &machine, bitmap_t *bitmap, int scanli
 
 			attr_and_code_offs = (sprite_number << 6) | (tile << 1);
 			attr = state->m_videoram[attr_and_code_offs + 1];
-			code = ((attr << 12) & 0x70000) | state->m_videoram[attr_and_code_offs];
+			//mamep: extended tile # to access C ROMs over 64M for kof98ae, kf2k2ps2 hacks
+			code = ((attr << 12) & 0xf0000) | state->m_videoram[attr_and_code_offs];
 
 			/* substitute auto animation bits */
 			if (!state->m_auto_animation_disabled)
@@ -540,7 +541,7 @@ static void draw_sprites( running_machine &machine, bitmap_t *bitmap, int scanli
 			{
 				int i;
 
-				UINT32 *pixel_addr = BITMAP_ADDR32(bitmap, scanline, x + NEOGEO_HBEND);
+				UINT32 *pixel_addr = &bitmap.pix32(scanline, x + NEOGEO_HBEND);
 
 				for (i = 0; i < 0x10; i++)
 				{
@@ -562,7 +563,7 @@ static void draw_sprites( running_machine &machine, bitmap_t *bitmap, int scanli
 				int i;
 
 				int x_save = x;
-				UINT32 *pixel_addr = BITMAP_ADDR32(bitmap, scanline, NEOGEO_HBEND);
+				UINT32 *pixel_addr = &bitmap.pix32(scanline, NEOGEO_HBEND);
 
 				for (i = 0; i < 0x10; i++)
 				{
@@ -920,16 +921,16 @@ VIDEO_RESET( neogeo )
  *
  *************************************/
 
-SCREEN_UPDATE( neogeo )
+SCREEN_UPDATE_RGB32( neogeo )
 {
-	neogeo_state *state = screen->machine().driver_data<neogeo_state>();
+	neogeo_state *state = screen.machine().driver_data<neogeo_state>();
 
 	/* fill with background color first */
-	bitmap_fill(bitmap, cliprect, state->m_pens[0x0fff]);
+	bitmap.fill(state->m_pens[0x0fff], cliprect);
 
-	draw_sprites(screen->machine(), bitmap, cliprect->min_y);
+	draw_sprites(screen.machine(), bitmap, cliprect.min_y);
 
-	draw_fixed_layer(screen->machine(), bitmap, cliprect->min_y);
+	draw_fixed_layer(screen.machine(), bitmap, cliprect.min_y);
 
 	return 0;
 }

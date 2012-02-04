@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include "corefile.h"
 
+#undef DRIVER_SWITCH
 
 #define MAX_DRIVERS 65536
 #define MAX_IGNORE  512
@@ -50,6 +51,12 @@ static const char *drivlist[MAX_DRIVERS];
 static int drivcount;
 static const char *ignorelst[MAX_IGNORE];
 static int ignorecount;
+
+#ifdef DRIVER_SWITCH
+static char filename[_MAX_FNAME];
+static const char *extra_drivlist[MAX_DRIVERS];
+static int extra_drivcount;
+#endif /* DRIVER_SWITCH */
 
 
 //-------------------------------------------------
@@ -80,7 +87,7 @@ bool isignored(const char *drivname)
 }
 
 //-------------------------------------------------
-//  parse_file - parse a single file, may be
+//  parse_file - parse a single file, may be 
 //  called recursively
 //-------------------------------------------------
 
@@ -95,7 +102,7 @@ int parse_file(const char *srcfile)
 		fprintf(stderr, "Unable to read source file '%s'\n", srcfile);
 		return 1;
 	}
-
+	
 	// rip through it to find all drivers
 	char *srcptr = (char *)buffer;
 	char *endptr = srcptr + length;
@@ -104,7 +111,7 @@ int parse_file(const char *srcfile)
 	while (srcptr < endptr)
 	{
 		char c = *srcptr++;
-
+		
 		// count newlines
 		if (c == 13 || c == 10)
 		{
@@ -113,11 +120,11 @@ int parse_file(const char *srcfile)
 			linenum++;
 			continue;
 		}
-
+	
 		// skip any spaces
 		if (isspace(c))
 			continue;
-
+		
 		// look for end of C comment
 		if (in_comment && c == '*' && *srcptr == '/')
 		{
@@ -125,11 +132,11 @@ int parse_file(const char *srcfile)
 			in_comment = false;
 			continue;
 		}
-
+		
 		// skip anything else inside a C comment
 		if (in_comment)
 			continue;
-
+		
 		// look for start of C comment
 		if (c == '/' && *srcptr == '*')
 		{
@@ -140,6 +147,14 @@ int parse_file(const char *srcfile)
 
 		// if we hit a C++ comment, scan to the end of line
 		if (c == '/' && *srcptr == '/')
+		{
+			while (srcptr < endptr && *srcptr != 13 && *srcptr != 10)
+				srcptr++;
+			continue;
+		}
+
+		// mamep: if we hit a preprocesser comment, scan to the end of line
+		if (c == '#' && *srcptr == ' ')
 		{
 			while (srcptr < endptr && *srcptr != 13 && *srcptr != 10)
 				srcptr++;
@@ -175,7 +190,7 @@ int parse_file(const char *srcfile)
 			ignorelst[ignorecount++] = name;
 			continue;
 		}
-
+		
 		// otherwise treat as a driver name
 		char drivname[32];
 		drivname[0] = 0;
@@ -201,11 +216,14 @@ int parse_file(const char *srcfile)
 			char *name = (char *)malloc(strlen(drivname) + 1);
 			strcpy(name, drivname);
 			drivlist[drivcount++] = name;
+#ifdef DRIVER_SWITCH
+			extra_drivlist[extra_drivcount++] = name;
+#endif /* DRIVER_SWITCH */
 		}
 	}
-
+	
 	osd_free(buffer);
-
+	
 	return 0;
 }
 
@@ -226,18 +244,69 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	// extract arguments
-	const char *srcfile = argv[1];
-
-	// parse the root file, exit early upon failure
+	bool header_outputed = false;
 	drivcount = 0;
 	ignorecount = 0;
-	if (parse_file(srcfile))
-		return 1;
+
+	// extract arguments
+	for (int src_idx = 1; src_idx < argc; src_idx++)
+	{
+		// extract arguments
+		const char *srcfile = argv[src_idx];
+
+#ifdef DRIVER_SWITCH
+		extra_drivcount = 0;
+#endif /* DRIVER_SWITCH */
+		{
+			char drive[_MAX_DRIVE];
+			char dir[_MAX_DIR];
+			char file[_MAX_FNAME];
+			char ext[_MAX_EXT];
+			_splitpath(srcfile, drive, dir, file, ext);
+#ifdef DRIVER_SWITCH
+			strcpy(filename, file);
+#endif /* DRIVER_SWITCH */
+
+			if (stricmp(ext, ".lst")) continue;
+		}
+
+		// parse the root file, exit early upon failure
+		if (parse_file(srcfile))
+			return 1;
+
+#ifdef DRIVER_SWITCH
+		// add a reference to the ___empty driver
+		extra_drivlist[extra_drivcount++] = "___empty";
+
+		// sort the list
+		qsort(extra_drivlist, extra_drivcount, sizeof(*extra_drivlist), sort_callback);
+
+		// start with a header
+		if (!header_outputed)
+		{
+			printf("#include \"emu.h\"\n\n");
+			header_outputed = true;
+		}
+
+		// output the list of externs first
+		for (int index = 0; index < extra_drivcount; index++)
+			printf("GAME_EXTERN(%s);\n", extra_drivlist[index]);
+		printf("\n");
+
+		// then output the array
+		printf("const game_driver * const driver_switch::%sdrivers[%d] =\n", filename, extra_drivcount+1);
+		printf("{\n");
+		for (int index = 0; index < extra_drivcount; index++)
+			printf("\t&GAME_NAME(%s)%s\n", extra_drivlist[index], ",");
+		printf("\tNULL\n");
+		printf("};\n");
+		printf("\n");
+#endif /* DRIVER_SWITCH */
+	}
 
 	// add a reference to the ___empty driver
 	drivlist[drivcount++] = "___empty";
-
+	
 	// output a count
 	if (drivcount == 0)
 	{
@@ -245,26 +314,31 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	fprintf(stderr, "%d drivers found\n", drivcount);
-
+	
 	// sort the list
 	qsort(drivlist, drivcount, sizeof(*drivlist), sort_callback);
-
+	
 	// start with a header
+	if (!header_outputed)
 	printf("#include \"emu.h\"\n\n");
-
+	
 	// output the list of externs first
 	for (int index = 0; index < drivcount; index++)
 		printf("GAME_EXTERN(%s);\n", drivlist[index]);
 	printf("\n");
 
 	// then output the array
+#ifdef DRIVER_SWITCH
+	printf("const game_driver * driver_list::s_drivers_sorted[%d] =\n", drivcount);
+#else
 	printf("const game_driver * const driver_list::s_drivers_sorted[%d] =\n", drivcount);
+#endif /* DRIVER_SWITCH */
 	printf("{\n");
 	for (int index = 0; index < drivcount; index++)
 		printf("\t&GAME_NAME(%s)%s\n", drivlist[index], (index == drivcount - 1) ? "" : ",");
 	printf("};\n");
 	printf("\n");
-
+	
 	// also output a global count
 	printf("int driver_list::s_driver_count = %d;\n", drivcount);
 

@@ -81,6 +81,7 @@ struct _translation_info
 
 static const translation_info gcc_translate[] =
 {
+	{ 0,		"-Drestrict=*",					"/Drestrict=" },
 	{ 0,		"-D*",						"/D*" },
 	{ 0,		"-U*",						"/U*" },
 	{ 0,		"-I*",						"/I*" },
@@ -91,10 +92,17 @@ static const translation_info gcc_translate[] =
 	{ 0,		"-S",						"/c~/Fa" },
 	{ VS7,		"-O0",						"/Od /GS /Oi" },
 	{ 0,		"-O0",						"/Od" },
-	{ 0,		"-O1",						"/O2" },
-	{ 0,		"-O2",						"/O2" },
-	{ 0,		"-O3",						"/O2" },
+	{ 0,		"-O1",						"/O2 /Qfast_transcendentals" },
+	{ 0,		"-O2",						"/O2 /Qfast_transcendentals" },
+	{ 0,		"-O3",						"/O2 /Qfast_transcendentals" },
 	{ 0,		"-Os",						"/O1" },
+//============================================================
+	{ 0,		"-Opgoc",					"/O2 /GL" },
+	// mamep: disable /Og implied by -O2
+	{ 0,		"-Ong",						"/Oi /Ot /Oy /Ob2 /Gs /GF /Gy /Qfast_transcendentals" },
+	{ 0,		"-Ongc",					"/Oi /Ot /Oy /Ob2 /Gs /GF /Gy /GL" },
+	{ 0,		"-pgoc",					"/GL" },
+//============================================================
 	{ 0,		"-g*",						"/Zi" },
 	{ VS2005,	"-fno-strict-aliasing",		"" },		// deprecated in VS2005
 	{ 0,		"-fno-strict-aliasing",		"/Oa" },
@@ -134,6 +142,12 @@ static const translation_info ld_translate[] =
 	{ 0,		"-Wl,-Map,*",				"/map:*" },
 	{ 0,		"-Wl,--allow-multiple-definition", "/force:multiple" },
 	{ 0,		"-Wl,--warn-common",		"" },
+//============================================================
+	{ 0,		"-ni",					"/INCREMENTAL:NO" },
+	{ 0,		"-ref",					"/OPT:NOREF" },
+	{ 0,		"-pgoi",				"/LTCG:PGINSTRUMENT" },
+	{ 0,		"-pgoo",				"/LTCG:PGOPTIMIZE" },
+//============================================================
 	{ 0,		"-mno-cygwin",				"" },
 	{ 0,		"-s",						"" },
 	{ 0,		"-WO",						"" },
@@ -142,6 +156,7 @@ static const translation_info ld_translate[] =
 	{ 0,		"-municode",				"" },
 	{ 0,		"-static-libgcc",			"" },
 	{ 0,		"-shared",					"/dll" },
+	{ 0,		"-L*",						"" },
 	{ 0 }
 };
 
@@ -284,7 +299,7 @@ static void build_command_line(int argc, char *argv[])
 	{
 		transtable = ld_translate;
 		executable = "link.exe";
-		dst += sprintf(dst, "link /nologo /debug ");
+		dst += sprintf(dst, "link /nologo ");
 	}
 	else if (!strcmp(argv[1], "ar"))
 	{

@@ -239,6 +239,12 @@ SOUNDS += YMZ770
 # the list of drivers
 #-------------------------------------------------
 
+DRVLIST += \
+	$(MAMEOBJ)/mame.lst \
+	$(MAMEOBJ)/mameplus.lst \
+	$(MAMEOBJ)/mamehb.lst \
+	$(MAMEOBJ)/mamedecrypted.lst \
+
 DRVLIBS += \
 	$(MAMEOBJ)/acorn.a \
 	$(MAMEOBJ)/alba.a \
@@ -524,6 +530,7 @@ $(MAMEOBJ)/bfm.a: \
 $(MAMEOBJ)/bmc.a: \
 	$(DRIVERS)/bmcbowl.o \
 	$(DRIVERS)/koftball.o \
+	$(DRIVERS)/popobear.o \
 
 $(MAMEOBJ)/capcom.a: \
 	$(DRIVERS)/1942.o $(VIDEO)/1942.o \
@@ -596,7 +603,7 @@ $(MAMEOBJ)/dataeast.a: \
 	$(DRIVERS)/deco_mlc.o $(VIDEO)/deco_mlc.o \
 	$(DRIVERS)/deco156.o $(MACHINE)/deco156.o \
 	$(DRIVERS)/deco32.o $(VIDEO)/deco32.o \
-    $(AUDIO)/decobsmt.o \
+	$(AUDIO)/decobsmt.o \
 	$(DRIVERS)/decocass.o $(MACHINE)/decocass.o $(VIDEO)/decocass.o \
 	$(DRIVERS)/deshoros.o \
 	$(DRIVERS)/dietgo.o $(VIDEO)/dietgo.o \
@@ -751,6 +758,7 @@ $(MAMEOBJ)/igs.a: \
 	$(DRIVERS)/iqblock.o $(VIDEO)/iqblock.o \
 	$(DRIVERS)/lordgun.o $(VIDEO)/lordgun.o \
 	$(DRIVERS)/pgm.o $(VIDEO)/pgm.o \
+	$(DRIVERS)/pgm2.o \
 	$(DRIVERS)/spoker.o \
 	$(MACHINE)/pgmcrypt.o \
 	$(MACHINE)/pgmprot.o \
@@ -840,7 +848,7 @@ $(MAMEOBJ)/konami.a: \
 	$(DRIVERS)/bottom9.o $(VIDEO)/bottom9.o \
 	$(DRIVERS)/chqflag.o $(VIDEO)/chqflag.o \
 	$(DRIVERS)/circusc.o $(VIDEO)/circusc.o \
-    $(DRIVERS)/cobra.o \
+	$(DRIVERS)/cobra.o \
 	$(DRIVERS)/combatsc.o $(VIDEO)/combatsc.o \
 	$(DRIVERS)/contra.o $(VIDEO)/contra.o \
 	$(DRIVERS)/crimfght.o $(VIDEO)/crimfght.o \
@@ -1732,6 +1740,7 @@ $(MAMEOBJ)/misc.a: \
 	$(DRIVERS)/homedata.o $(VIDEO)/homedata.o \
 	$(DRIVERS)/hotblock.o \
 	$(DRIVERS)/hotstuff.o \
+	$(DRIVERS)/ichiban.o \
 	$(DRIVERS)/imolagp.o \
 	$(DRIVERS)/intrscti.o \
 	$(DRIVERS)/istellar.o \
@@ -1824,6 +1833,7 @@ $(MAMEOBJ)/misc.a: \
 	$(DRIVERS)/sstrangr.o \
 	$(DRIVERS)/statriv2.o \
 	$(DRIVERS)/stellafr.o \
+	$(DRIVERS)/su2000.o \
 	$(DRIVERS)/summit.o \
 	$(DRIVERS)/sumt8035.o \
 	$(DRIVERS)/supertnk.o \
@@ -1905,6 +1915,8 @@ $(DRIVERS)/atarifb.o:	$(LAYOUT)/atarifb.lh \
 $(DRIVERS)/avalnche.o:	$(LAYOUT)/avalnche.lh
 
 $(DRIVERS)/balsente.o:	$(LAYOUT)/stocker.lh
+
+$(DRIVERS)/beaminv.o:	$(LAYOUT)/beaminv.lh
 
 $(DRIVERS)/bfm_sc1.o:	$(LAYOUT)/bfm_sc1.lh
 
@@ -2007,7 +2019,7 @@ $(DRIVERS)/mpoker.o:	$(LAYOUT)/mpoker.lh
 $(DRIVERS)/mpu4.o:	$(LAYOUT)/mpu4.lh \
 			$(LAYOUT)/connect4.lh \
 			$(LAYOUT)/mpu4ext.lh \
-			$(LAYOUT)/gamball.lh
+            $(LAYOUT)/gamball.lh
 
 $(DRIVERS)/mpu4vid.o:	$(LAYOUT)/crmaze2p.lh \
 			$(LAYOUT)/crmaze4p.lh
@@ -2040,6 +2052,8 @@ $(DRIVERS)/norautp.o:	$(LAYOUT)/noraut11.lh \
 			$(LAYOUT)/noraut12.lh
 
 $(DRIVERS)/overdriv.o:	$(LAYOUT)/overdriv.lh
+
+$(DRIVERS)/cps3.o:	$(LAYOUT)/cps3.lh
 
 $(DRIVERS)/peplus.o:	$(LAYOUT)/peplus.lh \
 			$(LAYOUT)/pe_schip.lh \
@@ -2166,6 +2180,17 @@ $(MACHINE)/nes_mmc.o:	$(MAMESRC)/machine/nes_ines.c \
 			$(MAMESRC)/machine/nes_unif.c
 $(VIDEO)/jaguar.o:	$(MAMESRC)/video/jagobj.c \
 			$(MAMESRC)/video/jagblit.c
-$(VIDEO)/model2.o:	$(MAMESRC)/video/model2rd.c
-$(VIDEO)/model3.o:	$(MAMESRC)/video/m3raster.c
-$(VIDEO)/n64.o:		$(MAMESRC)/video/rdpfiltr.c
+$(VIDEO)/model2.o:		$(MAMESRC)/video/model2rd.c
+$(VIDEO)/model3.o:		$(MAMESRC)/video/m3raster.c
+$(VIDEO)/n64.o:			$(MAMESRC)/video/rdpfiltr.c
+
+#-------------------------------------------------
+# mamep: driver list dependencies
+#-------------------------------------------------
+
+#FIXME
+$(MAMEOBJ)/%.lst:	$(MAMESRC)/%.lst
+	@echo Generating $@...
+	@echo #include "$<" > $@.h
+	$(CC) $(CDEFS) $(INCPATH) -I. -E $@.h -o $@
+

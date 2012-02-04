@@ -192,6 +192,10 @@ const char *real_profiler_state::text(running_machine &machine, astring &string)
 		{ PROFILER_BLIT,             "OSD Blitting" },
 		{ PROFILER_SOUND,            "Sound Generation" },
 		{ PROFILER_TIMER_CALLBACK,   "Timer Callbacks" },
+#ifdef USE_HISCORE
+		//MKCHAMP - INCLUDING THE HISCORE ENGINE TO THE PROFILER
+		{ PROFILER_HISCORE,          "Hiscore" },
+#endif /* USE_HISCORE */
 		{ PROFILER_INPUT,            "Input Processing" },
 		{ PROFILER_MOVIE_REC,        "Movie Recording" },
 		{ PROFILER_LOGERROR,         "Error Logging" },
@@ -233,6 +237,7 @@ const char *real_profiler_state::text(running_machine &machine, astring &string)
 	}
 
 	// loop over all types and generate the string
+	device_iterator iter(machine.root_device());
 	for (curtype = PROFILER_DEVICE_FIRST; curtype < PROFILER_TOTAL; curtype++)
 	{
 		// determine the accumulated time for this type
@@ -252,7 +257,7 @@ const char *real_profiler_state::text(running_machine &machine, astring &string)
 
 			// and then the text
 			if (curtype >= PROFILER_DEVICE_FIRST && curtype <= PROFILER_DEVICE_MAX)
-				string.catprintf("'%s'", machine.devicelist().find(curtype - PROFILER_DEVICE_FIRST)->tag());
+				string.catprintf("'%s'", iter.byindex(curtype - PROFILER_DEVICE_FIRST)->tag());
 			else
 				for (int nameindex = 0; nameindex < ARRAY_LENGTH(names); nameindex++)
 					if (names[nameindex].type == curtype)

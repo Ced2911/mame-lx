@@ -82,14 +82,14 @@ static VIDEO_START( koftball )
 	state->m_tilemap_1 = tilemap_create(machine, get_t1_tile_info,tilemap_scan_rows,8,8,64,32);
 	state->m_tilemap_2 = tilemap_create(machine, get_t2_tile_info,tilemap_scan_rows,8,8,64,32);
 
-	tilemap_set_transparent_pen(state->m_tilemap_1,0);
+	state->m_tilemap_1->set_transparent_pen(0);
 }
 
-static SCREEN_UPDATE( koftball )
+static SCREEN_UPDATE_IND16( koftball )
 {
-	koftball_state *state = screen->machine().driver_data<koftball_state>();
-	tilemap_draw( bitmap, cliprect, state->m_tilemap_2, 0, 0);
-	tilemap_draw( bitmap, cliprect, state->m_tilemap_1, 0, 0);
+	koftball_state *state = screen.machine().driver_data<koftball_state>();
+	state->m_tilemap_2->draw(bitmap, cliprect, 0, 0);
+	state->m_tilemap_1->draw(bitmap, cliprect, 0, 0);
 	return 0;
 }
 
@@ -144,14 +144,14 @@ static WRITE16_HANDLER(bmc_1_videoram_w)
 {
 	koftball_state *state = space->machine().driver_data<koftball_state>();
 	COMBINE_DATA(&state->m_bmc_1_videoram[offset]);
-	tilemap_mark_tile_dirty(state->m_tilemap_1, offset);
+	state->m_tilemap_1->mark_tile_dirty(offset);
 }
 
 static WRITE16_HANDLER(bmc_2_videoram_w)
 {
 	koftball_state *state = space->machine().driver_data<koftball_state>();
 	COMBINE_DATA(&state->m_bmc_2_videoram[offset]);
-	tilemap_mark_tile_dirty(state->m_tilemap_2, offset);
+	state->m_tilemap_2->mark_tile_dirty(offset);
 }
 
 static ADDRESS_MAP_START( koftball_mem, AS_PROGRAM, 16 )
@@ -244,9 +244,8 @@ static MACHINE_CONFIG_START( koftball, koftball_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_UPDATE(koftball)
+	MCFG_SCREEN_UPDATE_STATIC(koftball)
 
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_GFXDECODE(koftball)
 
 	MCFG_SCREEN_SIZE(64*8, 32*8)

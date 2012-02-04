@@ -1,0 +1,624 @@
+# 6
+Ball & Paddle
+ボール & パドル
+
+# 19
+Breakout
+脱出
+
+# 102
+Breakout *Mature*
+脱出 *アダルト*
+
+# 113
+Casino
+カジノ
+
+# 252
+Casino *Mature*
+カジノ *アダルト*
+
+# Title
+Category
+カテゴリ
+
+# 269
+Climbing
+クライミング
+
+# 286
+Driving
+運転
+
+# 314
+Driving / 1st Person
+運転 / 一人用
+
+# 374
+Driving / Boat
+運転 / ボート
+
+# 381
+Driving / Plane
+運転 / 飛行機
+
+# 386
+Driving / Race
+運転 / レース
+
+# 447
+Driving / Race (chase view)
+運転 / レース (追跡画面)
+
+# 590
+Driving / Race (chase view) Bike
+運転 / バイクレース (追跡画面)
+
+# 624
+Driving / Race 1st P Bike
+運転 / 一人用バイクレース
+
+# 631
+Driving / Race 1st Person
+運転 / 一人用レース
+
+# 654
+Driving / Race Bike
+運転 / バイクレース
+
+# 671
+Driving / Race Track
+運転 / トラックレース
+
+# 710
+Fighter / 2.5D
+格闘 / 2.5次元
+
+# 984
+Fighter / 2D
+格闘 / 2次元
+
+# 1044
+Fighter / 3D
+格闘 / 3次元
+
+# 1060
+Fighter / Field
+格闘 / 競技場
+
+# 1075
+Fighter / Misc.
+格闘 / その他
+
+# 1082
+Fighter / Multiplay
+格闘 / 多人数プレイ
+
+# 1086
+Fighter / Versus
+格闘 / 対戦
+
+# 1624
+Fighter / Versus *Mature*
+格闘 / 対戦 *アダルト*
+
+# 1628
+Fighter / Versus Co-op
+格闘 / 協力対戦
+
+# 1648
+Fighter / Vertical
+格闘 / 縦型
+
+# 1673
+Maze
+迷路
+
+# 1935
+Maze *Mature*
+迷路 *アダルト*
+
+# 1940
+Maze / Digging
+迷路/ 穴掘り
+
+# 1975
+Maze / Digging *Mature*
+迷路 / 穴掘り *アダルト*
+
+# 1978
+Maze / Driving
+迷路 / 運転
+
+# 2005
+Maze / Fighter
+迷路 / 戦士
+
+# 2035
+Maze / Outline
+迷路 / アウトライン
+
+# 2053
+Maze / Outline *Mature*
+迷路 / アウトライン *アダルト*
+
+# 2056
+Maze / Shooter Large
+迷路 / 大画面シューティング
+
+# 2133
+Maze / Shooter Small
+迷路 / 小画面シューティング
+
+# 2195
+Maze / Shooter Small *Mature*
+迷路 / 小画面シューティング *アダルト*
+
+# 2199
+Maze / Surround
+迷路 / 取り囲む
+
+# 2213
+Mini-Games
+ミニゲーム
+
+# 2255
+Misc.
+その他
+
+# 2340
+Misc. *Mature*
+その他 *アダルト*
+
+# 2349
+Multiplay
+多人数プレイ
+
+# 2402
+Multiplay *Mature*
+多人数プレイ *アダルト*
+
+# 2414
+Not Classified
+未分類
+
+# 2493
+Pinball
+ピンボール
+
+# 2512
+Pinball *Mature*
+ピンボール *アダルト*
+
+# 2518
+Pinball / Pachinko *Mature*
+ピンボール / パチンコ *アダルト*
+
+# 2524
+Platform / Fighter
+プラットフォーム / 戦士
+
+# 2545
+Platform / Fighter Scrolling
+プラットフォーム / 戦士 スクロール
+
+# 2728
+Platform / Run Jump
+プラットフォーム / 走る飛ぶ
+
+# 2992
+Platform / Run Jump *Mature*
+プラットフォーム / 走る飛ぶ *アダルト*
+
+# 2998
+Platform / Run Jump Scrolling
+プラットフォーム / 走る飛ぶ スクロール
+
+# 3074
+Platform / Shooter
+プラットフォーム / シューティング
+
+# 3092
+Platform / Shooter Scrolling
+プラットフォーム / シューティング スクロール
+
+# 3304
+Puzzle
+パズル
+
+# 3352
+Puzzle *Mature*
+パズル *アダルト*
+
+# 3360
+Puzzle / Cards
+パズル / カード
+
+# 3363
+Puzzle / Cards *Mature*
+パズル / カード *アダルト*
+
+# 3375
+Puzzle / Drop
+パズル / 落下
+
+# 3506
+Puzzle / Drop *Mature*
+パズル / 落下 *アダルト*
+
+# 3524
+Puzzle / Match
+パズル / 試合
+
+# 3557
+Puzzle / Match *Mature*
+パズル / 試合 *アダルト*
+
+# 3591
+Puzzle / Maze
+パズル / 迷路
+
+# 3606
+Puzzle / Outline
+パズル / アウトライン
+
+# 3622
+Puzzle / Outline *Mature*
+パズル / アウトライン *アダルト*
+
+# 3656
+Puzzle / Sliding
+パズル / 滑らす
+
+# 3667
+Puzzle / Sliding *Mature*
+パズル / 滑らす *アダルト*
+
+# 3673
+Puzzle / Toss
+パズル / 投げる
+
+# 3735
+Puzzle / Toss *Mature*
+パズル / 投げる *アダルト*
+
+# 3746
+Quiz / Chinese
+クイズ / 中国語
+
+# 3750
+Quiz / English
+クイズ / 英語
+
+# 3817
+Quiz / English *Mature*
+クイズ / 英語 *アダルト*
+
+# 3833
+Quiz / French
+クイズ / フランス語
+
+# 3837
+Quiz / German
+クイズ / ドイツ語
+
+# 3841
+Quiz / Italian
+クイズ / イタリア語
+
+# 3849
+Quiz / Japanese
+クイズ / 日本語
+
+# 3912
+Quiz / Japanese *Mature*
+クイズ / 日本語 *アダルト*
+
+# 3919
+Quiz / Korean
+クイズ / 韓国語
+
+# 3925
+Quiz / Music English
+クイズ / 英語音楽
+
+# 3929
+Quiz / Music Japanese
+クイズ / 日本語音楽
+
+# 3933
+Quiz / Spanish
+クイズ / スペイン語
+
+# 3937
+Rhythm
+リズム
+
+# 3950
+Rhythm / Dance
+リズム / ダンス
+
+# 3996
+Rhythm / Instruments
+リズム / インスト
+
+# 4033
+Shooter / 1st Person
+シューティング / 一人用
+
+# 4050
+Shooter / 3rd Person
+シューティング / 三人用
+
+# 4096
+Shooter / Command
+シューティング / 指令
+
+# 4126
+Shooter / Driving
+シューティング / 運転
+
+# 4135
+Shooter / Driving (chase view)
+シューティング / 運転 (追跡画面)
+
+# 4179
+Shooter / Driving 1st Person
+シューティング / 一人用運転
+
+# 4187
+Shooter / Driving Diagonal
+シューティング / 運転 斜め型
+
+# 4192
+Shooter / Driving Horizontal
+シューティング / 運転 横型
+
+# 4206
+Shooter / Driving Vertical
+シューティング / 運転 縦型
+
+# 4258
+Shooter / Field
+シューティング / 競技場
+
+# 4399
+Shooter / Field *Mature*
+シューティング / 競技場 *アダルト*
+
+# 4407
+Shooter / Flying
+シューティング / 飛行
+
+# 4459
+Shooter / Flying (chase view)
+シューティング / 飛行 (追跡画面)
+
+# 4492
+Shooter / Flying 1st Person
+シューティング / 一人用飛行
+
+# 4536
+Shooter / Flying Diagonal
+シューティング / 飛行 斜め型
+
+# 4544
+Shooter / Flying Horizontal
+シューティング / 飛行 横型
+
+# 4774
+Shooter / Flying Horizontal *Mature*
+シューティング / 飛行 横型 *アダルト*
+
+# 4777
+Shooter / Flying Vertical
+シューティング / 飛行 縦型
+
+# 5199
+Shooter / Flying Vertical *Mature*
+シューティング / 飛行 縦型 *アダルト*
+
+# 5202
+Shooter / Gallery
+シューティング / ギャラリー
+
+# 5587
+Shooter / Gallery *Mature*
+シューティング / ギャラリー *アダルト*
+
+# 5591
+Shooter / Gun
+シューティング / 銃
+
+# 5769
+Shooter / Misc.
+シューティング / その他
+
+# 5787
+Shooter / Misc. Horizontal
+シューティング / その他 横型
+
+# 5810
+Shooter / Misc. Vertical
+シューティング / その他 縦型
+
+# 5832
+Shooter / Versus
+シューティング / 対戦
+
+# 5845
+Shooter / Walking
+シューティング / 歩行
+
+# 5958
+Sports
+スポーツ
+
+# 5982
+Sports / Armwrestling
+スポーツ / 腕相撲
+
+# 5987
+Sports / Baseball
+スポーツ / 野球
+
+# 6071
+Sports / Basketball
+スポーツ / バスケットボール
+
+# 6124
+Sports / Bowling
+スポーツ / ボーリング
+
+# 6159
+Sports / Boxing
+スポーツ / ボクシング
+
+# 6200
+Sports / Bull Fighting
+スポーツ / 闘牛
+
+# 6204
+Sports / Darts
+スポーツ / ダーツ
+
+# 6211
+Sports / Dodgeball
+スポーツ / ドッヂボール
+
+# 6217
+Sports / Fishing
+スポーツ / 釣り
+
+# 6233
+Sports / Football Amer.
+スポーツ / アメフト
+
+# 6286
+Sports / Football Rugby
+スポーツ / ラグビー
+
+# 6291
+Sports / Golf
+スポーツ / ゴルフ
+
+# 6391
+Sports / Handball
+スポーツ / ハンドボール
+
+# 6395
+Sports / Hang Gliding
+スポーツ / ハンググライダー
+
+# 6401
+Sports / Hockey
+スポーツ / ホッケー
+
+# 6417
+Sports / Horse Racing
+スポーツ / 競馬
+
+# 6433
+Sports / Horseshoes
+スポーツ / 蹄鉄
+
+# 6438
+Sports / Multiplay
+スポーツ / 多人数プレイ
+
+# 6446
+Sports / Ping pong
+スポーツ / 卓球
+
+# 6451
+Sports / Pool
+スポーツ / ビリヤード
+
+# 6489
+Sports / Pool *Mature*
+スポーツ / ビリヤード *アダルト*
+
+# 6503
+Sports / Shuffleboard
+スポーツ / 銭はじき
+
+# 6509
+Sports / Skateboarding
+スポーツ / スケボー
+
+# 6518
+Sports / Skiing
+スポーツ / スキー
+
+# 6542
+Sports / SkyDiving
+スポーツ / スカイダイビング
+
+# 6546
+Sports / Soccer
+スポーツ / サッカー
+
+# 6653
+Sports / Sumo
+スポーツ / 相撲
+
+# 6656
+Sports / Swimming
+スポーツ / 水泳
+
+# 6667
+Sports / Tennis
+スポーツ / テニス
+
+# 6700
+Sports / Track & Field
+スポーツ / 陸上競技
+
+# 6737
+Sports / VolleyBall
+スポーツ / バレーボール
+
+# 6765
+Sports / Wrestling
+スポーツ / レスリング
+
+# 6817
+Tabletop
+テーブルゲーム
+
+# 6825
+Tabletop *Mature*
+テーブルゲーム *アダルト*
+
+# 6828
+Tabletop / Hanafuda
+テーブルゲーム / 花札
+
+# 6841
+Tabletop / Hanafuda *Mature*
+テーブルゲーム / 花札 *アダルト*
+
+# 6863
+Tabletop / Mahjong
+テーブルゲーム / 麻雀
+
+# 6910
+Tabletop / Mahjong *Mature*
+テーブルゲーム / 麻雀 *アダルト*
+
+# 7153
+Tabletop / Othello
+テーブルゲーム / オセロ
+
+# 7159
+Tabletop / Othello *Mature*
+テーブルゲーム / オセロ *アダルト*
+
+# 7164
+Tabletop / Renju
+テーブルゲーム / 連珠
+
+# 7169
+Tabletop / Shougi
+テーブルゲーム / 将棋
+

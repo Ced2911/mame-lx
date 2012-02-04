@@ -833,6 +833,11 @@ void osd_free_executable(void *ptr, size_t size);
 void osd_break_into_debugger(const char *message);
 
 
+int osd_get_default_codepage(void);
+
+void set_osdcore_acp(int cp);
+int get_osdcore_acp(void);
+
 /*-----------------------------------------------------------------------------
   MESS specific code below
 -----------------------------------------------------------------------------*/

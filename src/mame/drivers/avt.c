@@ -467,14 +467,14 @@ public:
 WRITE8_MEMBER( avt_state::avt_videoram_w )
 {
 	m_videoram[offset] = data;
-	tilemap_mark_tile_dirty(m_bg_tilemap, offset);
+	m_bg_tilemap->mark_tile_dirty(offset);
 }
 
 
 WRITE8_MEMBER( avt_state::avt_colorram_w )
 {
 	m_colorram[offset] = data;
-	tilemap_mark_tile_dirty(m_bg_tilemap, offset);
+	m_bg_tilemap->mark_tile_dirty(offset);
 }
 
 
@@ -501,12 +501,12 @@ static VIDEO_START( avt )
 }
 
 
-static SCREEN_UPDATE( avt )
+static SCREEN_UPDATE_IND16( avt )
 {
-	avt_state *state = screen->machine().driver_data<avt_state>();
+	avt_state *state = screen.machine().driver_data<avt_state>();
 	int x,y;
 	int count;
-	const gfx_element *gfx = screen->machine().gfx[0];
+	const gfx_element *gfx = screen.machine().gfx[0];
 
 	count = 0;
 
@@ -522,7 +522,7 @@ static SCREEN_UPDATE( avt )
 			count++;
 		}
 	}
-	//tilemap_draw(bitmap, cliprect, state->m_bg_tilemap, 0, 0);
+	//state->m_bg_tilemap->draw(bitmap, cliprect, 0, 0);
 	return 0;
 }
 
@@ -896,10 +896,9 @@ static MACHINE_CONFIG_START( avt, avt_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(32*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)	/* 240x224 (through CRTC) */
-	MCFG_SCREEN_UPDATE(avt)
+	MCFG_SCREEN_UPDATE_STATIC(avt)
 
 	MCFG_GFXDECODE(avt)
 

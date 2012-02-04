@@ -79,7 +79,7 @@ static WRITE8_HANDLER( sprcros2_m_port7_w )
 	if((state->m_port7^data)&0x40)
 		memory_set_bankptr(space->machine(), "bank1",&RAM[0x10000+((data&0x40)<<7)]);
 
-	tilemap_set_flip_all( space->machine(),data&0x02?(TILEMAP_FLIPX|TILEMAP_FLIPY):0 );
+	space->machine().tilemap().set_flip_all(data&0x02?(TILEMAP_FLIPX|TILEMAP_FLIPY):0 );
 
 	state->m_port7 = data;
 }
@@ -282,10 +282,9 @@ static MACHINE_CONFIG_START( sprcros2, sprcros2_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(32*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 2*8, 30*8-1)
-	MCFG_SCREEN_UPDATE(sprcros2)
+	MCFG_SCREEN_UPDATE_STATIC(sprcros2)
 
 	MCFG_GFXDECODE(sprcros2)
 	MCFG_PALETTE_LENGTH(768)

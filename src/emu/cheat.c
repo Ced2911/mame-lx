@@ -871,7 +871,7 @@ bool cheat_entry::activate()
 	{
 		execute_on_script();
 		changed = true;
-		popmessage("Activated %s", m_description.cstr());
+		popmessage(_("Activated %s"), m_description.cstr());
 	}
 
 	// if we're a oneshot parameter cheat and we're active, execute the "state change" script and indicate change
@@ -879,7 +879,7 @@ bool cheat_entry::activate()
 	{
 		execute_change_script();
 		changed = true;
-		popmessage("Activated\n %s = %s", m_description.cstr(), m_parameter->text());
+		popmessage(_("Activated\n %s = %s"), m_description.cstr(), m_parameter->text());
 	}
 
 	return changed;
@@ -1011,12 +1011,12 @@ void cheat_entry::menu_text(astring &description, astring &state, UINT32 &flags)
 
 	// if we have no parameter and no run or off script, it's a oneshot cheat
 	else if (is_oneshot())
-		state.cpy("Set");
+		state.cpy(_("Set"));
 
 	// if we have no parameter, it's just on/off
 	else if (is_onoff())
 	{
-		state.cpy((m_state == SCRIPT_STATE_RUN) ? "On" : "Off");
+		state.cpy((m_state == SCRIPT_STATE_RUN) ? _("On") : _("Off"));
 		flags = (m_state != 0) ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW;
 	}
 
@@ -1025,7 +1025,7 @@ void cheat_entry::menu_text(astring &description, astring &state, UINT32 &flags)
 	{
 		if (m_state == SCRIPT_STATE_OFF)
 		{
-			state.cpy(is_oneshot_parameter() ? "Set" : "Off");
+			state.cpy(is_oneshot_parameter() ? _("Set") : _("Off"));
 			flags = MENU_FLAG_RIGHT_ARROW;
 		}
 		else
@@ -1135,7 +1135,7 @@ void cheat_manager::set_enable(bool enable)
 		for (cheat_entry *cheat = m_cheatlist.first(); cheat != NULL; cheat = cheat->next())
 			if (cheat->state() == SCRIPT_STATE_RUN)
 				cheat->execute_off_script();
-		popmessage("Cheats Disabled");
+		popmessage(_("Cheats Disabled"));
 		m_disabled = true;
 	}
 
@@ -1147,7 +1147,7 @@ void cheat_manager::set_enable(bool enable)
 		for (cheat_entry *cheat = m_cheatlist.first(); cheat != NULL; cheat = cheat->next())
 			if (cheat->state() == SCRIPT_STATE_RUN)
 				cheat->execute_on_script();
-		popmessage("Cheats Enabled");
+		popmessage(_("Cheats Enabled"));
 	}
 }
 
@@ -1174,8 +1174,8 @@ void cheat_manager::reload()
 
 	// load the cheat file, MESS will load a crc32.xml ( eg. 01234567.xml )
     // and MAME will load gamename.xml
-	device_image_interface *image = NULL;
-	for (bool gotone = machine().devicelist().first(image); gotone; gotone = image->next(image))
+    image_interface_iterator iter(machine().root_device());
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 		if (image->exists())
 		{
 			// if we are loading through software lists, try to load shortname.xml
@@ -1415,7 +1415,7 @@ void cheat_manager::load_cheats(const char *filename)
 		// loop over all instrances of the files found in our search paths
 		while (filerr == FILERR_NONE)
 		{
-			mame_printf_verbose("Loading cheats file from %s\n", cheatfile.fullpath());
+			mame_printf_verbose(_("Loading cheats file from %s\n"), cheatfile.fullpath());
 
 			// read the XML file into internal data structures
 			xml_parse_options options = { 0 };
@@ -1449,7 +1449,7 @@ void cheat_manager::load_cheats(const char *filename)
 					for (scannode = m_cheatlist.first(); scannode != NULL; scannode = scannode->next())
 						if (strcmp(scannode->description(), curcheat->description()) == 0)
 						{
-							mame_printf_verbose("Ignoring duplicate cheat '%s' from file %s\n", curcheat->description(), cheatfile.fullpath());
+							mame_printf_verbose(_("Ignoring duplicate cheat '%s' from file %s\n"), curcheat->description(), cheatfile.fullpath());
 							break;
 						}
 

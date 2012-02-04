@@ -63,6 +63,10 @@ VIDEOCOMMON = \
 define bin2o
 	bin2s $< | xenon-as -a32 -o $(@)
 endef
+
+$(OBJ)/%.o: $(SRC)/%.cpp 
+	@echo Compiling $<...
+	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
 	
 $(OBJ)/%.o : $(SRC)/%.png
 	@echo $(notdir $<)

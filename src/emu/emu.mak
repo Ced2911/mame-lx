@@ -78,6 +78,7 @@ EMUOBJS = \
 	$(EMUOBJ)/emupal.o \
 	$(EMUOBJ)/fileio.o \
 	$(EMUOBJ)/hash.o \
+	$(EMUOBJ)/hiscore.o \
 	$(EMUOBJ)/image.o \
 	$(EMUOBJ)/info.o \
 	$(EMUOBJ)/input.o \
@@ -125,7 +126,23 @@ EMUOBJS = \
 	$(EMUOBJ)/debugint/debugint.o \
 	$(EMUOBJ)/profiler.o \
 	$(OSDOBJ)/osdepend.o \
-	$(OSDOBJ)/osdnet.o
+	$(OSDOBJ)/osdnet.o \
+	$(EMUOBJ)/uilang.o
+
+ifneq ($(USE_CMD_LIST),)
+EMUOBJS += \
+	$(EMUOBJ)/cmddata.o
+endif
+
+ifneq ($(USE_IPS),)
+EMUOBJS += \
+	$(EMUOBJ)/ips.o
+endif
+
+ifneq ($(USE_HISCORE),)
+EMUOBJS += \
+	$(EMUOBJ)/hiscore.o
+endif
 
 EMUSOUNDOBJS = \
 	$(EMUOBJ)/sound/filter.o \
@@ -138,6 +155,7 @@ EMUAUDIOOBJS = \
 
 EMUDRIVEROBJS = \
 	$(EMUDRIVERS)/empty.o \
+	$(EMUDRIVERS)/testcpu.o \
 
 EMUMACHINEOBJS = \
 	$(EMUMACHINE)/53c810.o		\
@@ -164,7 +182,6 @@ EMUMACHINEOBJS = \
 	$(EMUMACHINE)/adc1038.o		\
 	$(EMUMACHINE)/adc1213x.o	\
 	$(EMUMACHINE)/am53cf96.o	\
-	$(EMUMACHINE)/am8530h.o		\
 	$(EMUMACHINE)/amigafdc.o	\
 	$(EMUMACHINE)/at28c16.o		\
 	$(EMUMACHINE)/cdp1852.o		\
@@ -189,6 +206,7 @@ EMUMACHINEOBJS = \
 	$(EMUMACHINE)/i8255.o		\
 	$(EMUMACHINE)/i8355.o		\
 	$(EMUMACHINE)/idectrl.o		\
+	$(EMUMACHINE)/im6402.o		\
 	$(EMUMACHINE)/ins8154.o		\
 	$(EMUMACHINE)/ins8250.o		\
 	$(EMUMACHINE)/intelfsh.o	\
@@ -198,7 +216,8 @@ EMUMACHINEOBJS = \
 	$(EMUMACHINE)/k053252.o 	\
 	$(EMUMACHINE)/k056230.o		\
 	$(EMUMACHINE)/latch8.o		\
-	$(EMUMACHINE)/ldcore.o		\
+	$(EMUMACHINE)/laserdsc.o	\
+	$(EMUMACHINE)/ldstub.o		\
 	$(EMUMACHINE)/ldpr8210.o	\
 	$(EMUMACHINE)/ldv1000.o		\
 	$(EMUMACHINE)/ldvp931.o		\
@@ -261,6 +280,7 @@ EMUMACHINEOBJS = \
 	$(EMUMACHINE)/z8536.o		\
 
 EMUVIDEOOBJS = \
+	$(EMUVIDEO)/315_5124.o		\
 	$(EMUVIDEO)/cdp1861.o		\
 	$(EMUVIDEO)/cdp1862.o		\
 	$(EMUVIDEO)/crt9007.o		\
@@ -276,6 +296,8 @@ EMUVIDEOOBJS = \
 	$(EMUVIDEO)/k053250.o		\
 	$(EMUVIDEO)/mc6845.o		\
 	$(EMUVIDEO)/msm6255.o		\
+	$(EMUVIDEO)/pc_cga.o		\
+	$(EMUVIDEO)/cgapal.o		\
 	$(EMUVIDEO)/pc_vga.o		\
 	$(EMUVIDEO)/poly.o		\
 	$(EMUVIDEO)/psx.o		\
@@ -339,10 +361,9 @@ $(LIBSOUND): $(SOUNDOBJS)
 # additional dependencies
 #-------------------------------------------------
 
-$(EMUOBJ)/rendfont.o:	$(EMUOBJ)/uismall.fh
+$(EMUOBJ)/rendfont.o:	$(EMUOBJ)/uismall11.fh $(EMUOBJ)/uismall14.fh $(EMUOBJ)/uicmd11.fh $(EMUOBJ)/uicmd14.fh
 
 $(EMUOBJ)/video.o:	$(EMUSRC)/rendersw.c
-$(EMUVIDEO)/v9938.o:	$(EMUSRC)/video/v9938mod.c
 
 $(EMUMACHINE)/s3c2400.o:	$(EMUSRC)/machine/s3c24xx.c
 $(EMUMACHINE)/s3c2410.o:	$(EMUSRC)/machine/s3c24xx.c

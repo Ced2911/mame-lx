@@ -1,0 +1,32 @@
+# Title
+Artwork
+아트웍
+
+# 1688
+Backdrop
+배경
+
+# 1733
+Bezel
+베젤
+
+# 2762
+CP Graphics
+CP 그래픽스
+
+# 2776
+Inst. Card
+카드 삽입
+
+# 3511
+Lamps or LEDs
+램프 또는 LED
+
+# 3570
+Marquee
+간판
+
+# 3786
+Overlay
+오버레이
+

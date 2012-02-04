@@ -16,14 +16,17 @@
 ###########################################################################
 
 
+include config.def
+
+
 #xenon cfg
 PTR64 = 0
 BIGENDIAN = 1
 OSD = xenon
 AR = @xenon-ar
-CC = @xenon-gcc
-LD = xenon-g++
-MD = -mkdir$(EXE)
+CC = xenon-gcc
+LD = @xenon-g++
+MD = @mkdir$(EXE)
 RM = rm -f
 OBJDUMP = @xenon-objdump
 NOWERROR = 1
@@ -32,7 +35,7 @@ FORCE_DRC_C_BACKEND = 1
 
 SUBTARGET = xenon
 MACHDEP =  -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -mhard-float -L$(DEVKITXENON)/usr/lib -L$(DEVKITXENON)/xenon/lib/32 -u read -u _start -u exc_base
-CCOMFLAGS =  -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -ffast-math -funroll-loops -mhard-float -fomit-frame-pointer
+CCOMFLAGS =  -D__ppc__ -D__PPC__ -DXENON -m32 -mno-altivec -fno-pic -mpowerpc64 -ffast-math -funroll-loops -mhard-float -fomit-frame-pointer
 CPPONLYFLAGS = 
 LDSCRIPT := $(DEVKITXENON)/app.lds
 
@@ -159,7 +162,7 @@ PTR64 = 1
 endif
 endif
 
-# Autodetect BIGENDIAN 
+# Autodetect BIGENDIAN
 # MacOSX
 ifndef BIGENDIAN
 ifneq (,$(findstring Power,$(UNAME)))
@@ -172,7 +175,7 @@ endif
 endif # BIGENDIAN
 
 endif # OS/2
-endif # CROSS_BUILD	
+endif # CROSS_BUILD
 endif # Windows_NT
 
 endif # TARGET_OS
@@ -343,12 +346,8 @@ BUILD_EXE = $(EXE)
 endif
 
 # compiler, linker and utilities
-# AR = @ar
-# CC = @gcc
-# LD = @g++
-# MD = -mkdir$(EXE)
-# RM = @rm -f
-# OBJDUMP = @objdump
+MD = -mkdir$(EXE)
+RM = @rm -f
 
 
 
@@ -387,16 +386,25 @@ endif
 # the name is just 'target' if no subtarget; otherwise it is
 # the concatenation of the two (e.g., mametiny)
 ifeq ($(TARGET),$(SUBTARGET))
-NAME = $(TARGET)
+NAME = $(TARGET)$(EXTRA_SUFFIX)
 else
-NAME = $(TARGET)$(SUBTARGET)
+NAME = $(TARGET)$(EXTRA_SUFFIX)$(SUBTARGET)
 endif
 
 # fullname is prefix+name+suffix+suffix64+suffixdebug
 FULLNAME = $(PREFIX)$(PREFIXSDL)$(NAME)$(SUFFIX)$(SUFFIX64)$(SUFFIXDEBUG)$(SUFFIXPROFILE)
+ifneq ($(WINUI),)
+ifeq ($(TARGET),$(SUBTARGET))
+MAMEUINAME = $(TARGET)$(EXTRA_SUFFIX)ui
+else
+MAMEUINAME = $(TARGET)$(EXTRA_SUFFIX)$(SUBTARGET)ui
+endif
+MAMEUIEXE = $(PREFIX)$(PREFIXSDL)$(MAMEUINAME)$(SUFFIX)$(SUFFIX64)$(SUFFIXDEBUG)$(SUFFIXPROFILE)$(EXE)
+#BUILD += $(MAMEUIEXE)
+endif
 
 # add an EXE suffix to get the final emulator name
-EMULATOR = $(FULLNAME)$(EXE).elf
+EMULATOR = $(FULLNAME)$(EXE)
 
 
 
@@ -408,7 +416,7 @@ EMULATOR = $(FULLNAME)$(EXE).elf
 SRC = src
 
 # build the targets in different object dirs, so they can co-exist
-OBJ = obj/$(PREFIX)$(OSD)$(SUFFIX)$(SUFFIX64)$(SUFFIXDEBUG)$(SUFFIXPROFILE)
+OBJ = obj/$(OSD)/$(FULLNAME)
 
 
 
@@ -426,8 +434,16 @@ ifeq ($(TARGETOS),os2)
 DEFS = -DCRLF=3
 endif
 
+ifdef MSVC_BUILD
+    ifdef NO_FORCEINLINE
+    DEFS += -DINLINE="static __inline"
+    else
+    DEFS += -DINLINE="static __forceinline"
+    endif
+else
 # map the INLINE to something digestible by GCC
 DEFS += -DINLINE="static inline"
+endif
 
 # define LSB_FIRST if we are a little-endian target
 ifndef BIGENDIAN
@@ -455,6 +471,71 @@ endif
 ifdef USE_NETWORK
 DEFS += -DUSE_NETWORK
 endif
+
+# need to ensure FLAC functions are statically linked
+DEFS += -DFLAC__NO_DLL
+
+
+ifneq ($(USE_UI_COLOR_DISPLAY),)
+DEFS += -DUI_COLOR_DISPLAY
+endif
+
+ifneq ($(USE_TRANS_UI),)
+DEFS += -DTRANS_UI
+endif
+
+ifneq ($(USE_JOYSTICK_ID),)
+DEFS += -DJOYSTICK_ID
+endif
+
+ifneq ($(USE_AUTOFIRE),)
+DEFS += -DUSE_AUTOFIRE
+endif
+
+ifneq ($(USE_CUSTOM_BUTTON),)
+DEFS += -DUSE_CUSTOM_BUTTON
+endif
+
+ifneq ($(USE_INP_CAPTION),)
+DEFS += -DINP_CAPTION
+endif
+
+ifneq ($(USE_SHOW_TIME),)
+DEFS += -DUSE_SHOW_TIME
+endif
+
+ifneq ($(USE_SHOW_INPUT_LOG),)
+DEFS += -DUSE_SHOW_INPUT_LOG
+endif
+
+ifneq ($(USE_PLAYBACK_END_PAUSE),)
+DEFS += -DPLAYBACK_END_PAUSE
+endif
+
+ifneq ($(USE_AUDIO_SYNC),)
+DEFS += -DUSE_AUDIO_SYNC
+endif
+
+ifneq ($(USE_IPS),)
+DEFS += -DUSE_IPS
+endif
+
+ifeq ($(SUBTARGET),tiny)
+DEFS += -DTINY_BUILD
+endif
+
+ifneq ($(USE_DRIVER_SWITCH),)
+DEFS += -DDRIVER_SWITCH
+endif
+
+ifneq ($(USE_CMD_LIST),)
+DEFS += -DCMD_LIST
+endif
+
+ifneq ($(USE_HISCORE),)
+DEFS += -DUSE_HISCORE
+endif
+
 
 
 #-------------------------------------------------
@@ -507,7 +588,7 @@ CCOMFLAGS += -O$(OPTIMIZE)
 ifneq ($(OPTIMIZE),0)
 ifneq ($(TARGETOS),os2)
 ifndef NOWERROR
-CCOMFLAGS += -Werror -fno-strict-aliasing $(ARCHOPTS)
+#CCOMFLAGS += -Wno-error -fno-strict-aliasing $(ARCHOPTS)
 else
 CCOMFLAGS += -fno-strict-aliasing $(ARCHOPTS)
 endif
@@ -521,7 +602,7 @@ CCOMFLAGS += \
 	-Wall \
 	-Wcast-align \
 	-Wundef \
-	-Wformat-security \
+	-Wno-format-security \
 	-Wwrite-strings \
 	-Wno-sign-compare \
 	-Wno-conversion
@@ -536,7 +617,9 @@ CONLYFLAGS += \
 COBJFLAGS += \
 	-Wpointer-arith 
 
-
+# warnings only applicable to C++ compiles
+CPPONLYFLAGS += \
+	-Woverloaded-virtual
 
 #-------------------------------------------------
 # include paths
@@ -611,7 +694,7 @@ endif
 # this variable
 #-------------------------------------------------
 
-OBJDIRS = $(OBJ) $(OBJ)/$(TARGET)/$(SUBTARGET)
+OBJDIRS = $(OBJ)
 
 
 
@@ -620,19 +703,19 @@ OBJDIRS = $(OBJ) $(OBJ)/$(TARGET)/$(SUBTARGET)
 #-------------------------------------------------
 
 LIBEMU = $(OBJ)/libemu.a
-LIBCPU = $(OBJ)/$(TARGET)/$(SUBTARGET)/libcpu.a
-LIBDASM = $(OBJ)/$(TARGET)/$(SUBTARGET)/libdasm.a
-LIBSOUND = $(OBJ)/$(TARGET)/$(SUBTARGET)/libsound.a
+LIBCPU = $(OBJ)/libcpu.a
+LIBDASM = $(OBJ)/libdasm.a
+LIBSOUND = $(OBJ)/libsound.a
 LIBUTIL = $(OBJ)/libutil.a
 LIBOCORE = $(OBJ)/libocore.a
 LIBOSD = $(OBJ)/libosd.a
 
 VERSIONOBJ = $(OBJ)/version.o
 EMUINFOOBJ = $(OBJ)/$(TARGET)/$(TARGET).o
-DRIVLISTSRC = $(OBJ)/$(TARGET)/$(SUBTARGET)/drivlist.c
-DRIVLISTOBJ = $(OBJ)/$(TARGET)/$(SUBTARGET)/drivlist.o
-DEVLISTSRC = $(OBJ)/$(TARGET)/$(SUBTARGET)/devlist.c
-DEVLISTOBJ = $(OBJ)/$(TARGET)/$(SUBTARGET)/devlist.o
+DRIVLISTSRC = $(OBJ)/drivlist.c
+DRIVLISTOBJ = $(OBJ)/drivlist.o
+DEVLISTSRC = $(OBJ)/devlist.c
+DEVLISTOBJ = $(OBJ)/devlist.o
 
 
 
@@ -668,10 +751,7 @@ SOFTFLOAT = $(OBJ)/libsoftfloat.a
 # add formats emulation library
 FORMATS_LIB = $(OBJ)/libformats.a
 
-# add cothread library
-COTHREAD = $(OBJ)/libco.a
-
-
+JPEG_LIB = $(OBJ)/libjpeg.a
 
 #-------------------------------------------------
 # 'default' target needs to go here, before the 
@@ -682,6 +762,7 @@ default: maketree buildtools emulator
 
 all: default tools
 
+FLAC_LIB = $(OBJ)/libflac.a $(OBJ)/libflac++.a
 
 
 #-------------------------------------------------
@@ -703,12 +784,14 @@ include $(SRC)/osd/$(OSD)/$(OSD).mak
 
 # then the various core pieces
 include $(SRC)/$(TARGET)/$(SUBTARGET).mak
--include $(SRC)/$(TARGET)/osd/$(OSD)/$(OSD).mak
 include $(SRC)/emu/emu.mak
 include $(SRC)/lib/lib.mak
 #include $(SRC)/build/build.mak
 -include $(SRC)/osd/$(CROSS_BUILD_OSD)/build.mak
 include $(SRC)/tools/tools.mak
+ifneq ($(MAMEMESS),)
+include $(SRC)/mess/mess.mak
+endif
 
 # combine the various definitions to one
 CCOMFLAGS += $(INCPATH)
@@ -719,6 +802,8 @@ CDEFS = $(DEFS)
 #-------------------------------------------------
 # primary targets
 #-------------------------------------------------
+btools: $(FILE2STR_TARGET) $(MAKEDEP_TARGET)  $(MAKELIST_TARGET)  $(MAKEDEV_TARGET)  $(PNG2BDC_TARGET)  $(VERINFO_TARGET) 
+	
 
 emulator: maketree $(BUILD) $(EMULATOR)
 
@@ -729,6 +814,16 @@ buildtools: maketree $(BUILD)
 depend: maketree $(MAKEDEP_TARGET)
 	@echo Rebuilding depend.mak...
 	$(MAKEDEP) -I. $(INCPATH) -X$(SRC)/emu -X$(SRC)/osd/... -X$(OBJ)/... src/$(TARGET) > depend.mak
+
+INCPATH += \
+	-I$(SRC)/$(TARGET) \
+	-I$(OBJ)/$(TARGET)/layout \
+	-I$(SRC)/emu \
+	-I$(OBJ)/emu \
+	-I$(OBJ)/emu/layout \
+	-I$(SRC)/lib/util \
+	-I$(SRC)/osd \
+	-I$(SRC)/osd/$(OSD) \
 
 tools: maketree $(TOOLS)
 
@@ -755,10 +850,11 @@ checkautodetect:
 	@echo PTR64=$(PTR64) 
 	@echo BIGENDIAN=$(BIGENDIAN) 
 	@echo UNAME="$(UNAME)"
-
+	
 run:$(EMULATOR)
 	cp $(EMULATOR)32 /var/lib/tftpboot/tftpboot/xenon
 	xenon-strip /var/lib/tftpboot/tftpboot/xenon
+
 #-------------------------------------------------
 # directory targets
 #-------------------------------------------------
@@ -775,16 +871,16 @@ $(sort $(OBJDIRS)):
 ifndef EXECUTABLE_DEFINED
 
 # always recompile the version string
-$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(LIBOCORE) $(RESFILE)
+$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(SOFTFLOAT) $(FORMATS_LIB) $(LIBOCORE) $(RESFILE)
 
-$(EMULATOR): $(VERSIONOBJ) $(EMUINFOOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(LIBOCORE) $(RESFILE)
+$(EMULATOR): $(VERSIONOBJ) $(EMUINFOOBJ) $(DRIVLISTOBJ) $(DEVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(JPEG_LIB) $(FLAC_LIB) $(FORMATS_LIB) $(ZLIB) $(LIBOCORE) $(RESFILE) $(CLIRESFILE)
 	@echo Linking $@...
-#$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
+#	$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) -mconsole $^ $(LIBS) -o $@
 	$(LD) -g $(MACHDEP) -Wl,-Map,$(notdir $@).map $(LDFLAGS) $(LDFLAGSEMULATOR) $(LIBPATHS)  $(LIBS) -lxenon -lm  -lpng -lfreetype $^  -lxenon -lpng -lfreetype  -n -T $(LDSCRIPT) -o $@
 	@echo converting and stripping ... $@
 	xenon-objcopy -O elf32-powerpc --adjust-vma 0x80000000 $@ $@32
 	xenon-strip $@32
-	
+
 ifeq ($(TARGETOS),win32)
 ifdef SYMBOLS
 	$(OBJDUMP) --section=.text --line-numbers --syms --demangle $@ >$(FULLNAME).sym
@@ -798,10 +894,25 @@ endif
 #-------------------------------------------------
 # generic rules
 #-------------------------------------------------
-$(OBJ)/%.o: $(SRC)/%.cpp | $(OSPREBUILD)
+
+ifneq ($(MAMEMESS),)
+$(OBJ)/mess/%.o: $(SRC)/mess/%.c | $(OSPREBUILD)
 	@echo Compiling $<...
-	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
-	
+	$(CC) $(CDEFS) -DMESS $(CFLAGS) -c $< -o $@
+
+$(OBJ)/mess/devices/%.o: $(SRC)/mess/devices/%.c | $(OSPREBUILD)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) -DMESS $(CFLAGS) -c $< -o $@
+
+$(OBJ)/mess/drivers/%.o: $(SRC)/mess/drivers/%.c | $(OSPREBUILD)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) -DMESS $(CFLAGS) -c $< -o $@
+
+$(OBJ)/mess/osd/windows/%.o: $(SRC)/mess/osd/windows/%.c | $(OSPREBUILD)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) -DMESS $(CFLAGS) -c $< -o $@
+endif
+
 $(OBJ)/%.o: $(SRC)/%.c | $(OSPREBUILD)
 	@echo Compiling $<...
 	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
@@ -818,10 +929,9 @@ $(OBJ)/%.lh: $(SRC)/%.lay
 	@echo Converting $<...
 	@$(FILE2STR) $< $@ layout_$(basename $(notdir $<))
 
-$(OBJ)/%.fh: $(SRC)/%.png 
+$(OBJ)/%.fh: $(OBJ)/%.bdc 
 	@echo Converting $<...
-	@$(PNG2BDC) $< $(OBJ)/temp.bdc
-	@$(FILE2STR) $(OBJ)/temp.bdc $@ font_$(basename $(notdir $<)) UINT8
+	@$(FILE2STR) $< $@ font_$(basename $(notdir $<)) UINT8
 
 $(DRIVLISTOBJ): $(DRIVLISTSRC)
 	@echo Compiling $<...
@@ -831,13 +941,13 @@ $(DEVLISTOBJ): $(DEVLISTSRC)
 	@echo Compiling $<...
 	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
 
-$(DRIVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET).lst 
+$(DRIVLISTSRC): $(DRVLIST)
 	@echo Building driver list $<...
-	@$(MAKELIST) $< >$@
+	$(MAKELIST) $^ >$@
 
-$(DEVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET)_dev.lst 
+$(DEVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET)_dev.lst $(MAKEDEV)
 	@echo Building device list $<...
-	@$(MAKEDEV) $< >$@
+	$(MAKEDEV) $< >$@
 
 $(OBJ)/%.a:
 	@echo Archiving $@...
@@ -849,6 +959,36 @@ $(OBJ)/%.o: $(SRC)/%.m | $(OSPREBUILD)
 	@echo Objective-C compiling $<...
 	$(CC) $(CDEFS) $(COBJFLAGS) $(CCOMFLAGS) -c $< -o $@
 endif
+
+
+
+#-------------------------------------------------
+# embedded font
+#-------------------------------------------------
+
+$(EMUOBJ)/uismall11.bdc: $(PNG2BDC) \
+		$(SRC)/emu/font/uismall.png \
+		$(SRC)/emu/font/cp1250.png
+	@echo Generating $@...
+	@$^ $@
+
+$(EMUOBJ)/uismall14.bdc: $(PNG2BDC) \
+		$(SRC)/emu/font/cp1252.png \
+		$(SRC)/emu/font/cp932.png \
+		$(SRC)/emu/font/cp932hw.png \
+		$(SRC)/emu/font/cp936.png \
+		$(SRC)/emu/font/cp949.png \
+		$(SRC)/emu/font/cp950.png
+	@echo Generating $@...
+	@$^ $@
+
+$(EMUOBJ)/uicmd11.bdc: $(PNG2BDC) $(SRC)/emu/font/cmd11.png
+	@echo Generating $@...
+	@$^ $@
+
+$(EMUOBJ)/uicmd14.bdc: $(PNG2BDC) $(SRC)/emu/font/cmd14.png
+	@echo Generating $@...
+	@$^ $@
 
 
 

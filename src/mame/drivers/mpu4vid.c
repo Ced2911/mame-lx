@@ -447,12 +447,12 @@ static const gfx_layout mpu4_vid_char_16x16_layout =
 
 
 
-static SCREEN_UPDATE(mpu4_vid)
+static SCREEN_UPDATE_RGB32(mpu4_vid)
 {
-	mpu4_state *state = screen->machine().driver_data<mpu4_state>();
+	mpu4_state *state = screen.machine().driver_data<mpu4_state>();
 	int x, y/*, count = 0*/;
 
-	bitmap_fill(bitmap,cliprect,0);
+	bitmap.fill(0, cliprect);
 
 	/* this is in main ram.. i think it must transfer it out of here??? */
 	/* count = 0x0018b6/2; - crmaze count = 0x004950/2; - turnover */
@@ -482,7 +482,7 @@ static SCREEN_UPDATE(mpu4_vid)
 			attr = tiledat >>12;
 
 			if (attr)
-				drawgfx_opaque(bitmap,cliprect,screen->machine().gfx[gfxregion],tiledat,0,0,0,(x*8),(y*8));
+				drawgfx_opaque(bitmap,cliprect,screen.machine().gfx[gfxregion],tiledat,0,0,0,(x*8),(y*8));
 
 		}
 		if (dbl_size&2)
@@ -2148,9 +2148,9 @@ static PALETTE_INIT( dealem )
 }
 
 
-static SCREEN_UPDATE(dealem)
+static SCREEN_UPDATE_IND16(dealem)
 {
-	mpu4_state *state = screen->machine().driver_data<mpu4_state>();
+	mpu4_state *state = screen.machine().driver_data<mpu4_state>();
 	int x,y;
 	int count = 0;
 
@@ -2160,7 +2160,7 @@ static SCREEN_UPDATE(dealem)
 		{
 			int tile = state->m_dealem_videoram[count + 0x1000] | (state->m_dealem_videoram[count] << 8);
 			count++;
-			drawgfx_opaque(bitmap,cliprect,screen->machine().gfx[0],tile,0,0,0,x * 8,y * 8);
+			drawgfx_opaque(bitmap,cliprect,screen.machine().gfx[0],tile,0,0,0,x * 8,y * 8);
 		}
 	}
 
@@ -2340,12 +2340,11 @@ static MACHINE_CONFIG_START( mpu4_vid, mpu4_state )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE((63*8)+(17*8), (37*8)+17) // note this directly affects the scanline counters used below, and thus the timing of everything
 	MCFG_SCREEN_VISIBLE_AREA(0, (63*8)+(0)-1, 0, (37*8)+0-1)
 
 	MCFG_SCREEN_REFRESH_RATE(50)
-	MCFG_SCREEN_UPDATE(mpu4_vid)
+	MCFG_SCREEN_UPDATE_STATIC(mpu4_vid)
 
 	MCFG_CPU_ADD("video", M68000, VIDEO_MASTER_CLOCK )
 	MCFG_CPU_PROGRAM_MAP(mpu4_68k_map)
@@ -2421,11 +2420,10 @@ static MACHINE_CONFIG_START( dealem, mpu4_state )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE((54+1)*8, (32+1)*8)					/* Taken from 6845 init, registers 00 & 04. Normally programmed with (value-1) */
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 31*8-1)		/* Taken from 6845 init, registers 01 & 06 */
 	MCFG_SCREEN_REFRESH_RATE(56)							/* Measured accurately from the flip-flop, but 6845 handles this */
-	MCFG_SCREEN_UPDATE(dealem)
+	MCFG_SCREEN_UPDATE_STATIC(dealem)
 
 	MCFG_GFXDECODE(dealem)
 

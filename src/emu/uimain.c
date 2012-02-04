@@ -24,6 +24,13 @@
 #include <ctype.h>
 #include "imagedev/cassette.h"
 #include "imagedev/bitbngr.h"
+#include "rendfont.h" // For convert_command_glyph
+#ifdef CMD_LIST
+#include "cmddata.h"
+#endif /* CMD_LIST */
+#ifdef USE_SCALE_EFFECTS
+#include "osdscale.h"
+#endif /* USE_SCALE_EFFECTS */
 
 
 
@@ -129,82 +136,100 @@ void ui_menu_main::populate()
 		}
 
 	/* add input menu items */
-	item_append("Input (general)", NULL, 0, (void *)INPUT_GROUPS);
+	item_append(_("Input (general)"), NULL, 0, (void *)INPUT_GROUPS);
 
-	menu_text.printf("Input (this %s)",emulator_info::get_capstartgamenoun());
+	menu_text.printf(_("Input (this %s)"),emulator_info::get_capstartgamenoun());
 	item_append(menu_text.cstr(), NULL, 0, (void *)INPUT_SPECIFIC);
+#ifdef USE_AUTOFIRE
+	item_append(_("Autofire Setting"), NULL, 0, (void *)AUTOFIRE);
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+	item_append(_("Custom Buttons"), NULL, 0, (void *)CUSTOM_BUTTON);
+#endif /* USE_CUSTOM_BUTTON */
 
 	/* add optional input-related menus */
 	if (has_dips)
-		item_append("Dip Switches", NULL, 0, (void *)SETTINGS_DIP_SWITCHES);
+		item_append(_("Dip Switches"), NULL, 0, (void *)SETTINGS_DIP_SWITCHES);
 	if (has_configs)
-		item_append("Driver Configuration", NULL, 0, (void *)SETTINGS_DRIVER_CONFIG);
+		item_append(_("Driver Configuration"), NULL, 0, (void *)SETTINGS_DRIVER_CONFIG);
 	if (has_analog)
-		item_append("Analog Controls", NULL, 0, (void *)ANALOG);
+		item_append(_("Analog Controls"), NULL, 0, (void *)ANALOG);
 
 	/* add bookkeeping menu */
-	item_append("Bookkeeping Info", NULL, 0, (void *)BOOKKEEPING);
+	item_append(_("Bookkeeping Info"), NULL, 0, (void *)BOOKKEEPING);
 
 	/* add game info menu */
-	menu_text.printf("%s Information",emulator_info::get_capstartgamenoun());
+	menu_text.printf(_("%s Information"),emulator_info::get_capstartgamenoun());
 	item_append(menu_text.cstr(), NULL, 0, (void *)GAME_INFO);
 
-	device_image_interface *image = NULL;
-	if (machine().devicelist().first(image))
+	image_interface_iterator imgiter(machine().root_device());
+	if (imgiter.first() != NULL)
 	{
 		/* add image info menu */
-		item_append("Image Information", NULL, 0, (void *)IMAGE_MENU_IMAGE_INFO);
+		item_append(_("Image Information"), NULL, 0, (void *)IMAGE_MENU_IMAGE_INFO);
 
 		/* add file manager menu */
-		item_append("File Manager", NULL, 0, (void *)IMAGE_MENU_FILE_MANAGER);
+		item_append(_("File Manager"), NULL, 0, (void *)IMAGE_MENU_FILE_MANAGER);
 
 		/* add tape control menu */
-		if (machine().devicelist().first(CASSETTE))
-			item_append("Tape Control", NULL, 0, (void *)MESS_MENU_TAPE_CONTROL);
+		cassette_device_iterator cassiter(machine().root_device());
+		if (cassiter.first() != NULL)
+			item_append(_("Tape Control"), NULL, 0, (void *)MESS_MENU_TAPE_CONTROL);
 
 		/* add bitbanger control menu */
-		if (machine().devicelist().first(BITBANGER))
-			item_append("Bitbanger Control", NULL, 0, (void *)MESS_MENU_BITBANGER_CONTROL);
+		bitbanger_device_iterator bititer(machine().root_device());
+		if (bititer.first() != NULL)
+			item_append(_("Bitbanger Control"), NULL, 0, (void *)MESS_MENU_BITBANGER_CONTROL);
 	}
 
-	device_slot_interface *slot = NULL;
-	if (machine().devicelist().first(slot))
+	slot_interface_iterator slotiter(machine().root_device());
+	if (slotiter.first() != NULL)
 	{
 		/* add image info menu */
-		item_append("Slot Devices", NULL, 0, (void *)SLOT_DEVICES);
+		item_append(_("Slot Devices"), NULL, 0, (void *)SLOT_DEVICES);
 	}
 
-	device_network_interface *network = NULL;
-	if (machine().devicelist().first(network))
+	network_interface_iterator netiter(machine().root_device());
+	if (netiter.first() != NULL)
 	{
 		/* add image info menu */
-		item_append("Network Devices", NULL, 0, (void*)NETWORK_DEVICES);
+		item_append(_("Network Devices"), NULL, 0, (void*)NETWORK_DEVICES);
 	}
 
 	/* add keyboard mode menu */
 	if (input_machine_has_keyboard(machine()) && inputx_can_post(machine()))
-		item_append("Keyboard Mode", NULL, 0, (void *)KEYBOARD_MODE);
+		item_append(_("Keyboard Mode"), NULL, 0, (void *)KEYBOARD_MODE);
 
 	/* add sliders menu */
-	item_append("Slider Controls", NULL, 0, (void *)SLIDERS);
+	item_append(_("Slider Controls"), NULL, 0, (void *)SLIDERS);
 
 	/* add video options menu */
-	item_append("Video Options", NULL, 0, (machine().render().target_by_index(1) != NULL) ? (void *)VIDEO_TARGETS : (void *)VIDEO_OPTIONS);
+	item_append(_("Video Options"), NULL, 0, (machine().render().target_by_index(1) != NULL) ? (void *)VIDEO_TARGETS : (void *)VIDEO_OPTIONS);
+
+#ifdef USE_SCALE_EFFECTS
+	/* add image enhancement menu */
+	item_append(_("Image Enhancement"), NULL, 0, (void *)SCALE_EFFECT);
+#endif /* USE_SCALE_EFFECTS */
 
 	/* add crosshair options menu */
 	if (crosshair_get_usage(machine()))
-		item_append("Crosshair Options", NULL, 0, (void *)CROSSHAIR);
+		item_append(_("Crosshair Options"), NULL, 0, (void *)CROSSHAIR);
 
 	/* add cheat menu */
 	if (machine().options().cheat() && machine().cheat().first() != NULL)
-		item_append("Cheat", NULL, 0, (void *)CHEAT);
+		item_append(_("Cheat"), NULL, 0, (void *)CHEAT);
 
 	/* add memory card menu */
 	if (machine().config().m_memcard_handler != NULL)
-		item_append("Memory Card", NULL, 0, (void *)MEMORY_CARD);
+		item_append(_("Memory Card"), NULL, 0, (void *)MEMORY_CARD);
+
+#ifdef CMD_LIST
+	/* add command list menu */
+	item_append(_("Show Command List"), NULL, 0, (void *)COMMAND);
+#endif /* CMD_LIST */
 
 	/* add reset and exit menus */
-	menu_text.printf("Select New %s",emulator_info::get_capstartgamenoun());
+	menu_text.printf(_("Select New %s"),emulator_info::get_capstartgamenoun());
 	item_append(menu_text.cstr(), NULL, 0, (void *)SELECT_GAME);
 }
 
@@ -230,6 +255,18 @@ void ui_menu_main::handle()
 			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_input_specific(machine(), container)));
 			break;
 
+#ifdef USE_AUTOFIRE
+		case AUTOFIRE:
+			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_autofire(machine(), container)));
+			break;
+
+#endif /* USE_AUTOFIRE */
+#ifdef USE_CUSTOM_BUTTON
+		case CUSTOM_BUTTON:
+			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_custom_button(machine(), container)));
+			break;
+
+#endif /* USE_CUSTOM_BUTTON */
 		case SETTINGS_DIP_SWITCHES:
 			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_settings_dip_switches(machine(), container)));
 			break;
@@ -290,6 +327,12 @@ void ui_menu_main::handle()
 			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_video_options(machine(), container, machine().render().first_target())));
 			break;
 
+#ifdef USE_SCALE_EFFECTS
+		case SCALE_EFFECT:
+			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_scale_effect(machine(), container)));
+			break;
+#endif /* USE_SCALE_EFFECTS */
+
 		case CROSSHAIR:
 			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_crosshair(machine(), container)));
 			break;
@@ -301,6 +344,12 @@ void ui_menu_main::handle()
 		case MEMORY_CARD:
 			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_memory_card(machine(), container)));
 			break;
+
+#ifdef CMD_LIST
+		case COMMAND:
+			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_command(machine(), container)));
+			break;
+#endif /* CMD_LIST */
 
 		case SELECT_GAME:
 			ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_select_game(machine(), container, 0)));
@@ -353,7 +402,7 @@ void ui_menu_keyboard_mode::handle()
 -------------------------------------------------*/
 int ui_menu_slot_devices::slot_get_current_index(device_slot_interface *slot)
 {
-	const char *current = machine().options().value(slot->device().tag());
+	const char *current = machine().options().value(slot->device().tag()+1);
 	const slot_interface* intf = slot->get_slot_interfaces();
 	int val = -1;
 	for (int i = 0; intf[i].name != NULL; i++) {
@@ -400,7 +449,7 @@ const char *ui_menu_slot_devices::slot_get_prev(device_slot_interface *slot)
 -------------------------------------------------*/
 const char *ui_menu_slot_devices::get_slot_device(device_slot_interface *slot)
 {
-	return machine().options().value(slot->device().tag());
+	return machine().options().value(slot->device().tag()+1);
 }
 
 
@@ -412,7 +461,7 @@ const char *ui_menu_slot_devices::get_slot_device(device_slot_interface *slot)
 void ui_menu_slot_devices::set_slot_device(device_slot_interface *slot, const char *val)
 {
 	astring error;
-	machine().options().set_value(slot->device().tag(), val, OPTION_PRIORITY_CMDLINE, error);
+	machine().options().set_value(slot->device().tag()+1, val, OPTION_PRIORITY_CMDLINE, error);
 	assert(!error);
 }
 
@@ -427,14 +476,13 @@ ui_menu_slot_devices::ui_menu_slot_devices(running_machine &machine, render_cont
 
 void ui_menu_slot_devices::populate()
 {
-	device_slot_interface *slot = NULL;
-
 	/* cycle through all devices for this system */
-	for (bool gotone = machine().devicelist().first(slot); gotone; gotone = slot->next(slot))
+	slot_interface_iterator iter(machine().root_device());
+	for (device_slot_interface *slot = iter.first(); slot != NULL; slot = iter.next())
 	{
 		/* record the menu item */
 		const char *title = get_slot_device(slot);
-		item_append(slot->device().tag(), strcmp(title,"")==0 ? "------" : title, MENU_FLAG_LEFT_ARROW | MENU_FLAG_RIGHT_ARROW, (void *)slot);
+		item_append(slot->device().tag()+1, strcmp(title,"")==0 ? "------" : title, MENU_FLAG_LEFT_ARROW | MENU_FLAG_RIGHT_ARROW, (void *)slot);
 	}
 	item_append(MENU_SEPARATOR_ITEM, NULL, 0, NULL);
 	item_append("Reset",  NULL, 0, NULL);
@@ -481,10 +529,9 @@ ui_menu_network_devices::~ui_menu_network_devices()
 
 void ui_menu_network_devices::populate()
 {
-	device_network_interface *network = NULL;
-
 	/* cycle through all devices for this system */
-	for (bool gotone = machine().devicelist().first(network); gotone; gotone = network->next(network))
+	network_interface_iterator iter(machine().root_device());
+	for (device_network_interface *network = iter.first(); network != NULL; network = iter.next())
 	{
 		int curr = network->get_interface();
 		const char *title = NULL;
@@ -537,14 +584,14 @@ void ui_menu_input_groups::populate()
 	int player;
 
 	/* build up the menu */
-	item_append("User Interface", NULL, 0, (void *)(IPG_UI + 1));
+	item_append(_("User Interface"), NULL, 0, (void *)(IPG_UI + 1));
 	for (player = 0; player < MAX_PLAYERS; player++)
 	{
 		char buffer[40];
-		sprintf(buffer, "Player %d Controls", player + 1);
+		sprintf(buffer, _("Player %d Controls"), player + 1);
 		item_append(buffer, NULL, 0, (void *)(FPTR)(IPG_PLAYER1 + player + 1));
 	}
-	item_append("Other Controls", NULL, 0, (void *)(FPTR)(IPG_OTHER + 1));
+	item_append(_("Other Controls"), NULL, 0, (void *)(FPTR)(IPG_OTHER + 1));
 }
 
 ui_menu_input_groups::~ui_menu_input_groups()
@@ -880,9 +927,9 @@ void ui_menu_input::populate_and_sort(input_item_data *itemlist)
 
 	/* create a mini lookup table for name format based on type */
 	nameformat[INPUT_TYPE_DIGITAL] = "%s";
-	nameformat[INPUT_TYPE_ANALOG] = "%s Analog";
-	nameformat[INPUT_TYPE_ANALOG_INC] = "%s Analog Inc";
-	nameformat[INPUT_TYPE_ANALOG_DEC] = "%s Analog Dec";
+	nameformat[INPUT_TYPE_ANALOG] = _("%s Analog");
+	nameformat[INPUT_TYPE_ANALOG_INC] = _("%s Analog Inc");
+	nameformat[INPUT_TYPE_ANALOG_DEC] = _("%s Analog Dec");
 
 	/* first count the number of items */
 	for (item = itemlist; item != NULL; item = item->next)
@@ -904,7 +951,7 @@ void ui_menu_input::populate_and_sort(input_item_data *itemlist)
 		/* generate the name of the item itself, based off the base name and the type */
 		item = itemarray[curitem];
 		assert(nameformat[item->type] != NULL);
-		text.printf(nameformat[item->type], item->name);
+		text.printf(nameformat[item->type], _(item->name));
 
 		/* if we're polling this item, use some spaces with left/right arrows */
 		if (pollingref == item->ref)
@@ -921,7 +968,7 @@ void ui_menu_input::populate_and_sort(input_item_data *itemlist)
 		}
 
 		/* add the item */
-		item_append(text, subtext, flags, item);
+		item_append(_(text), _(subtext), flags, item);
 	}
 }
 
@@ -1034,7 +1081,7 @@ void ui_menu_settings::populate()
 					flags |= MENU_FLAG_RIGHT_ARROW;
 
 				/* add the menu item */
-				item_append(input_field_name(field), input_field_setting_name(field), flags, (void *)field);
+				item_append(_(input_field_name(field)), _(input_field_setting_name(field)), flags, (void *)field);
 
 				/* for DIP switches, build up the model */
 				if (type == IPT_DIPSWITCH && field->diploclist().count() != 0)
@@ -1325,7 +1372,7 @@ void ui_menu_analog::populate()
 						{
 							default:
 							case ANALOG_ITEM_KEYSPEED:
-								text.printf("%s Digital Speed", input_field_name(field));
+								text.printf(_("%s Digital Speed"), _(input_field_name(field)));
 								subtext.printf("%d", settings.delta);
 								data->min = 0;
 								data->max = 255;
@@ -1334,7 +1381,7 @@ void ui_menu_analog::populate()
 								break;
 
 							case ANALOG_ITEM_CENTERSPEED:
-								text.printf("%s Autocenter Speed", input_field_name(field));
+								text.printf(_("%s Autocenter Speed"), _(input_field_name(field)));
 								subtext.printf("%d", settings.centerdelta);
 								data->min = 0;
 								data->max = 255;
@@ -1343,8 +1390,8 @@ void ui_menu_analog::populate()
 								break;
 
 							case ANALOG_ITEM_REVERSE:
-								text.printf("%s Reverse", input_field_name(field));
-								subtext.cpy(settings.reverse ? "On" : "Off");
+								text.printf(_("%s Reverse"), _(input_field_name(field)));
+								subtext.cpy(settings.reverse ? _("On") : _("Off"));
 								data->min = 0;
 								data->max = 1;
 								data->cur = settings.reverse;
@@ -1352,7 +1399,7 @@ void ui_menu_analog::populate()
 								break;
 
 							case ANALOG_ITEM_SENSITIVITY:
-								text.printf("%s Sensitivity", input_field_name(field));
+								text.printf(_("%s Sensitivity"), _(input_field_name(field)));
 								subtext.printf("%d", settings.sensitivity);
 								data->min = 1;
 								data->max = 255;
@@ -1420,13 +1467,13 @@ void ui_menu_bookkeeping::populate()
 
 	/* show total time first */
 	if (prevtime.seconds >= 60 * 60)
-		tempstring.catprintf("Uptime: %d:%02d:%02d\n\n", prevtime.seconds / (60*60), (prevtime.seconds / 60) % 60, prevtime.seconds % 60);
+		tempstring.catprintf(_("Uptime: %d:%02d:%02d\n\n"), prevtime.seconds / (60*60), (prevtime.seconds / 60) % 60, prevtime.seconds % 60);
 	else
-		tempstring.catprintf("Uptime: %d:%02d\n\n", (prevtime.seconds / 60) % 60, prevtime.seconds % 60);
+		tempstring.catprintf(_("Uptime: %d:%02d\n\n"), (prevtime.seconds / 60) % 60, prevtime.seconds % 60);
 
 	/* show tickets at the top */
 	if (tickets > 0)
-		tempstring.catprintf("Tickets dispensed: %d\n\n", tickets);
+		tempstring.catprintf(_("Tickets dispensed: %d\n\n"), tickets);
 
 	/* loop over coin counters */
 	for (ctrnum = 0; ctrnum < COIN_COUNTERS; ctrnum++)
@@ -1434,17 +1481,17 @@ void ui_menu_bookkeeping::populate()
 		int count = coin_counter_get_count(machine(), ctrnum);
 
 		/* display the coin counter number */
-		tempstring.catprintf("Coin %c: ", ctrnum + 'A');
+		tempstring.catprintf(_("Coin %c: "), ctrnum + 'A');
 
 		/* display how many coins */
 		if (count == 0)
-			tempstring.cat("NA");
+			tempstring.cat(_("NA"));
 		else
 			tempstring.catprintf("%d", count);
 
 		/* display whether or not we are locked out */
 		if (coin_lockout_get_state(machine(), ctrnum))
-			tempstring.cat(" (locked)");
+			tempstring.cat(_(" (locked)"));
 		tempstring.cat("\n");
 	}
 
@@ -1477,6 +1524,91 @@ void ui_menu_game_info::handle()
 ui_menu_game_info::~ui_menu_game_info()
 {
 }
+
+#ifdef CMD_LIST
+/*-------------------------------------------------
+    menu_command - handle the command.dat
+    menu
+-------------------------------------------------*/
+
+ui_menu_command::ui_menu_command(running_machine &machine, render_container *container) : ui_menu(machine, container)
+{
+}
+
+ui_menu_command::~ui_menu_command()
+{
+}
+
+void ui_menu_command::populate()
+{
+	const char *item[256];
+	int menu_items;
+	int total = command_sub_menu(&machine().system(), item);
+		
+	if (total)
+	{
+		for (menu_items = 0; menu_items < total; menu_items++)
+			item_append(item[menu_items], NULL, 0, (void *)menu_items);
+	}
+
+
+}
+
+void ui_menu_command::handle()
+{
+	/* process the menu */
+	const ui_menu_event *menu_event = process(0);
+	if (menu_event != NULL && menu_event->iptkey == IPT_UI_SELECT)
+		ui_menu::stack_push(auto_alloc_clear(machine(), ui_menu_command_content(machine(), container, int((long long)(menu_event->itemref)))));
+}
+
+ui_menu_command_content::ui_menu_command_content(running_machine &machine, render_container *container, int _param) : ui_menu_command(machine, container)
+{
+	param = _param;
+}
+
+ui_menu_command_content::~ui_menu_command_content()
+{
+}
+
+void ui_menu_command_content::handle()
+{
+	/* process the menu */
+	process(UI_MENU_PROCESS_CUSTOM_ONLY);
+}
+
+void ui_menu_command_content::populate()
+{
+	char commandbuf[64 * 1024]; // 64KB of command.dat buffer, enough for everything
+
+	int game_paused = machine().paused();
+
+	/* Disable sound to prevent strange sound*/
+	if (!game_paused)
+		machine().pause();
+
+	if (load_driver_command_ex(&machine().system(), commandbuf, ARRAY_LENGTH(commandbuf), (FPTR)param) == 0)
+	{
+		const game_driver *last_drv;
+		last_drv = &machine().system();
+		convert_command_glyph(commandbuf, ARRAY_LENGTH(commandbuf));
+
+//		item_append(commandbuf, NULL, MENU_FLAG_MULTILINE, NULL);
+		ui_draw_message_window_fixed_width(container, commandbuf);
+	}
+
+	if (!game_paused)
+		machine().resume();
+
+	if (ui_window_scroll_keys(machine()) > 0)
+		ui_menu::stack_pop(machine());
+}
+
+void ui_menu_command_content::custom_render(void *selectedref, float top, float bottom, float x, float y, float x2, float y2)
+{
+}
+
+#endif /* CMD_LIST */
 
 /*-------------------------------------------------
     menu_cheat - handle the cheat menu
@@ -1537,7 +1669,7 @@ void ui_menu_cheat::handle()
 				case IPT_UI_DOWN:
 					string = curcheat->comment();
 					if (string != NULL && string[0] != 0)
-						popmessage("Cheat Comment:\n%s", string);
+						popmessage(_("Cheat Comment:\n%s"), string);
 					break;
 			}
 		}
@@ -1550,7 +1682,7 @@ void ui_menu_cheat::handle()
 
 			/* display the reloaded cheats */
 			reset(UI_MENU_RESET_REMEMBER_REF);
-			popmessage("All cheats reloaded");
+			popmessage(_("All cheats reloaded"));
 		}
 
 		/* if things changed, update */
@@ -1584,10 +1716,10 @@ void ui_menu_cheat::populate()
 	item_append(MENU_SEPARATOR_ITEM, NULL, 0, NULL);
 
 	/* add a reset all option */
-	item_append("Reset All", NULL, 0, (void *)1);
+	item_append(_("Reset All"), NULL, 0, (void *)1);
 
 	/* add a reload all cheats option */
-	item_append("Reload All", NULL, 0, (void *)2);
+	item_append(_("Reload All"), NULL, 0, (void *)2);
 }
 
 ui_menu_cheat::~ui_menu_cheat()
@@ -1618,25 +1750,25 @@ void ui_menu_memory_card::handle()
 				case MEMCARD_ITEM_LOAD:
 					if (memcard_insert(machine(), cardnum) == 0)
 					{
-						popmessage("Memory card loaded");
+						popmessage(_("Memory card loaded"));
 						ui_menu::stack_reset(machine());
 					}
 					else
-						popmessage("Error loading memory card");
+						popmessage(_("Error loading memory card"));
 					break;
 
 				/* handle card ejecting */
 				case MEMCARD_ITEM_EJECT:
 					memcard_eject(machine());
-					popmessage("Memory card ejected");
+					popmessage(_("Memory card ejected"));
 					break;
 
 				/* handle card creating */
 				case MEMCARD_ITEM_CREATE:
 					if (memcard_create(machine(), cardnum, false) == 0)
-						popmessage("Memory card created");
+						popmessage(_("Memory card created"));
 					else
-						popmessage("Error creating memory card\n(Card may already exist)");
+						popmessage(_("Error creating memory card\n(Card may already exist)"));
 					break;
 			}
 		}
@@ -1683,13 +1815,13 @@ void ui_menu_memory_card::populate()
 		flags |= MENU_FLAG_LEFT_ARROW;
 	if (cardnum < 1000)
 		flags |= MENU_FLAG_RIGHT_ARROW;
-	item_append("Card Number:", tempstring, flags, (void *)MEMCARD_ITEM_SELECT);
+	item_append(_("Card Number:"), tempstring, flags, (void *)MEMCARD_ITEM_SELECT);
 
 	/* add the remaining items */
-	item_append("Load Selected Card", NULL, 0, (void *)MEMCARD_ITEM_LOAD);
+	item_append(_("Load Selected Card"), NULL, 0, (void *)MEMCARD_ITEM_LOAD);
 	if (memcard_present(machine()) != -1)
-		item_append("Eject Current Card", NULL, 0, (void *)MEMCARD_ITEM_EJECT);
-	item_append("Create New Card", NULL, 0, (void *)MEMCARD_ITEM_CREATE);
+		item_append(_("Eject Current Card"), NULL, 0, (void *)MEMCARD_ITEM_EJECT);
+	item_append(_("Create New Card"), NULL, 0, (void *)MEMCARD_ITEM_CREATE);
 }
 
 ui_menu_memory_card::~ui_menu_memory_card()
@@ -1951,7 +2083,7 @@ void ui_menu_video_targets::populate()
 			break;
 
 		/* add a menu item */
-		sprintf(buffer, "Screen #%d", targetnum);
+		sprintf(buffer, _("Screen #%d"), targetnum);
 		item_append(buffer, NULL, 0, target);
 	}
 }
@@ -2070,7 +2202,7 @@ ui_menu_video_options::ui_menu_video_options(running_machine &machine, render_co
 
 void ui_menu_video_options::populate()
 {
-	const char *subtext = "";
+ 	const char *subtext = "";
 	astring tempstring;
 	int viewnum;
 	int enabled;
@@ -2078,7 +2210,8 @@ void ui_menu_video_options::populate()
 	/* add items for each view */
 	for (viewnum = 0; ; viewnum++)
 	{
-		const char *name = target->view_name(viewnum);
+		// mamep: return the localized name of the indexed view
+		const char *name = target->translated_view_name(viewnum);
 		if (name == NULL)
 			break;
 
@@ -2093,36 +2226,36 @@ void ui_menu_video_options::populate()
 	/* add a rotate item */
 	switch (target->orientation())
 	{
-		case ROT0:		subtext = "None";					break;
-		case ROT90:		subtext = "CW 90" UTF8_DEGREES; 	break;
-		case ROT180:	subtext = "180" UTF8_DEGREES;		break;
-		case ROT270:	subtext = "CCW 90" UTF8_DEGREES;	break;
+		case ROT0:	subtext = _("None");			break;
+		case ROT90:	subtext = _("CW 90" UTF8_DEGREES); 	break;
+		case ROT180:	subtext = _("180" UTF8_DEGREES);	break;
+		case ROT270:	subtext = _("CCW 90" UTF8_DEGREES);	break;
 	}
-	item_append("Rotate", subtext, MENU_FLAG_LEFT_ARROW | MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_ROTATE);
+	item_append(_("Rotate"), subtext, MENU_FLAG_LEFT_ARROW | MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_ROTATE);
 
 	/* backdrop item */
 	enabled = target->backdrops_enabled();
-	item_append("Backdrops", enabled ? "Enabled" : "Disabled", enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_BACKDROPS);
+	item_append(_("Backdrops"), enabled ? _("Enabled") : _("Disabled"), enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_BACKDROPS);
 
 	/* overlay item */
 	enabled = target->overlays_enabled();
-	item_append("Overlays", enabled ? "Enabled" : "Disabled", enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_OVERLAYS);
+	item_append(_("Overlays"), enabled ? _("Enabled") : _("Disabled"), enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_OVERLAYS);
 
 	/* bezel item */
 	enabled = target->bezels_enabled();
-	item_append("Bezels", enabled ? "Enabled" : "Disabled", enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_BEZELS);
+	item_append(_("Bezels"), enabled ? _("Enabled") : _("Disabled"), enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_BEZELS);
 
 	/* cpanel item */
 	enabled = target->cpanels_enabled();
-	item_append("CPanels", enabled ? "Enabled" : "Disabled", enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_CPANELS);
+	item_append(_("CPanels"), enabled ? _("Enabled") : _("Disabled"), enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_CPANELS);
 
 	/* marquee item */
 	enabled = target->marquees_enabled();
-	item_append("Marquees", enabled ? "Enabled" : "Disabled", enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_MARQUEES);
+	item_append(_("Marquees"), enabled ? _("Enabled") : _("Disabled"), enabled ? MENU_FLAG_LEFT_ARROW : MENU_FLAG_RIGHT_ARROW, (void *)VIDEO_ITEM_MARQUEES);
 
 	/* cropping */
 	enabled = target->zoom_to_screen();
-	item_append("View", enabled ? "Cropped" : "Full", enabled ? MENU_FLAG_RIGHT_ARROW : MENU_FLAG_LEFT_ARROW, (void *)VIDEO_ITEM_ZOOM);
+	item_append(_("View"), enabled ? _("Cropped") : _("Full"), enabled ? MENU_FLAG_RIGHT_ARROW : MENU_FLAG_LEFT_ARROW, (void *)VIDEO_ITEM_ZOOM);
 }
 
 ui_menu_video_options::~ui_menu_video_options()
@@ -2277,8 +2410,8 @@ void ui_menu_crosshair::populate()
 				flags |= MENU_FLAG_RIGHT_ARROW;
 
 			/* add CROSSHAIR_ITEM_VIS menu */
-			sprintf(temp_text, "P%d Visibility", player + 1);
-			item_append(temp_text, vis_text[settings.mode], flags, data);
+			sprintf(temp_text, _("P%d Visibility"), player + 1);
+			item_append(temp_text, _(vis_text[settings.mode]), flags, data);
 
 			/* CROSSHAIR_ITEM_PIC - allocate a data item and fill it */
 			data = (crosshair_item_data *)m_pool_alloc(sizeof(*data));
@@ -2354,8 +2487,8 @@ void ui_menu_crosshair::populate()
 				flags |= MENU_FLAG_LEFT_ARROW;
 
 			/* add CROSSHAIR_ITEM_PIC menu */
-			sprintf(temp_text, "P%d Crosshair", player + 1);
-			item_append(temp_text, using_default ? "DEFAULT" : settings.name, flags, data);
+			sprintf(temp_text, _("P%d Crosshair"), player + 1);
+			item_append(temp_text, using_default ? _("DEFAULT") : settings.name, flags, data);
 		}
 	}
 	if (use_auto)
@@ -2379,7 +2512,7 @@ void ui_menu_crosshair::populate()
 
 		/* add CROSSHAIR_ITEM_AUTO_TIME menu */
 		sprintf(temp_text, "%d", settings.auto_time);
-		item_append("Visible Delay", temp_text, flags, data);
+		item_append(_("Visible Delay"), temp_text, flags, data);
 	}
 //  else
 //      /* leave a blank filler line when not in auto time so size does not rescale */
@@ -2389,6 +2522,332 @@ void ui_menu_crosshair::populate()
 ui_menu_crosshair::~ui_menu_crosshair()
 {
 }
+
+#ifdef USE_SCALE_EFFECTS
+#define SCALE_ITEM_NONE 0
+/*-------------------------------------------------
+    menu_scale_effect - handle the scale effect
+    settings menu
+-------------------------------------------------*/
+
+ui_menu_scale_effect::ui_menu_scale_effect(running_machine &machine, render_container *container) : ui_menu(machine, container)
+{
+}
+
+ui_menu_scale_effect::~ui_menu_scale_effect()
+{
+}
+
+void ui_menu_scale_effect::handle()
+{
+	const ui_menu_event *menu_event = process(0);
+	bool changed = false;
+
+	/* process the menu */
+	if (menu_event != NULL && menu_event->iptkey == IPT_UI_SELECT && 
+		(FPTR)menu_event->itemref >= SCALE_ITEM_NONE)
+	{
+		screen_device *screen = machine().first_screen();
+		screen->video_exit_scale_effect();
+		scale_decode(scale_name((FPTR)menu_event->itemref - SCALE_ITEM_NONE));
+		screen->video_init_scale_effect();
+		changed = true;
+		mame_printf_verbose(_("scale effect: %s\n"), scale_name((FPTR)menu_event->itemref - SCALE_ITEM_NONE));
+	}
+
+	/* if something changed, rebuild the menu */
+	if (changed)
+		reset(UI_MENU_RESET_REMEMBER_REF);
+}
+
+
+/*-------------------------------------------------
+    menu_scale_effect_populate - populate the
+    scale effect menu
+-------------------------------------------------*/
+
+void ui_menu_scale_effect::populate()
+{
+	int scaler;
+	item_append(_("None"), NULL, 0, (void *)SCALE_ITEM_NONE);
+
+	/* add items for each scaler */
+	for (scaler = 1; ; scaler++)
+	{
+		const char *desc = scale_desc(scaler);
+		if (desc == NULL)
+			break;
+
+		/* create a string for the item */
+		item_append(desc, NULL, 0, (void *)(SCALE_ITEM_NONE + scaler));
+	}
+	selected = scale_effect.effect;
+}
+#undef SCALE_ITEM_NONE
+#endif /* USE_SCALE_EFFECTS */
+
+
+#ifdef USE_AUTOFIRE
+#define AUTOFIRE_ITEM_P1_DELAY 1
+/*-------------------------------------------------
+    menu_autofire - handle the autofire settings
+    menu
+-------------------------------------------------*/
+
+ui_menu_autofire::ui_menu_autofire(running_machine &machine, render_container *container) : ui_menu(machine, container)
+{
+}
+
+ui_menu_autofire::~ui_menu_autofire()
+{
+}
+
+void ui_menu_autofire::handle()
+{
+	bool changed = false;
+
+	/* process the menu */
+	const ui_menu_event *menu_event = process(0);
+	
+	/* handle events */
+	if (menu_event != NULL && menu_event->itemref != NULL)
+	{
+		if (menu_event->iptkey == IPT_UI_LEFT || menu_event->iptkey == IPT_UI_RIGHT)
+		{
+			int player = (int)(FPTR)menu_event->itemref - AUTOFIRE_ITEM_P1_DELAY;
+			//autofire delay
+			if (player >= 0 && player < MAX_PLAYERS)
+			{
+				int autofire_delay = get_autofiredelay(player);
+
+				if (menu_event->iptkey == IPT_UI_LEFT)
+				{
+					autofire_delay--;
+					if (autofire_delay < 1)
+						autofire_delay = 1;
+				}
+				else
+				{
+					autofire_delay++;
+					if (autofire_delay > 99)
+						autofire_delay = 99;
+				}
+
+				set_autofiredelay(player, autofire_delay);
+
+				changed = true;
+			}
+			//anything else is a toggle item
+			else
+			{
+				const input_field_config *field = (const input_field_config *)menu_event->itemref;
+				input_field_user_settings settings;
+				int selected_value;
+				input_field_get_user_settings(field, &settings);
+				selected_value = settings.autofire;
+
+				if (menu_event->iptkey == IPT_UI_LEFT)
+				{
+					if (--selected_value < 0)
+					selected_value = 2;
+				}
+				else
+				{
+					if (++selected_value > 2)
+					selected_value = 0;	
+				}
+
+				settings.autofire = selected_value;
+				input_field_set_user_settings(field, &settings);
+
+				changed = true;
+			}
+		}
+	}
+
+	/* if something changed, rebuild the menu */
+	if (changed)
+		reset(UI_MENU_RESET_REMEMBER_REF);
+}
+
+
+/*-------------------------------------------------
+    menu_autofire_populate - populate the autofire
+    menu
+-------------------------------------------------*/
+
+void ui_menu_autofire::populate()
+{
+	astring subtext;
+	astring text;
+	const input_field_config *field;
+	const input_port_config *port;
+	int players = 0;
+	int i;
+
+	/* iterate over the input ports and add autofire toggle items */
+	for (port = machine().m_portlist.first(); port != NULL; port = port->next())
+		for (field = port->first_field(); field != NULL; field = field->next())
+		{
+			const char *name = input_field_name(field);
+
+			if (name != NULL && (
+			    (field->type >= IPT_BUTTON1 && field->type < IPT_BUTTON1 + MAX_NORMAL_BUTTONS)
+#ifdef USE_CUSTOM_BUTTON
+			    || (field->type >= IPT_CUSTOM1 && field->type < IPT_CUSTOM1 + MAX_CUSTOM_BUTTONS)
+#endif /* USE_CUSTOM_BUTTON */
+			   ))
+			{
+				input_field_user_settings settings;
+				input_field_get_user_settings(field, &settings);
+//				entry[menu_items] = field;
+
+				if (players < field->player + 1)
+					players = field->player + 1;
+
+				/* add an autofire item */
+				switch (settings.autofire)
+				{
+					case 0:	subtext.cpy(_("Off"));	break;
+					case 1:	subtext.cpy(_("On"));		break;
+					case 2:	subtext.cpy(_("Toggle"));	break;
+				}
+				item_append(_(input_field_name(field)), subtext, MENU_FLAG_LEFT_ARROW | MENU_FLAG_RIGHT_ARROW, (void *)field);
+			}
+		}
+	
+	/* add autofire delay items */
+	for (i = 0; i < players; i++)
+	{
+		text.printf(_("P%d %s"), i + 1, _("Autofire Delay"));
+		subtext.printf("%d", get_autofiredelay(i));
+
+		/* append a menu item */
+		item_append(text, subtext, MENU_FLAG_LEFT_ARROW | MENU_FLAG_RIGHT_ARROW, (void *)(i + AUTOFIRE_ITEM_P1_DELAY));
+	}
+}
+#undef AUTOFIRE_ITEM_P1_DELAY
+#endif /* USE_AUTOFIRE */
+
+
+#ifdef USE_CUSTOM_BUTTON
+/*-------------------------------------------------
+    menu_custom_button - handle the custom button
+    settings menu
+-------------------------------------------------*/
+
+ui_menu_custom_button::ui_menu_custom_button(running_machine &machine, render_container *container) : ui_menu(machine, container)
+{
+}
+
+ui_menu_custom_button::~ui_menu_custom_button()
+{
+}
+
+void ui_menu_custom_button::handle()
+{
+	const ui_menu_event *menu_event = process(0);
+	bool changed = false;
+	int custom_buttons_count = 0;
+	const input_field_config *field;
+	const input_port_config *port;
+
+	/* handle events */
+	if (menu_event != NULL && menu_event->itemref != NULL)
+	{
+		UINT16 *selected_custom_button = (UINT16 *)(FPTR)menu_event->itemref;
+		int i;
+		
+		//count the number of custom buttons
+		for (port = machine().m_portlist.first(); port != NULL; port = port->next())
+			for (field = port->first_field(); field != NULL; field = field->next())
+			{
+				int type = field->type;
+
+				if (type >= IPT_BUTTON1 && type < IPT_BUTTON1 + MAX_NORMAL_BUTTONS)
+				{
+					type -= IPT_BUTTON1;
+					if (type >= custom_buttons_count)
+						custom_buttons_count = type + 1;
+				}
+			}
+
+		input_item_id id = ITEM_ID_1;
+		for (i = 0; i < custom_buttons_count; i++, id++)
+		{
+			if (i == 9)
+				id = ITEM_ID_0;
+
+			//fixme: code_pressed_once() doesn't work well
+			if (machine().input().code_pressed_once(input_code(DEVICE_CLASS_KEYBOARD, 0, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, id)))
+			{
+				*selected_custom_button ^= 1 << i;
+				changed = true;
+				break;
+			}
+		}
+	}
+
+	/* if something changed, rebuild the menu */
+	if (changed)
+		reset(UI_MENU_RESET_REMEMBER_REF);
+}
+
+
+/*-------------------------------------------------
+    menu_custom_button_populate - populate the 
+    custom button menu
+-------------------------------------------------*/
+
+void ui_menu_custom_button::populate()
+{
+	astring subtext;
+	astring text;
+	const input_field_config *field;
+	const input_port_config *port;
+	int menu_items = 0;
+	int is_neogeo = !mame_stricmp(machine().system().source_file+17, "neodrvr.c");
+	int i;
+
+//	item_append(_("Press 1-9 to Config"), NULL, 0, NULL);
+//	item_append(MENU_SEPARATOR_ITEM, NULL, 0, NULL);
+
+	/* loop over the input ports and add autofire toggle items */
+	for (port = machine().m_portlist.first(); port != NULL; port = port->next())
+		for (field = port->first_field(); field != NULL; field = field->next())
+		{
+			int player = field->player;
+			int type = field->type;
+			const char *name = input_field_name(field);
+
+			if (name != NULL && type >= IPT_CUSTOM1 && type < IPT_CUSTOM1 + MAX_CUSTOM_BUTTONS)
+			{
+				const char colorbutton1 = is_neogeo ? 'A' : 'a';
+				int n = 1;
+				static char commandbuf[256];
+
+				type -= IPT_CUSTOM1;
+				subtext.cpy("");
+
+				//unpack the custom button value
+				for (i = 0; i < MAX_NORMAL_BUTTONS; i++, n <<= 1)
+					if (custom_button[player][type] & n)
+					{
+						if (subtext.len() > 0)
+							subtext.cat("_+");
+						subtext.catprintf("_%c", colorbutton1 + i);
+					}
+
+				strcpy(commandbuf, subtext);
+				convert_command_glyph(commandbuf, ARRAY_LENGTH(commandbuf));
+				item_append(_(name), commandbuf, 0, (void *)(FPTR)&custom_button[player][type]);
+
+				menu_items++;
+			}
+		}
+}
+#endif /* USE_CUSTOM_BUTTON */
+
 
 /*-------------------------------------------------
     menu_quit_game - handle the "menu" for
@@ -2502,8 +2961,8 @@ void ui_menu_select_game::handle()
 	/* if we're in an error state, overlay an error message */
 	if (error)
 		ui_draw_text_box(container,
-						 "The selected game is missing one or more required ROM or CHD images. "
-		                 "Please select a different game.\n\nPress any key to continue.",
+						 _("The selected game is missing one or more required ROM or CHD images. "
+		                 "Please select a different game.\n\nPress any key to continue."),
 		                 JUSTIFY_CENTER, 0.5f, 0.5f, UI_RED_COLOR);
 }
 
@@ -2534,9 +2993,9 @@ void ui_menu_select_game::populate()
 	if (matchcount == 0)
 	{
 		astring txt;
-		txt.printf("No %s found. Please check the rompath specified in the %s.ini file.\n\n"
+		txt.printf(_("No %s found. Please check the rompath specified in the %s.ini file.\n\n"
 					"If this is your first time using %s, please see the config.txt file in "
-					"the docs directory for information on configuring %s.",
+					"the docs directory for information on configuring %s."),
 					emulator_info::get_gamesnoun(),
 					emulator_info::get_configname(),
 					emulator_info::get_appname(),emulator_info::get_appname() );
@@ -2557,7 +3016,7 @@ void ui_menu_select_game::populate()
 		if (curmatch != -1)
 		{
 			int cloneof = drivlist->non_bios_clone(curmatch);
-			item_append(drivlist->driver(curmatch).name, drivlist->driver(curmatch).description, (cloneof == -1) ? 0 : MENU_FLAG_INVERT, (void *)&drivlist->driver(curmatch));
+			item_append(drivlist->driver(curmatch).name, _LST(drivlist->driver(curmatch).description), (cloneof == -1) ? 0 : MENU_FLAG_INVERT, (void *)&drivlist->driver(curmatch));
 		}
 	}
 
@@ -2565,7 +3024,7 @@ void ui_menu_select_game::populate()
 	if (ui_menu::stack_has_special_main_menu())
 	{
 		item_append(MENU_SEPARATOR_ITEM, NULL, 0, NULL);
-		item_append("Configure General Inputs", NULL, 0, (void *)1);
+		item_append(_("Configure General Inputs"), NULL, 0, (void *)1);
 	}
 
 	/* configure the custom rendering */
@@ -2638,9 +3097,9 @@ void ui_menu_select_game::custom_render(void *selectedref, float top, float bott
 
 	/* display the current typeahead */
 	if (search[0] != 0)
-		sprintf(&tempbuf[0][0], "Type name or select: %s_", search);
+		sprintf(&tempbuf[0][0], _("Type name or select: %s_"), search);
 	else
-		sprintf(&tempbuf[0][0], "Type name or select: (random)");
+		sprintf(&tempbuf[0][0], _("Type name or select: (random)"));
 
 	/* get the size of the text */
 	ui_draw_text_full(container, &tempbuf[0][0], 0.0f, 0.0f, 1.0f, JUSTIFY_CENTER, WRAP_TRUNCATE,
@@ -2674,33 +3133,33 @@ void ui_menu_select_game::custom_render(void *selectedref, float top, float bott
 		const char *gfxstat, *soundstat;
 
 		/* first line is game name */
-		sprintf(&tempbuf[0][0], "%-.100s", driver->description);
+		sprintf(&tempbuf[0][0], "%-.100s", _LST(driver->description));
 
 		/* next line is year, manufacturer */
-		sprintf(&tempbuf[1][0], "%s, %-.100s", driver->year, driver->manufacturer);
+		sprintf(&tempbuf[1][0], "%s, %-.100s", driver->year, _MANUFACT(driver->manufacturer));
 
 		/* next line is overall driver status */
 		if (driver->flags & GAME_NOT_WORKING)
-			strcpy(&tempbuf[2][0], "Overall: NOT WORKING");
+			strcpy(&tempbuf[2][0], _("Overall: NOT WORKING"));
 		else if (driver->flags & GAME_UNEMULATED_PROTECTION)
-			strcpy(&tempbuf[2][0], "Overall: Unemulated Protection");
+			strcpy(&tempbuf[2][0], _("Overall: Unemulated Protection"));
 		else
-			strcpy(&tempbuf[2][0], "Overall: Working");
+			strcpy(&tempbuf[2][0], _("Overall: Working"));
 
 		/* next line is graphics, sound status */
 		if (driver->flags & (GAME_IMPERFECT_GRAPHICS | GAME_WRONG_COLORS | GAME_IMPERFECT_COLORS))
-			gfxstat = "Imperfect";
+			gfxstat = _("Imperfect");
 		else
-			gfxstat = "OK";
+			gfxstat = _("OK");
 
 		if (driver->flags & GAME_NO_SOUND)
-			soundstat = "Unimplemented";
+			soundstat = _("Unimplemented");
 		else if (driver->flags & GAME_IMPERFECT_SOUND)
-			soundstat = "Imperfect";
+			soundstat = _("Imperfect");
 		else
-			soundstat = "OK";
+			soundstat = _("OK");
 
-		sprintf(&tempbuf[3][0], "Gfx: %s, Sound: %s", gfxstat, soundstat);
+		sprintf(&tempbuf[3][0], _("Gfx: %s, Sound: %s"), gfxstat, soundstat);
 	}
 	else
 	{

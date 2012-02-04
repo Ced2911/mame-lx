@@ -151,21 +151,21 @@ static WRITE8_HANDLER( bg_tile_w )
 {
 	igspoker_state *state = space->machine().driver_data<igspoker_state>();
 	state->m_bg_tile_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_bg_tilemap,offset);
+	state->m_bg_tilemap->mark_tile_dirty(offset);
 }
 
 static WRITE8_HANDLER( fg_tile_w )
 {
 	igspoker_state *state = space->machine().driver_data<igspoker_state>();
 	state->m_fg_tile_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_fg_tilemap,offset);
+	state->m_fg_tilemap->mark_tile_dirty(offset);
 }
 
 static WRITE8_HANDLER( fg_color_w )
 {
 	igspoker_state *state = space->machine().driver_data<igspoker_state>();
 	state->m_fg_color_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_fg_tilemap,offset);
+	state->m_fg_tilemap->mark_tile_dirty(offset);
 }
 
 static VIDEO_START(igs_video)
@@ -174,18 +174,18 @@ static VIDEO_START(igs_video)
 	state->m_fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows,	8,  8,	64, 32);
 	state->m_bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,	8,  32,	64, 8);
 
-	tilemap_set_transparent_pen(state->m_fg_tilemap, 0);
+	state->m_fg_tilemap->set_transparent_pen(0);
 }
 
-static SCREEN_UPDATE(igs_video)
+static SCREEN_UPDATE_IND16(igs_video)
 {
-	igspoker_state *state = screen->machine().driver_data<igspoker_state>();
-	bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine()));
+	igspoker_state *state = screen.machine().driver_data<igspoker_state>();
+	bitmap.fill(get_black_pen(screen.machine()), cliprect);
 
 	// FIX: CSK227IT must have some way to disable background, or wrong gfx?
-	if (state->m_bg_enable) tilemap_draw(bitmap, cliprect, state->m_bg_tilemap, 0, 0);
+	if (state->m_bg_enable) state->m_bg_tilemap->draw(bitmap, cliprect, 0, 0);
 
-	tilemap_draw(bitmap, cliprect, state->m_fg_tilemap, 0, 0);
+	state->m_fg_tilemap->draw(bitmap, cliprect, 0, 0);
 
 	return 0;
 }
@@ -196,10 +196,10 @@ static VIDEO_START(cpokerpk)
 	state->m_fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows,	8,  8,	64, 32);
 }
 
-static SCREEN_UPDATE(cpokerpk)
+static SCREEN_UPDATE_IND16(cpokerpk)
 {
-	igspoker_state *state = screen->machine().driver_data<igspoker_state>();
-	tilemap_draw(bitmap, cliprect, state->m_fg_tilemap, 0, 0);
+	igspoker_state *state = screen.machine().driver_data<igspoker_state>();
+	state->m_fg_tilemap->draw(bitmap, cliprect, 0, 0);
 
 	return 0;
 }
@@ -1765,10 +1765,9 @@ static MACHINE_CONFIG_START( igspoker, igspoker_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(57)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8) // TODO: wrong screen size!
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0, 32*8-1)
-	MCFG_SCREEN_UPDATE(igs_video)
+	MCFG_SCREEN_UPDATE_STATIC(igs_video)
 
 	MCFG_GFXDECODE(igspoker)
 	MCFG_PALETTE_LENGTH(2048)
@@ -1799,7 +1798,7 @@ static MACHINE_CONFIG_DERIVED( number10, igspoker )
 	MCFG_CPU_IO_MAP(number10_io_map)
 
 	MCFG_SCREEN_MODIFY("screen")
-	MCFG_SCREEN_UPDATE(cpokerpk)
+	MCFG_SCREEN_UPDATE_STATIC(cpokerpk)
 	MCFG_VIDEO_START(cpokerpk)
 
 	MCFG_OKIM6295_ADD("oki", XTAL_12MHz / 12, OKIM6295_PIN7_HIGH)

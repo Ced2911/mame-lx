@@ -228,6 +228,9 @@ enum input_item_id
 	ITEM_ID_RWIN,
 	ITEM_ID_MENU,
 	ITEM_ID_CANCEL,
+	ITEM_ID_KANA,
+	ITEM_ID_CONVERT,
+	ITEM_ID_NONCONVERT,
 
 	// standard mouse/joystick/gun IDs
 	ITEM_ID_XAXIS,
@@ -370,14 +373,14 @@ public:
 	// construction/destruction
 	joystick_map();
 	joystick_map(const joystick_map &src) { copy(src); }
-
+	
 	// operators
 	joystick_map &operator=(const joystick_map &src) { if (this != &src) copy(src); return *this; }
 
 	// parse from a string
 	bool parse(const char *mapstring);
 
-	// create a friendly string
+	// create a friendly string	
 	const char *to_string(astring &string) const;
 
 	// update the state of a live map
@@ -416,7 +419,7 @@ public:
 	// construction/destruction
 	input_code(input_device_class devclass = DEVICE_CLASS_INVALID, int devindex = 0, input_item_class itemclass = ITEM_CLASS_INVALID, input_item_modifier modifier = ITEM_MODIFIER_NONE, input_item_id itemid = ITEM_ID_INVALID)
 		: m_internal(((devclass & 0xf) << 28) | ((devindex & 0xff) << 20) | ((itemclass & 0xf) << 16) | ((modifier & 0xf) << 12) | (itemid & 0xfff))
-	{
+{
 		assert(devclass >= 0 && devclass < DEVICE_CLASS_MAXIMUM);
 		assert(devindex >= 0 && devindex < DEVICE_INDEX_MAXIMUM);
 		assert(itemclass >= 0 && itemclass < ITEM_CLASS_MAXIMUM);
@@ -426,11 +429,11 @@ public:
 	input_code(const input_code &src)
 		: m_internal(src.m_internal) { }
 	input_code(input_device &device, input_item_id itemid);
-
+	
 	// operators
 	bool operator==(const input_code &rhs) const { return m_internal == rhs.m_internal; }
 	bool operator!=(const input_code &rhs) const { return m_internal != rhs.m_internal; }
-
+	
 	// getters
 	bool internal() const { return device_class() == DEVICE_CLASS_INTERNAL; }
 	input_device_class device_class() const { return input_device_class((m_internal >> 28) & 0xf); }
@@ -438,7 +441,7 @@ public:
 	input_item_class item_class() const { return input_item_class((m_internal >> 16) & 0xf); }
 	input_item_modifier item_modifier() const { return input_item_modifier((m_internal >> 12) & 0xf); }
 	input_item_id item_id() const { return input_item_id(m_internal & 0xfff); }
-
+	
 	// setters
 	void set_device_class(input_device_class devclass) { assert(devclass >= 0 && devclass <= 0xf); m_internal = (m_internal & ~(0xf << 28)) | ((devclass & 0xf) << 28); }
 	void set_device_index(int devindex) { assert(devindex >= 0 && devindex <= 0xff); m_internal = (m_internal & ~(0xff << 20)) | ((devindex & 0xff) << 20); }
@@ -493,7 +496,7 @@ public:
 
 private:
 	// internal state
-	input_code	m_code[16];
+	input_code 	m_code[16];
 };
 
 
@@ -501,7 +504,7 @@ private:
 
 // a logical device of a given class that can provide input
 class input_device
-{
+{	
 	friend class input_class;
 
 	// construction/destruction
@@ -556,7 +559,7 @@ class input_class
 public:
 	// construction/destruction
 	input_class(input_manager &manager, input_device_class devclass, bool enabled = false, bool multi = false);
-
+	
 	// getters
 	input_manager &manager() const { return m_manager; }
 	running_machine &machine() const;
@@ -583,7 +586,7 @@ private:
 
 	// internal state
 	input_manager &			m_manager;				// reference to our manager
-	input_device *			m_device[DEVICE_INDEX_MAXIMUM];	// array of devices in this class
+	input_device * 			m_device[DEVICE_INDEX_MAXIMUM];	// array of devices in this class
 	input_device_class		m_devclass;				// our device class
 	int						m_maxindex;				// maximum populated index
 	bool					m_enabled;				// is this class enabled?
@@ -599,16 +602,16 @@ class input_manager
 public:
 	// construction/destruction
 	input_manager(running_machine &machine);
-
+	
 	// getters
 	running_machine &machine() const { return m_machine; }
 	input_class &device_class(input_device_class devclass) { assert(devclass < ARRAY_LENGTH(m_class)); assert(m_class[devclass] != NULL); return *m_class[devclass]; }
-
+	
 	// input code readers
 	INT32 code_value(input_code code);
 	bool code_pressed(input_code code) { return code_value(code) != 0; }
 	bool code_pressed_once(input_code code);
-
+	
 	// input code polling
 	void reset_polling();
 	input_code poll_axes();
@@ -781,6 +784,9 @@ private:
 #define KEYCODE_RWIN_INDEXED(n) input_code(DEVICE_CLASS_KEYBOARD, n, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, ITEM_ID_RWIN)
 #define KEYCODE_MENU_INDEXED(n) input_code(DEVICE_CLASS_KEYBOARD, n, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, ITEM_ID_MENU)
 #define KEYCODE_CANCEL_INDEXED(n) input_code(DEVICE_CLASS_KEYBOARD, n, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, ITEM_ID_CANCEL)
+#define KEYCODE_KANA_INDEXED(n) input_code(DEVICE_CLASS_KEYBOARD, n, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, ITEM_ID_KANA)
+#define KEYCODE_CONVERT_INDEXED(n) input_code(DEVICE_CLASS_KEYBOARD, n, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, ITEM_ID_CONVERT)
+#define KEYCODE_NONCONVERT_INDEXED(n) input_code(DEVICE_CLASS_KEYBOARD, n, ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, ITEM_ID_NONCONVERT)
 
 #define KEYCODE_A KEYCODE_A_INDEXED(0)
 #define KEYCODE_B KEYCODE_B_INDEXED(0)
@@ -891,6 +897,9 @@ private:
 #define KEYCODE_RWIN KEYCODE_RWIN_INDEXED(0)
 #define KEYCODE_MENU KEYCODE_MENU_INDEXED(0)
 #define KEYCODE_CANCEL KEYCODE_CANCEL_INDEXED(0)
+#define KEYCODE_KANA KEYCODE_KANA_INDEXED(0)
+#define KEYCODE_CONVERT KEYCODE_CONVERT_INDEXED(0)
+#define KEYCODE_NONCONVERT KEYCODE_NONCONVERT_INDEXED(0)
 
 // mouse axes as relative devices
 #define MOUSECODE_X_INDEXED(n) input_code(DEVICE_CLASS_MOUSE, n, ITEM_CLASS_RELATIVE, ITEM_MODIFIER_NONE, ITEM_ID_XAXIS)

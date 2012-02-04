@@ -68,7 +68,6 @@ static void image_dirs_load(running_machine &machine, int config_type, xml_data_
 	xml_data_node *node;
 	const char *dev_instance;
 	const char *working_directory;
-	device_image_interface *image = NULL;
 
 	if ((config_type == CONFIG_TYPE_GAME) && (parentnode != NULL))
 	{
@@ -78,7 +77,8 @@ static void image_dirs_load(running_machine &machine, int config_type, xml_data_
 
 			if ((dev_instance != NULL) && (dev_instance[0] != '\0'))
 			{
-				for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+				image_interface_iterator iter(machine.root_device());
+				for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 				{
 					if (!strcmp(dev_instance, image->instance_name())) {
 						working_directory = xml_get_attribute_string(node, "directory", NULL);
@@ -102,12 +102,12 @@ static void image_dirs_save(running_machine &machine, int config_type, xml_data_
 {
 	xml_data_node *node;
 	const char *dev_instance;
-	device_image_interface *image = NULL;
 
 	/* only care about game-specific data */
 	if (config_type == CONFIG_TYPE_GAME)
 	{
-		for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+		image_interface_iterator iter(machine.root_device());
+		for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 		{
 			dev_instance = image->instance_name();
 
@@ -156,13 +156,13 @@ static int write_config(emu_options &options, const char *filename, const game_d
 
 static void image_options_extract(running_machine &machine)
 {
-	/* only extract the device options if we've added them
-       no need to assert in case they are missing */
+	/* only extract the device options if we've added them 
+	   no need to assert in case they are missing */
 	{
 		int index = 0;
-		device_image_interface *image = NULL;
 
-		for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+		image_interface_iterator iter(machine.root_device());
+		for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 		{
 			const char *filename = image->filename();
 
@@ -186,12 +186,11 @@ static void image_options_extract(running_machine &machine)
 
 void image_unload_all(running_machine &machine)
 {
-    device_image_interface *image = NULL;
-
 	// extract the options
 	image_options_extract(machine);
 
-	for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+	image_interface_iterator iter(machine.root_device());
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 	{
 		// unload this image
 		image->unload();
@@ -205,10 +204,10 @@ void image_unload_all(running_machine &machine)
 void image_device_init(running_machine &machine)
 {
 	const char *image_name;
-	device_image_interface *image = NULL;
 
 	/* make sure that any required devices have been allocated */
-    for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+	image_interface_iterator iter(machine.root_device());
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 	{
 		/* is an image specified for this image */
 		image_name = machine.options().device_option(*image);
@@ -239,7 +238,7 @@ void image_device_init(running_machine &machine)
 		}
 	}
 
-    for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 	{
 		/* is an image specified for this image */
 		image_name = image->filename();
@@ -264,25 +263,24 @@ void image_device_init(running_machine &machine)
 
 void image_postdevice_init(running_machine &machine)
 {
-	device_image_interface *image = NULL;
-
 	/* make sure that any required devices have been allocated */
-    for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
-    {
-			int result = image->finish_load();
-			/* did the image load fail? */
-			if (result)
-			{
-				/* retrieve image error message */
-				astring image_err = astring(image->error());
+	image_interface_iterator iter(machine.root_device());
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
+	{
+		int result = image->finish_load();
+		/* did the image load fail? */
+		if (result)
+		{
+			/* retrieve image error message */
+			astring image_err = astring(image->error());
 
-				/* unload all images */
-				image_unload_all(machine);
+			/* unload all images */
+			image_unload_all(machine);
 
-				fatalerror_exitcode(machine, MAMERR_DEVICE, "Device %s load failed: %s",
-					image->device().name(),
-					image_err.cstr());
-			}
+			fatalerror_exitcode(machine, MAMERR_DEVICE, "Device %s load failed: %s",
+				image->device().name(),
+				image_err.cstr());
+		}
 	}
 
 	/* add a callback for when we shut down */
@@ -371,21 +369,20 @@ static char *strip_extension(const char *filename)
     string with the image info text
 -------------------------------------------------*/
 
-astring *image_info_astring(running_machine &machine, astring *string)
+astring &image_info_astring(running_machine &machine, astring &string)
 {
-	device_image_interface *image = NULL;
-
-	astring_printf(string, "%s\n\n", machine.system().description);
+	string.printf("%s\n\n", machine.system().description);
 
 #if 0
 	if (mess_ram_size > 0)
 	{
 		char buf2[RAM_STRING_BUFLEN];
-		astring_catprintf(string, "RAM: %s\n\n", ram_string(buf2, mess_ram_size));
+		string.catprintf("RAM: %s\n\n", ram_string(buf2, mess_ram_size));
 	}
 #endif
 
-	for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
+	image_interface_iterator iter(machine.root_device());
+	for (device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 	{
 		const char *name = image->filename();
 		if (name != NULL)
@@ -398,28 +395,28 @@ astring *image_info_astring(running_machine &machine, astring *string)
 			base_filename_noextension = strip_extension(base_filename);
 
 			/* display device type and filename */
-			astring_catprintf(string, "%s: %s\n", image->device().name(), base_filename);
+			string.catprintf("%s: %s\n", image->device().name(), base_filename);
 
 			/* display long filename, if present and doesn't correspond to name */
 			info = image->longname();
 			if (info && (!base_filename_noextension || mame_stricmp(info, base_filename_noextension)))
-				astring_catprintf(string, "%s\n", info);
+				string.catprintf("%s\n", info);
 
 			/* display manufacturer, if available */
 			info = image->manufacturer();
 			if (info != NULL)
 			{
-				astring_catprintf(string, "%s", info);
+				string.catprintf("%s", info);
 				info = stripspace(image->year());
 				if (info && *info)
-					astring_catprintf(string, ", %s", info);
-				astring_catprintf(string,"\n");
+					string.catprintf(", %s", info);
+				string.catprintf("\n");
 			}
 
 			/* display supported information, if available */
 			switch(image->supported()) {
-				case SOFTWARE_SUPPORTED_NO : astring_catprintf(string, "Not supported\n"); break;
-				case SOFTWARE_SUPPORTED_PARTIAL : astring_catprintf(string, "Partialy supported\n"); break;
+				case SOFTWARE_SUPPORTED_NO : string.catprintf("Not supported\n"); break;
+				case SOFTWARE_SUPPORTED_PARTIAL : string.catprintf("Partialy supported\n"); break;
 				default : break;
 			}
 
@@ -428,7 +425,7 @@ astring *image_info_astring(running_machine &machine, astring *string)
 		}
 		else
 		{
-			astring_catprintf(string, "%s: ---\n", image->device().name());
+			string.catprintf("%s: ---\n", image->device().name());
 		}
 	}
 	return string;
@@ -480,15 +477,8 @@ void image_battery_save_by_name(emu_options &options, const char *filename, cons
 -------------------------------------------------*/
 device_image_interface *image_from_absolute_index(running_machine &machine, int absolute_index)
 {
-	device_image_interface *image = NULL;
-	int cnt = 0;
-	/* make sure that any required devices have been allocated */
-    for (bool gotone = machine.devicelist().first(image); gotone; gotone = image->next(image))
-	{
-		if (cnt==absolute_index) return image;
-		cnt++;
-	}
-	return NULL;
+	image_interface_iterator iter(machine.root_device());
+	return iter.byindex(absolute_index);
 }
 
 /*-------------------------------------------------

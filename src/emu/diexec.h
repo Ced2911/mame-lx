@@ -47,10 +47,6 @@
 #define __DIEXEC_H__
 
 
-// set to 1 to execute on cothread instead of directly
-//#define USE_COTHREADS 1
-
-
 //**************************************************************************
 //  CONSTANTS
 //**************************************************************************
@@ -144,6 +140,7 @@ typedef int (*device_irq_callback)(device_t *device, int irqnum);
 class device_execute_interface : public device_interface
 {
 	friend class device_scheduler;
+	friend class testcpu_state;
 
 public:
 	// construction/destruction
@@ -201,11 +198,7 @@ public:
 	UINT64 total_cycles() const;
 
 	// required operation overrides
-//#if USE_COTHREADS
-//  void run() { m_cothread.make_active(); }
-//#else
 	void run() { execute_run(); }
-//#endif
 
 protected:
 	// internal helpers
@@ -227,7 +220,7 @@ protected:
 	virtual void execute_set_input(int linenum, int state);
 
 	// interface-level overrides
-	virtual bool interface_validity_check(emu_options &options, const game_driver &driver) const;
+	virtual void interface_validity_check(validity_checker &valid) const;
 	virtual void interface_pre_start();
 	virtual void interface_post_start();
 	virtual void interface_pre_reset();
@@ -269,7 +262,6 @@ protected:
 	};
 
 	// internal state
-//  cothread                m_cothread;                 // thread used for execution
 
 	// configuration
 	bool					m_disabled;					// disabled from executing?
@@ -320,6 +312,9 @@ private:
 
 	attoseconds_t minimum_quantum() const;
 };
+
+// iterator
+typedef device_interface_iterator<device_execute_interface> execute_interface_iterator;
 
 
 

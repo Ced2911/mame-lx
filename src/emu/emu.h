@@ -49,11 +49,18 @@
 #ifndef __EMU_H__
 #define __EMU_H__
 
+// turn off legacy bitmap addressing macros
+#define BITMAP_DISABLE_LEGACY_MACROS
+
 // core emulator headers -- must be first
 #include "emucore.h"
 #include "emutempl.h"
 #include "eminline.h"
 #include "profiler.h"
+#include "uilang.h"
+#ifdef UI_COLOR_DISPLAY
+#include "uipal.h"
+#endif /* UI_COLOR_DISPLAY */
 
 // commonly-referenecd utilities imported from lib/util
 #include "chd.h"
@@ -65,7 +72,6 @@
 #include "hash.h"
 #include "fileio.h" // remove me once NVRAM is implemented as device
 #include "delegate.h"
-//#include "cothread.h"
 
 // memory and address spaces
 #include "memory.h"
@@ -84,6 +90,9 @@ typedef device_t * (*machine_config_constructor)(machine_config &config, device_
 #include "input.h"
 #include "ioport.h"
 #include "output.h"
+
+// diimage requires uimenu
+#include "uimenu.h"
 
 // devices and callbacks
 #include "device.h"

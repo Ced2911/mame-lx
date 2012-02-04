@@ -120,6 +120,7 @@ enum
 ***************************************************************************/
 
 class machine_config;
+class memory_region;
 class emu_options;
 
 typedef device_t rom_source;
@@ -132,6 +133,73 @@ struct rom_entry
 	UINT32			_offset;			/* offset to load it to */
 	UINT32			_length;			/* length of the file */
 	UINT32			_flags;				/* flags */
+};
+
+
+
+//mamep: moved from romload.c
+class open_chd
+{
+	friend class simple_list<open_chd>;
+
+public:
+	open_chd(const char *region, emu_file &file, chd_file &chdfile, emu_file *difffile = NULL, chd_file *diffchd = NULL)
+		: m_next(NULL),
+		  m_region(region),
+		  m_origchd(&chdfile),
+		  m_origfile(&file),
+		  m_diffchd(diffchd),
+		  m_difffile(difffile) { }
+
+	~open_chd()
+	{
+		if (m_diffchd != NULL) chd_close(m_diffchd);
+		global_free(m_difffile);
+		chd_close(m_origchd);
+		global_free(m_origfile);
+	}
+
+	open_chd *next() const { return m_next; }
+	const char *region() const { return m_region; }
+	chd_file *chd() const { return (m_diffchd != NULL) ? m_diffchd : m_origchd; }
+
+private:
+	open_chd *			m_next;					/* pointer to next in the list */
+	astring				m_region;				/* disk region we came from */
+	chd_file *			m_origchd;				/* handle to the original CHD */
+	emu_file *			m_origfile;				/* file handle to the original CHD file */
+	chd_file *			m_diffchd;				/* handle to the diff CHD */
+	emu_file *			m_difffile;				/* file handle to the diff CHD file */
+};
+
+
+typedef struct _romload_private rom_load_data;
+struct _romload_private
+{
+	running_machine &machine() const { assert(m_machine != NULL); return *m_machine; }
+
+	running_machine *m_machine;			/* machine object where needed */
+	int				system_bios;		/* the system BIOS we wish to load */
+	int				default_bios;		/* the default system BIOS */
+
+	int				warnings;			/* warning count during processing */
+	int				knownbad;			/* BAD_DUMP/NO_DUMP count during processing */
+	int				errors;				/* error count during processing */
+
+	int				romsloaded;			/* current ROMs loaded count */
+	int				romstotal;			/* total number of ROMs to read */
+	UINT32			romsloadedsize;		/* total size of ROMs loaded so far */
+	UINT32			romstotalsize;		/* total size of ROMs to read */
+
+	emu_file *		file;				/* current file */
+#ifdef USE_IPS
+	void *			patch;				/* current ips */
+#endif /* USE_IPS */
+	simple_list<open_chd> chd_list;		/* disks */
+
+	memory_region *	region;				/* info about current region */
+
+	astring			errorstring;		/* error string */
 };
 
 

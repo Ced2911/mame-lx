@@ -142,7 +142,7 @@ private:
 	void					end_avi_recording();
 	void					begin_avi_recording(const char *name);
 
-	bool					screen_encountered[9];		// whether a given screen was encountered this frame
+	bool 					screen_encountered[9];		// whether a given screen was encountered this frame
 
 	d3d *                   d3dintf;					// D3D interface
 	win_window_info *       window;						// D3D window info
@@ -158,13 +158,13 @@ private:
 	int						prescale_size_x;			// prescale size x
 	int						prescale_size_y;			// prescale size y
 	int						preset;						// preset, if relevant
-	bitmap_t *				shadow_bitmap;				// shadow mask bitmap for post-processing shader
+	bitmap_argb32			shadow_bitmap;				// shadow mask bitmap for post-processing shader
 	d3d_texture_info *		shadow_texture;				// shadow mask texture for post-processing shader
 	int						registered_targets;			// number of registered HLSL targets (i.e., screens)
 	int						cyclic_target_idx;			// cyclic index of next HLSL target slot
 	hlsl_options *			options;					// current uniform state
 	avi_file *				avi_output_file;			// AVI file
-	bitmap_t *				avi_snap;					// AVI snapshot
+	bitmap_rgb32			avi_snap;					// AVI snapshot
 	int						avi_frame;					// AVI frame
 	attotime				avi_frame_period;			// AVI frame period
 	attotime				avi_next_frame_time;		// AVI next frame time
@@ -198,10 +198,10 @@ private:
 
 	// render targets
 	int						raw_target_idx[9];			// Number of targets currently in use
-	int						target_use_count[9];		// Whether or not a target has been used yet
+	int				target_use_count[9];		// Whether or not a target has been used yet
 	d3d_texture_info *		target_in_use[9];			// Target texture that is currently in use
-	int						target_width[9];			// Render target width
-	int						target_height[9];			// Render target height
+	int				target_width[9];			// Render target width
+	int				target_height[9];			// Render target height
 	d3d_surface *			last_target[9];				// Render target surface pointer for each screen's previous frame
 	d3d_texture *			last_texture[9];			// Render target texture pointer for each screen's previous frame
 	d3d_surface *			prescaletarget0[9];			// Render target surface pointer (prescale, if necessary)

@@ -717,6 +717,9 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( spangbl )
 	PORT_INCLUDE( pang )
 
+	PORT_MODIFY("SYS0")
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* unused? */
+
 	PORT_MODIFY("IN1")
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_UNKNOWN ) // must be high for game to boot..
 INPUT_PORTS_END
@@ -724,12 +727,12 @@ INPUT_PORTS_END
 static INPUT_PORTS_START( mstworld )
 	/* this port may not have the same role */
 	PORT_START("SYS0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* USED - handled in port5_r */
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* unused? */
 	PORT_SERVICE_NO_TOGGLE( 0x02, IP_ACTIVE_LOW )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* unused? */
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_VBLANK )
 	PORT_BIT( 0x70, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* unused? */
-	PORT_BIT( 0x80, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE_MEMBER("eeprom", eeprom_device, read_bit)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* unused? */
 
 	PORT_START("IN0")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
@@ -1107,11 +1110,11 @@ static TIMER_DEVICE_CALLBACK( mitchell_irq )
 	mitchell_state *state = timer.machine().driver_data<mitchell_state>();
 	int scanline = param;
 
-	if(scanline == 248 || scanline == 0)
+	if (scanline == 240 || scanline == 0)
 	{
-		device_set_input_line(state->m_maincpu,0,HOLD_LINE);
+		device_set_input_line(state->m_maincpu, 0, HOLD_LINE);
 
-		state->m_irq_source = (scanline == 248);
+		state->m_irq_source = (scanline == 0);
 	}
 }
 
@@ -1132,10 +1135,9 @@ static MACHINE_CONFIG_START( mgakuen, mitchell_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 1*8, 31*8-1 )
-	MCFG_SCREEN_UPDATE(pang)
+	MCFG_SCREEN_UPDATE_STATIC(pang)
 
 	MCFG_GFXDECODE(mgakuen)
 	MCFG_PALETTE_LENGTH(1024)	/* less colors than the others */
@@ -1171,7 +1173,6 @@ static MACHINE_CONFIG_START( pang, mitchell_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(57.42)   /* verified on pcb */
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 1*8, 31*8-1 )
 
@@ -1179,7 +1180,7 @@ static MACHINE_CONFIG_START( pang, mitchell_state )
 	MCFG_PALETTE_LENGTH(2048)
 
 	MCFG_VIDEO_START(pang)
-	MCFG_SCREEN_UPDATE(pang)
+	MCFG_SCREEN_UPDATE_STATIC(pang)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1230,12 +1231,12 @@ static const msm5205_interface msm5205_config =
 
 static MACHINE_CONFIG_DERIVED( spangbl, pang )
 
-	MCFG_DEVICE_REMOVE("maincpu")
-
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_16MHz/2)
+	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(spangbl_map)
 	MCFG_CPU_IO_MAP(spangbl_io_map)
 	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+
+	MCFG_DEVICE_REMOVE("scantimer")
 
 	MCFG_CPU_ADD("audiocpu", Z80, 8000000)
 	MCFG_CPU_PROGRAM_MAP(spangbl_sound_map)
@@ -1272,7 +1273,6 @@ static MACHINE_CONFIG_START( mstworld, mitchell_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 1*8, 31*8-1 )
 
@@ -1280,7 +1280,7 @@ static MACHINE_CONFIG_START( mstworld, mitchell_state )
 	MCFG_PALETTE_LENGTH(2048)
 
 	MCFG_VIDEO_START(pang)
-	MCFG_SCREEN_UPDATE(pang)
+	MCFG_SCREEN_UPDATE_STATIC(pang)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1305,7 +1305,6 @@ static MACHINE_CONFIG_START( marukin, mitchell_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 1*8, 31*8-1 )
 
@@ -1313,7 +1312,7 @@ static MACHINE_CONFIG_START( marukin, mitchell_state )
 	MCFG_PALETTE_LENGTH(2048)
 
 	MCFG_VIDEO_START(pang)
-	MCFG_SCREEN_UPDATE(pang)
+	MCFG_SCREEN_UPDATE_STATIC(pang)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1358,7 +1357,6 @@ static MACHINE_CONFIG_START( pkladiesbl, mitchell_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(59.09) /* verified on pcb */
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 1*8, 31*8-1 )
 
@@ -1366,7 +1364,7 @@ static MACHINE_CONFIG_START( pkladiesbl, mitchell_state )
 	MCFG_PALETTE_LENGTH(2048)
 
 	MCFG_VIDEO_START(pang)
-	MCFG_SCREEN_UPDATE(pang)
+	MCFG_SCREEN_UPDATE_STATIC(pang)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")

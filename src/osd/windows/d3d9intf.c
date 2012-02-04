@@ -112,7 +112,7 @@ d3d *drawd3d9_init(void)
 	dllhandle = LoadLibrary(TEXT("d3d9.dll"));
 	if (dllhandle == NULL)
 	{
-		mame_printf_verbose("Direct3D: Unable to access d3d9.dll\n");
+		mame_printf_verbose(_WINDOWS("Direct3D: Unable to access d3d9.dll\n"));
 		return NULL;
 	}
 
@@ -120,7 +120,7 @@ d3d *drawd3d9_init(void)
 	direct3dcreate9 = (direct3dcreate9_ptr)GetProcAddress(dllhandle, "Direct3DCreate9");
 	if (direct3dcreate9 == NULL)
 	{
-		mame_printf_verbose("Direct3D: Unable to find Direct3DCreate9\n");
+		mame_printf_verbose(_WINDOWS("Direct3D: Unable to find Direct3DCreate9\n"));
 		FreeLibrary(dllhandle);
 		dllhandle = NULL;
 		return NULL;
@@ -130,7 +130,7 @@ d3d *drawd3d9_init(void)
 	d3d9 = (*direct3dcreate9)(D3D_SDK_VERSION);
 	if (d3d9 == NULL)
 	{
-		mame_printf_verbose("Direct3D: Error attempting to initialize Direct3D9\n");
+		mame_printf_verbose(_WINDOWS("Direct3D: Error attempting to initialize Direct3D9\n"));
 		FreeLibrary(dllhandle);
 		dllhandle = NULL;
 		return NULL;
@@ -141,7 +141,7 @@ d3d *drawd3d9_init(void)
 	if (fxhandle == NULL)
 	{
 		post_available = false;
-		mame_printf_verbose("Direct3D: Warning - Unable to access d3dx9_43.dll; disabling post-effect rendering\n");
+		mame_printf_verbose(_WINDOWS("Direct3D: Warning - Unable to access d3dx9_43.dll; disabling post-effect rendering\n"));
 	}
 
 	// import the create function
@@ -161,7 +161,7 @@ d3d *drawd3d9_init(void)
 	{
 		g_load_effect = NULL;
 		post_available = false;
-		mame_printf_verbose("Direct3D: Warning - Unable to get a handle to D3DXCreateEffectFromFileW; disabling post-effect rendering\n");
+		mame_printf_verbose(_WINDOWS("Direct3D: Warning - Unable to get a handle to D3DXCreateEffectFromFileW; disabling post-effect rendering\n"));
 	}
 
 	// allocate an object to hold our data
@@ -172,7 +172,7 @@ d3d *drawd3d9_init(void)
 	d3dptr->post_fx_available = post_available;
 	set_interfaces(d3dptr);
 
-	mame_printf_verbose("Direct3D: Using Direct3D 9\n");
+	mame_printf_verbose(_WINDOWS("Direct3D: Using Direct3D 9\n"));
 	return d3dptr;
 }
 

@@ -19,6 +19,9 @@
 #define __INPTPORT_H__
 
 #include <time.h>
+#ifdef INP_CAPTION
+#include "render.h"
+#endif /* INP_CAPTION */
 
 
 
@@ -27,6 +30,17 @@
 ***************************************************************************/
 
 #define MAX_PLAYERS			8
+
+#ifdef USE_AUTOFIRE
+#define AUTOFIRE_ON			1	/* Autofire enable bit */
+#define AUTOFIRE_TOGGLE			2	/* Autofire toggle enable bit */
+#endif /* USE_AUTOFIRE */
+
+#ifdef USE_CUSTOM_BUTTON
+#define MAX_CUSTOM_BUTTONS		4
+#endif /* USE_CUSTOM_BUTTON */
+
+#define MAX_NORMAL_BUTTONS		10
 
 #define IP_ACTIVE_HIGH		0x00000000
 #define IP_ACTIVE_LOW		0xffffffff
@@ -198,6 +212,19 @@ enum
 	IPT_BUTTON15,
 	IPT_BUTTON16,
 
+#ifdef USE_AUTOFIRE
+	/* autofire control buttons */
+	IPT_TOGGLE_AUTOFIRE,
+#endif /* USE_AUTOFIRE */
+
+#ifdef USE_CUSTOM_BUTTON
+	/* custom action buttons */
+	IPT_CUSTOM1,
+	IPT_CUSTOM2,
+	IPT_CUSTOM3,
+	IPT_CUSTOM4,
+#endif /* USE_CUSTOM_BUTTON */
+
 	/* mahjong inputs */
 #define __ipt_mahjong_start IPT_MAHJONG_A
 	IPT_MAHJONG_A,
@@ -347,6 +374,12 @@ enum
 	IPT_UI_SNAPSHOT,
 	IPT_UI_RECORD_MOVIE,
 	IPT_UI_TOGGLE_CHEAT,
+#ifdef USE_SHOW_TIME
+	IPT_UI_TIME,
+#endif /* USE_SHOW_TIME */
+#ifdef USE_SHOW_INPUT_LOG
+	IPT_UI_SHOW_INPUT_LOG,
+#endif /* USE_SHOW_INPUT_LOG */
 	IPT_UI_UP,
 	IPT_UI_DOWN,
 	IPT_UI_LEFT,
@@ -800,6 +833,9 @@ typedef struct _input_field_user_settings input_field_user_settings;
 struct _input_field_user_settings
 {
 	input_port_value			value;			/* for DIP switches */
+#ifdef USE_AUTOFIRE
+	int						autofire;	/* autofire */
+#endif /* USE_AUTOFIRE */
 	input_seq					seq[SEQ_TYPE_TOTAL];/* sequences of all types */
 	INT32						sensitivity;	/* for analog controls */
 	INT32						delta;			/* for analog controls */
@@ -834,7 +870,7 @@ public:
 	simple_list<input_field_config> &fieldlist() { return m_fieldlist; }
 	const char *tag() const { return m_tag; }
 	int modcount() const { return m_modcount; }
-
+	
 	void bump_modcount() { m_modcount++; }
 
 	void collapse_fields(astring &errorbuf);
@@ -856,7 +892,7 @@ private:
 class input_type_entry
 {
 	friend class simple_list<input_type_entry>;
-
+	
 public:
 	input_type_entry(UINT32 type, ioport_group group, int player, const char *token, const char *name, input_seq standard);
 	input_type_entry(UINT32 type, ioport_group group, int player, const char *token, const char *name, input_seq standard, input_seq decrement, input_seq increment);
@@ -1235,6 +1271,31 @@ ATTR_COLD void INPUT_PORTS_NAME(_name)(device_t &owner, ioport_list &portlist, a
 
 
 
+#ifdef USE_CUSTOM_BUTTON
+extern UINT16 custom_button[MAX_PLAYERS][MAX_CUSTOM_BUTTONS];
+extern int custom_buttons;
+#endif /* USE_CUSTOM_BUTTON */
+
+
+#ifdef USE_SHOW_INPUT_LOG
+typedef struct _input_log input_log;
+struct _input_log
+{
+	unicode_char code;
+	double time;
+};
+
+extern input_log command_buffer[];
+extern int show_input_log;
+#endif /* USE_SHOW_INPUT_LOG */
+
+
+#ifdef INP_CAPTION
+void draw_caption(running_machine &machine, render_container *container);
+#endif /* INP_CAPTION */
+
+
+
 /***************************************************************************
     FUNCTION PROTOTYPES
 ***************************************************************************/
@@ -1310,6 +1371,17 @@ int input_field_has_next_setting(const input_field_config *field);
 
 /* select the next item for a DIP switch or configuration field */
 void input_field_select_next_setting(const input_field_config *field);
+
+/* has_record_file */
+int has_record_file(running_machine &machine);
+
+/* has_playback_file */
+int has_playback_file(running_machine &machine);
+
+#ifdef USE_AUTOFIRE
+int get_autofiredelay(int player);
+void set_autofiredelay(int player, int delay);
+#endif /* USE_AUTOFIRE */
 
 
 /* ----- port checking ----- */

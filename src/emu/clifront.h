@@ -74,6 +74,7 @@
 #define CLICOMMAND_LISTSLOTS			"listslots"
 #define CLICOMMAND_LISTMEDIA			"listmedia"		// needed by MESS
 #define CLICOMMAND_LISTSOFTWARE			"listsoftware"
+#define CLICOMMAND_LISTGAMES			"listgames"		// for make tp_manufact.txt
 
 
 
@@ -120,6 +121,7 @@ public:
 	void verifyroms(const char *gamename = "*");
 	void verifysamples(const char *gamename = "*");
 	void romident(const char *filename);
+	void listgames(const char *gamename = "*");		// for make tp_manufact.txt
 
 private:
 	// internal helpers
@@ -162,6 +164,6 @@ private:
 	int					m_nonroms;
 };
 
-
+void setup_language(emu_options &options);
 
 #endif	/* __CLIFRONT_H__ */

@@ -344,9 +344,9 @@ static VIDEO_START(fortecar)
 {
 }
 
-static SCREEN_UPDATE(fortecar)
+static SCREEN_UPDATE_IND16(fortecar)
 {
-	fortecar_state *state = screen->machine().driver_data<fortecar_state>();
+	fortecar_state *state = screen.machine().driver_data<fortecar_state>();
 	int x,y,count;
 	count = 0;
 
@@ -363,7 +363,7 @@ static SCREEN_UPDATE(fortecar)
 			if(bpp)
 				color&=0x3;
 
-			drawgfx_opaque(bitmap,cliprect,screen->machine().gfx[bpp],tile,color,0,0,x*8,y*8);
+			drawgfx_opaque(bitmap,cliprect,screen.machine().gfx[bpp],tile,color,0,0,x*8,y*8);
 			count++;
 
 		}
@@ -693,10 +693,9 @@ static MACHINE_CONFIG_START( fortecar, fortecar_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 600-1, 0, 240-1)	/* driven by CRTC */
-	MCFG_SCREEN_UPDATE(fortecar)
+	MCFG_SCREEN_UPDATE_STATIC(fortecar)
 
 	MCFG_MACHINE_RESET(fortecar)
 

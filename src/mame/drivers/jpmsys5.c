@@ -190,7 +190,7 @@ static VIDEO_START( jpmsys5v )
 	tms34061_start(machine, &tms34061intf);
 }
 
-static SCREEN_UPDATE( jpmsys5v )
+static SCREEN_UPDATE_RGB32( jpmsys5v )
 {
 	int x, y;
 	struct tms34061_display state;
@@ -199,22 +199,22 @@ static SCREEN_UPDATE( jpmsys5v )
 
 	if (state.blanked)
 	{
-		bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine()));
+		bitmap.fill(get_black_pen(screen.machine()), cliprect);
 		return 0;
 	}
 
-	for (y = cliprect->min_y; y <= cliprect->max_y; ++y)
+	for (y = cliprect.min_y; y <= cliprect.max_y; ++y)
 	{
 		UINT8 *src = &state.vram[(state.dispstart & 0xffff)*2 + 256 * y];
-		UINT32 *dest = BITMAP_ADDR32(bitmap, y, cliprect->min_x);
+		UINT32 *dest = &bitmap.pix32(y, cliprect.min_x);
 
-		for (x = cliprect->min_x; x <= cliprect->max_x; x +=2)
+		for (x = cliprect.min_x; x <= cliprect.max_x; x +=2)
 		{
-			UINT8 pen = src[(x-cliprect->min_x)>>1];
+			UINT8 pen = src[(x-cliprect.min_x)>>1];
 
 			/* Draw two 4-bit pixels */
-			*dest++ = screen->machine().pens[(pen >> 4) & 0xf];
-			*dest++ = screen->machine().pens[pen & 0xf];
+			*dest++ = screen.machine().pens[(pen >> 4) & 0xf];
+			*dest++ = screen.machine().pens[pen & 0xf];
 		}
 	}
 
@@ -670,9 +670,8 @@ static MACHINE_CONFIG_START( jpmsys5v, jpmsys5_state )
 	MCFG_MACHINE_RESET(jpmsys5v)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_40MHz / 4, 676, 20*4, 147*4, 256, 0, 254)
-	MCFG_SCREEN_UPDATE(jpmsys5v)
+	MCFG_SCREEN_UPDATE_STATIC(jpmsys5v)
 
 	MCFG_VIDEO_START(jpmsys5v)
 

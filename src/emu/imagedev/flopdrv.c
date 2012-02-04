@@ -123,7 +123,9 @@ static const floppy_error_map errmap[] =
 INLINE floppy_drive *get_safe_token(device_t *device)
 {
 	assert( device != NULL );
+#if 0 //mamep:link error by debug build
 	//assert( device->type() == LEGACY_FLOPPY || device->type() == FLOPPY_APPLE || device->type() == FLOPPY_SONY);
+#endif
 	return (floppy_drive *) downcast<legacy_device_base *>(device)->token();
 }
 
@@ -750,10 +752,10 @@ device_t *floppy_get_device_by_type(running_machine &machine,int ftype,int drive
 int floppy_get_drive(device_t *image)
 {
 	int drive =0;
-	if (strcmp(image->tag(), FLOPPY_0) == 0) drive = 0;
-	if (strcmp(image->tag(), FLOPPY_1) == 0) drive = 1;
-	if (strcmp(image->tag(), FLOPPY_2) == 0) drive = 2;
-	if (strcmp(image->tag(), FLOPPY_3) == 0) drive = 3;
+	if (strcmp(image->tag(), ":" FLOPPY_0) == 0) drive = 0;
+	if (strcmp(image->tag(), ":" FLOPPY_1) == 0) drive = 1;
+	if (strcmp(image->tag(), ":" FLOPPY_2) == 0) drive = 2;
+	if (strcmp(image->tag(), ":" FLOPPY_3) == 0) drive = 3;
 	return drive;
 }
 

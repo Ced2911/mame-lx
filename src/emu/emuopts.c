@@ -39,9 +39,13 @@
 
 #include "emu.h"
 #include "emuopts.h"
+#include "clifront.h"
 
 #include <ctype.h>
 
+#ifdef MAMEMESS
+#define MESS
+#endif /* MAMEMESS */
 
 
 //**************************************************************************
@@ -58,6 +62,10 @@ const options_entry emu_options::s_option_entries[] =
 	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE CONFIGURATION OPTIONS" },
 	{ OPTION_READCONFIG ";rc",                           "1",         OPTION_BOOLEAN,    "enable loading of configuration files" },
 	{ OPTION_WRITECONFIG ";wc",                          "0",         OPTION_BOOLEAN,    "writes configuration to (driver).ini on exit" },
+#ifdef DRIVER_SWITCH
+	{ OPTION_DRIVER_CONFIG,                              "all",       OPTION_STRING,     "switch drivers"},
+	{ OPTION_DISABLE_MECHANICAL_DRIVER,                  "0",         OPTION_BOOLEAN,    "disable mechanical drivers"},
+#endif /* DRIVER_SWITCH */
 
 	// seach path options
 	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE SEARCH PATH OPTIONS" },
@@ -66,10 +74,14 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SAMPLEPATH ";sp",                           "samples",   OPTION_STRING,     "path to samplesets" },
 	{ OPTION_ARTPATH,                                    "artwork",   OPTION_STRING,     "path to artwork files" },
 	{ OPTION_CTRLRPATH,                                  "ctrlr",     OPTION_STRING,     "path to controller definitions" },
-	{ OPTION_INIPATH,                                    ".;ini",     OPTION_STRING,     "path to ini files" },
+	{ OPTION_INIPATH,                                    "ini",       OPTION_STRING,     "path to ini files" },
 	{ OPTION_FONTPATH,                                   ".",         OPTION_STRING,     "path to font files" },
 	{ OPTION_CHEATPATH,                                  "cheat",     OPTION_STRING,     "path to cheat files" },
 	{ OPTION_CROSSHAIRPATH,                              "crosshair", OPTION_STRING,     "path to crosshair files" },
+	{ OPTION_LANGPATH,                                   "lang",      OPTION_STRING,     "path to localized languages and datafiles" },
+#ifdef USE_IPS
+	{ OPTION_IPSPATH,                                    "ips",       OPTION_STRING,     "path to ips files" },
+#endif /* USE_IPS */
 
 	// output directory options
 	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE OUTPUT DIRECTORY OPTIONS" },
@@ -81,6 +93,18 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SNAPSHOT_DIRECTORY,                         "snap",      OPTION_STRING,     "directory to save screenshots" },
 	{ OPTION_DIFF_DIRECTORY,                             "diff",      OPTION_STRING,     "directory to save hard drive image difference files" },
 	{ OPTION_COMMENT_DIRECTORY,                          "comments",  OPTION_STRING,     "directory to save debugger comments" },
+#ifdef USE_HISCORE
+	{ "hiscore_directory",                               "hi",        OPTION_STRING,     "directory to save hiscores" },
+#endif /* USE_HISCORE */
+
+	// filename options
+	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE FILENAME OPTIONS" },
+#ifdef CMD_LIST
+	{ OPTION_COMMAND_FILE,                               "command.dat",OPTION_STRING,    "command list database name" },
+#endif /* CMD_LIST */
+#ifdef USE_HISCORE
+	{ OPTION_HISCORE_FILE,                               "hiscore.dat",OPTION_STRING,    "high score database name" },
+#endif /* USE_HISCORE */
 
 	// state/playback options
 	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE STATE/PLAYBACK OPTIONS" },
@@ -132,6 +156,9 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_GAMMA "(0.1-3.0)",                          "1.0",       OPTION_FLOAT,      "default game screen gamma correction" },
 	{ OPTION_PAUSE_BRIGHTNESS "(0.0-1.0)",               "0.65",      OPTION_FLOAT,      "amount to scale the screen brightness when paused" },
 	{ OPTION_EFFECT,                                     "none",      OPTION_STRING,     "name of a PNG file to use for visual effects, or 'none'" },
+#ifdef USE_SCALE_EFFECTS
+	{ OPTION_SCALE_EFFECT,                               "none",      OPTION_STRING,     "image enhancement effect" },
+#endif /* USE_SCALE_EFFECTS */
 
 	// vector options
 	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE VECTOR OPTIONS" },
@@ -191,7 +218,42 @@ const options_entry emu_options::s_option_entries[] =
 	{ OPTION_SKIP_GAMEINFO,                              "0",         OPTION_BOOLEAN,    "skip displaying the information screen at startup" },
 	{ OPTION_UI_FONT,                                    "default",   OPTION_STRING,     "specify a font to use" },
 	{ OPTION_RAMSIZE ";ram",                             NULL,        OPTION_STRING,     "size of RAM (if supported by driver)" },
-	{ OPTION_CONFIRM_QUIT,                               "0",         OPTION_BOOLEAN,    "display confirm quit screen on exit" },
+	{ OPTION_CONFIRM_QUIT,                               "1",         OPTION_BOOLEAN,    "display confirm quit screen on exit" },
+#ifdef PLAYBACK_END_PAUSE
+	{ OPTION_PLAYBACK_END_PAUSE,                         "0",         OPTION_BOOLEAN,    "automatic pause when playback ended" },
+#endif /* PLAYBACK_END_PAUSE */
+#ifdef TRANS_UI
+	{ OPTION_UI_TRANSPARENCY,                            "215",       OPTION_INTEGER,    "transparency in-game UI [0-255]" },
+#endif /* TRANS_UI */
+#ifdef USE_IPS
+	{ OPTION_IPS,                                        NULL,        OPTION_STRING,     "ips datafile name"},
+#endif /* USE_IPS */
+
+#ifdef UI_COLOR_DISPLAY
+	// palette options
+	{ NULL,                                              NULL,        OPTION_HEADER,     "CORE PALETTE OPTIONS" },
+	{ OPTION_SYSTEM_BACKGROUND,                         "16,16,48",   OPTION_STRING,     "main background color" },
+	{ OPTION_CURSOR_SELECTED_TEXT,                      "255,255,255",OPTION_STRING,     "cursor text color (selected)" },
+	{ OPTION_CURSOR_SELECTED_BG,                        "60,120,240", OPTION_STRING,     "cursor background color (selected)" },
+	{ OPTION_CURSOR_HOVER_TEXT,                         "120,180,240",OPTION_STRING,     "cursor text color (floating)" },
+	{ OPTION_CURSOR_HOVER_BG,                           "32,32,0",    OPTION_STRING,     "cursor background color (floating)" },
+	{ OPTION_BUTTON_RED,                                "255,64,64",  OPTION_STRING,     "button color (red)" },
+	{ OPTION_BUTTON_YELLOW,                             "255,238,0",  OPTION_STRING,     "button color (yellow)" },
+	{ OPTION_BUTTON_GREEN,                              "0,255,64",   OPTION_STRING,     "button color (green)" },
+	{ OPTION_BUTTON_BLUE,                               "0,170,255",  OPTION_STRING,     "button color (blue)" },
+	{ OPTION_BUTTON_PURPLE,                             "170,0,255",  OPTION_STRING,     "button color (purple)" },
+	{ OPTION_BUTTON_PINK,                               "255,0,170",  OPTION_STRING,     "button color (pink)" },
+	{ OPTION_BUTTON_AQUA,                               "0,255,204",  OPTION_STRING,     "button color (aqua)" },
+	{ OPTION_BUTTON_SILVER,                             "255,0,255",  OPTION_STRING,     "button color (silver)" },
+	{ OPTION_BUTTON_NAVY,                               "255,160,0",  OPTION_STRING,     "button color (navy)" },
+	{ OPTION_BUTTON_LIME,                               "190,190,190",OPTION_STRING,     "button color (lime)" },
+#endif /* UI_COLOR_DISPLAY */
+
+	// language options
+	{ NULL,                                             NULL,         OPTION_HEADER,     "CORE LANGUAGE OPTIONS" },
+	{ OPTION_LANGUAGE ";lang",                          "auto",       OPTION_STRING,     "select translation language" },
+	{ OPTION_USE_LANG_LIST,                             "1",          OPTION_BOOLEAN,    "enable/disable local language game list" },
+
 	{ NULL }
 };
 
@@ -226,11 +288,11 @@ bool emu_options::add_slot_options(bool isfirst)
 	// iterate through all slot devices
 	options_entry entry[2] = { { 0 }, { 0 } };
 	bool first = true;
-	const device_slot_interface *slot = NULL;
 	// create the configuration
 	machine_config config(*cursystem, *this);
 	bool added = false;
-	for (bool gotone = config.devicelist().first(slot); gotone; gotone = slot->next(slot))
+	slot_interface_iterator iter(config.root_device());
+	for (const device_slot_interface *slot = iter.first(); slot != NULL; slot = iter.next())
 	{
 		// first device? add the header as to be pretty
 		if (first && isfirst)
@@ -244,18 +306,15 @@ bool emu_options::add_slot_options(bool isfirst)
 		first = false;
 
 		// retrieve info about the device instance
-		astring option_name;
-		option_name.printf("%s;%s", slot->device().tag(), slot->device().tag());
-
-		if (!exists(slot->device().tag())) {
-
+		if (!exists(slot->device().tag() + 1)) {
+		
 			// add the option
-			entry[0].name = slot->device().tag();
+			entry[0].name = slot->device().tag() + 1;
 			entry[0].description = NULL;
 			entry[0].flags = OPTION_STRING | OPTION_FLAG_DEVICE;
-			entry[0].defvalue = (slot->get_slot_interfaces() != NULL) ? slot->get_default_card(config.devicelist(),*this) : NULL;
+			entry[0].defvalue = (slot->get_slot_interfaces() != NULL) ? slot->get_default_card(config,*this) : NULL;
 			add_entries(entry, true);
-
+			
 			added = true;
 		}
 	}
@@ -263,8 +322,8 @@ bool emu_options::add_slot_options(bool isfirst)
 }
 
 //-------------------------------------------------
-//  update_slot_options - update slot values
-//  depending of image mounted
+// update_slot_options - update slot values
+// depending of image mounted
 //-------------------------------------------------
 
 void emu_options::update_slot_options()
@@ -275,23 +334,21 @@ void emu_options::update_slot_options()
 		return;
 
 	// iterate through all slot devices
-	const device_slot_interface *slot = NULL;
 	// create the configuration
 	machine_config config(*cursystem, *this);
-	for (bool gotone = config.devicelist().first(slot); gotone; gotone = slot->next(slot))
+	slot_interface_iterator iter(config.root_device());
+	for (const device_slot_interface *slot = iter.first(); slot != NULL; slot = iter.next())
 	{
 		// retrieve info about the device instance
-		astring option_name;
-		option_name.printf("%s;%s", slot->device().tag(), slot->device().tag());
-
-		if (exists(slot->device().tag())) {
+		if (exists(slot->device().tag()+1)) {
 			if (slot->get_slot_interfaces() != NULL) {
-				const char *def = slot->get_default_card_software(config.devicelist(),*this);
-				if (def) set_default_value(slot->device().tag(),def);
+				const char *def = slot->get_default_card_software(config,*this);
+				if (def) set_default_value(slot->device().tag()+1,def);
 			}
 		}
 	}
 }
+
 //-------------------------------------------------
 //  add_device_options - add all of the device
 //  options for the configured system
@@ -308,9 +365,9 @@ void emu_options::add_device_options(bool isfirst)
 	options_entry entry[2] = { { 0 }, { 0 } };
 	bool first = true;
 	// iterate through all image devices
-	const device_image_interface *image = NULL;
 	machine_config config(*cursystem, *this);
-	for (bool gotone = config.devicelist().first(image); gotone; gotone = image->next(image))
+	image_interface_iterator iter(config.root_device());
+	for (const device_image_interface *image = iter.first(); image != NULL; image = iter.next())
 	{
 		// first device? add the header as to be pretty
 		if (first && isfirst)
@@ -366,7 +423,6 @@ void emu_options::remove_device_options()
 
 bool emu_options::parse_slot_devices(int argc, char *argv[], astring &error_string, const char *name, const char *value)
 {
-	remove_device_options();
 	bool isfirst = true;
 	bool result = core_options::parse_command_line(argc, argv, OPTION_PRIORITY_CMDLINE, error_string);
 	while (add_slot_options(isfirst)) {
@@ -399,6 +455,7 @@ bool emu_options::parse_command_line(int argc, char *argv[], astring &error_stri
 	if (old_system_name != system_name())
 	{
 		// remove any existing device options
+		remove_device_options();
 		result = parse_slot_devices(argc, argv, error_string, NULL, NULL);
 	}
 	return result;
@@ -416,9 +473,14 @@ void emu_options::parse_standard_inis(astring &error_string)
 	error_string.reset();
 
 	// parse the INI file defined by the platform (e.g., "mame.ini")
+	astring error;
+	set_value(OPTION_INIPATH, ".", OPTION_PRIORITY_INI, error);
+	assert(!error);
 	// we do this twice so that the first file can change the INI path
 	parse_one_ini(emulator_info::get_configname(), OPTION_PRIORITY_MAME_INI);
 	parse_one_ini(emulator_info::get_configname(), OPTION_PRIORITY_MAME_INI, &error_string);
+
+	setup_language(*this);
 
 	// debug mode: parse "debug.ini" as well
 	if (debug())
@@ -438,7 +500,8 @@ void emu_options::parse_standard_inis(astring &error_string)
 	// parse "vector.ini" for vector games
 	{
 		machine_config config(*cursystem, *this);
-		for (const screen_device *device = config.first_screen(); device != NULL; device = device->next_screen())
+		screen_device_iterator iter(config.root_device());
+		for (const screen_device *device = iter.first(); device != NULL; device = iter.next())
 			if (device->screen_type() == SCREEN_TYPE_VECTOR)
 			{
 				parse_one_ini("vector", OPTION_PRIORITY_VECTOR_INI, &error_string);
@@ -448,10 +511,10 @@ void emu_options::parse_standard_inis(astring &error_string)
 
 	// next parse "source/<sourcefile>.ini"; if that doesn't exist, try <sourcefile>.ini
 	astring sourcename;
-	core_filename_extract_base(&sourcename, cursystem->source_file, TRUE)->ins(0, "source" PATH_SEPARATOR);
+	core_filename_extract_base(sourcename, cursystem->source_file, true).ins(0, "source" PATH_SEPARATOR);
 	if (!parse_one_ini(sourcename, OPTION_PRIORITY_SOURCE_INI, &error_string))
 	{
-		core_filename_extract_base(&sourcename, cursystem->source_file, TRUE);
+		core_filename_extract_base(sourcename, cursystem->source_file, true);
 		parse_one_ini(sourcename, OPTION_PRIORITY_SOURCE_INI, &error_string);
 	}
 
@@ -462,6 +525,13 @@ void emu_options::parse_standard_inis(astring &error_string)
 		parse_one_ini(driver_list::driver(gparent).name, OPTION_PRIORITY_GPARENT_INI, &error_string);
 	if (parent != -1)
 		parse_one_ini(driver_list::driver(parent).name, OPTION_PRIORITY_PARENT_INI, &error_string);
+
+#ifdef USE_IPS
+	//mamep: hack, DO NOT INHERIT IPS CONFIGURATION
+	set_value(OPTION_IPS, "", OPTION_PRIORITY_INI, error);
+	assert(!error);
+#endif /* USE_IPS */
+
 	parse_one_ini(cursystem->name, OPTION_PRIORITY_DRIVER_INI, &error_string);
 }
 
@@ -474,7 +544,7 @@ void emu_options::parse_standard_inis(astring &error_string)
 const game_driver *emu_options::system() const
 {
 	astring tempstr;
-	int index = driver_list::find(*core_filename_extract_base(&tempstr, system_name(), TRUE));
+	int index = driver_list::find(core_filename_extract_base(tempstr, system_name(), true));
 	return (index != -1) ? &driver_list::driver(index) : NULL;
 }
 

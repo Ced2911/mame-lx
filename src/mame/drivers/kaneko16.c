@@ -79,6 +79,7 @@ Dip locations verified from manual for:
 - shogwarr
 
 [general]
+- interrupt timing/behaviour
 - replace sample bank copying with new ADDRESS MAP system for OKI and do banking like CPUs
 
 ***************************************************************************/
@@ -1752,32 +1753,21 @@ GFXDECODE_END
 
 ***************************************************************************/
 
-/*
-    TODO:
-    Fix this arrangement (specific for Bonk's Adventure)!
-
-    pre-deprecat lib note says:
-    Even though 3 interrupts are triggered, I set an int_num of 4. (notice '+1')
-    I agree that it is kind of a misuse of the function, but I haven't found
-    clues in code on how interrupts are scheduled...
-    IT5 is the main int, and needs more time to execute than IT 3 and 4.
-    Between other things, each of these 2 int are responsible of translating
-    a part of sprite buffer from work ram to sprite ram.
-    So now test mode is fully working and visible.
-    SebV
-*/
 static TIMER_DEVICE_CALLBACK( kaneko16_interrupt )
 {
 	kaneko16_state *state = timer.machine().driver_data<kaneko16_state>();
 	int scanline = param;
 
-	if(scanline == 0)
+	// main vblank interrupt
+	if(scanline == 224)
 		device_set_input_line(state->m_maincpu, 5, HOLD_LINE);
 
-	if(scanline == 180)
+	// each of these 2 int are responsible of translating a part of sprite buffer
+	// from work ram to sprite ram. How these are scheduled is unknown.
+	if(scanline == 64)
 		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
 
-	if(scanline == 120)
+	if(scanline == 144)
 		device_set_input_line(state->m_maincpu, 3, HOLD_LINE);
 }
 
@@ -1839,10 +1829,9 @@ static MACHINE_CONFIG_START( berlwall, kaneko16_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(256, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 240-1)
-	MCFG_SCREEN_UPDATE(berlwall)
+	MCFG_SCREEN_UPDATE_STATIC(berlwall)
 
 	MCFG_GFXDECODE(1x4bit_1x4bit)
 	MCFG_PALETTE_LENGTH(2048 + 32768)	/* 32768 static colors for the bg */
@@ -1886,10 +1875,9 @@ static MACHINE_CONFIG_START( bakubrkr, kaneko16_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(59)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(256, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 240-1)
-	MCFG_SCREEN_UPDATE(kaneko16)
+	MCFG_SCREEN_UPDATE_STATIC(kaneko16)
 
 	MCFG_GFXDECODE(1x4bit_2x4bit)
 	MCFG_PALETTE_LENGTH(2048)
@@ -1944,10 +1932,9 @@ static MACHINE_CONFIG_START( blazeon, kaneko16_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(320, 240)
 	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1 -8)
-	MCFG_SCREEN_UPDATE(kaneko16)
+	MCFG_SCREEN_UPDATE_STATIC(kaneko16)
 
 	MCFG_GFXDECODE(1x4bit_1x4bit)
 	MCFG_PALETTE_LENGTH(2048)
@@ -1994,10 +1981,9 @@ static MACHINE_CONFIG_START( gtmr, kaneko16_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(320, 240)
 	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
-	MCFG_SCREEN_UPDATE(kaneko16)
+	MCFG_SCREEN_UPDATE_STATIC(kaneko16)
 
 	MCFG_GFXDECODE(1x8bit_2x4bit)
 	MCFG_PALETTE_LENGTH(32768)
@@ -2071,10 +2057,9 @@ static MACHINE_CONFIG_START( mgcrystl, kaneko16_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(256, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 0+16, 256-16-1)
-	MCFG_SCREEN_UPDATE(kaneko16)
+	MCFG_SCREEN_UPDATE_STATIC(kaneko16)
 
 	MCFG_GFXDECODE(1x4bit_2x4bit)
 	MCFG_PALETTE_LENGTH(2048)
@@ -2119,27 +2104,24 @@ static TIMER_DEVICE_CALLBACK( shogwarr_interrupt )
 	kaneko16_state *state = timer.machine().driver_data<kaneko16_state>();
 	int scanline = param;
 
-	if(scanline == 240)
+	if(scanline == 224)
 	{
+		// the code for this interrupt is provided by the MCU..
 		device_set_input_line(state->m_maincpu, 4, HOLD_LINE);
 		calc3_mcu_run(timer.machine());
-	}
-
-	if(scanline == 0)
-		device_set_input_line(state->m_maincpu, 3, HOLD_LINE);
-
-	if(scanline == 128)
-		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
 
 #if 0
-	{
-			// hack, clear this ram address to get into test mode (interrupt would clear it)
+		// hack, clear this ram address to get into test mode (interrupt would clear it)
 		if (state->mainram[0x2dfe/2]==0xff00)
-		{
 			state->mainram[0x2dfe/2]=0x0000;
-		}
-	}
 #endif
+	}
+
+	if(scanline == 64)
+		device_set_input_line(state->m_maincpu, 3, HOLD_LINE);
+
+	if(scanline == 144)
+		device_set_input_line(state->m_maincpu, 2, HOLD_LINE);
 }
 
 /*
@@ -2191,10 +2173,9 @@ static MACHINE_CONFIG_START( shogwarr, kaneko16_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(59.1854)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(320, 240)
 	MCFG_SCREEN_VISIBLE_AREA(40, 296-1, 16, 240-1)
-	MCFG_SCREEN_UPDATE(kaneko16)
+	MCFG_SCREEN_UPDATE_STATIC(kaneko16)
 
 	MCFG_GFXDECODE(1x4bit_1x4bit)
 	MCFG_PALETTE_LENGTH(2048)

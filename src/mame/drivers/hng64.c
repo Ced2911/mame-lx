@@ -935,10 +935,7 @@ static WRITE32_HANDLER( tcram_w )
 
 		state->m_screen_dis = 0;
 
-		visarea.min_x = min_x;
-		visarea.max_x = min_x + max_x - 1;
-		visarea.min_y = min_y;
-		visarea.max_y = min_y + max_y - 1;
+		visarea.set(min_x, min_x + max_x - 1, min_y, min_y + max_y - 1);
 		space->machine().primary_screen->configure(HTOTAL, VTOTAL, visarea, space->machine().primary_screen->frame_period().attoseconds );
 	}
 }
@@ -1741,13 +1738,12 @@ static MACHINE_CONFIG_START( hng64, hng64_state )
 
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MCFG_SCREEN_UPDATE(hng64)
+	MCFG_SCREEN_UPDATE_STATIC(hng64)
 
 	MCFG_PALETTE_LENGTH(0x1000)
 
 	MCFG_VIDEO_START(hng64)
-	MCFG_SCREEN_EOF(hng64)
+	MCFG_SCREEN_VBLANK_STATIC(hng64)
 MACHINE_CONFIG_END
 
 

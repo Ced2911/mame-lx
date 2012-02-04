@@ -673,7 +673,7 @@ static void cps2_decrypt(running_machine &machine, const UINT32 *master_key, UIN
 		if ((i & 0xff) == 0)
 		{
 			char loadingMessage[256]; // for displaying with UI
-			sprintf(loadingMessage, "Decrypting %d%%", i*100/0x10000);
+			sprintf(loadingMessage, _("Decrypting %d%%"), i*100/0x10000);
 			ui_set_startup_text(machine, loadingMessage,FALSE);
 		}
 

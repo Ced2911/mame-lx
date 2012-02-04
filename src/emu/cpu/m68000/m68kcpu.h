@@ -34,14 +34,12 @@ typedef class _m68ki_cpu_core m68ki_cpu_core;
 
 #include <limits.h>
 #include <setjmp.h>
-
 // xenon.c
 extern int xmon_setjmp(jmp_buf buf);
 extern void xmon_longjmp(jmp_buf buf, int val);
 
 #define setjmp xmon_setjmp
 #define longjmp xmon_longjmp
-
 /* ======================================================================== */
 /* ==================== ARCHITECTURE-DEPENDANT DEFINES ==================== */
 /* ======================================================================== */

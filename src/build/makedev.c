@@ -203,9 +203,9 @@ int parse_file(const char *srcfile)
 			devlist[devcount++] = name;
 		}
 	}
-
+	
 	osd_free(buffer);
-
+	
 	return 0;
 }
 

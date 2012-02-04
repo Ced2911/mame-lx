@@ -198,9 +198,9 @@ static VIDEO_START( imolagp )
 }
 
 
-static SCREEN_UPDATE( imolagp )
+static SCREEN_UPDATE_IND16( imolagp )
 {
-	imolagp_state *state = screen->machine().driver_data<imolagp_state>();
+	imolagp_state *state = screen.machine().driver_data<imolagp_state>();
 	int scroll2 = state->m_scroll ^ 0x03;
 	int pass;
 	for (pass = 0; pass < 2; pass++)
@@ -213,7 +213,7 @@ static SCREEN_UPDATE( imolagp )
 			int pen;
 			int y = (i / 0x40);
 			int x = (i & 0x3f) * 4 - scroll2;
-			UINT16 *dest = BITMAP_ADDR16(bitmap, y & 0xff, 0);
+			UINT16 *dest = &bitmap.pix16(y & 0xff);
 			int data = source[i];
 			if (data || pass == 0)
 			{
@@ -574,10 +574,9 @@ static MACHINE_CONFIG_START( imolagp, imolagp_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(256,256)
 	MCFG_SCREEN_VISIBLE_AREA(0+64-16,255,0+16,255)
-	MCFG_SCREEN_UPDATE(imolagp)
+	MCFG_SCREEN_UPDATE_STATIC(imolagp)
 
 	MCFG_PALETTE_LENGTH(0x20)
 	MCFG_VIDEO_START(imolagp)

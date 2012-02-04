@@ -452,7 +452,7 @@ struct XenosSurface * osd_xenon_get_surface(){
 void osd_xenon_video_resume(){
     if(video_thread_running==0){
         // run the video on a new thread
-        xenon_run_thread_task(4, &thread_stack[sizeof (thread_stack) - 0x100], (void*) osd_xenon_video_thread);
+         xenon_run_thread_task(4, &thread_stack[sizeof (thread_stack) - 0x100], (void*) osd_xenon_video_thread);
     }
 }
 

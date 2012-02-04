@@ -63,9 +63,9 @@ static TIMER_DEVICE_CALLBACK( rotaryf_interrupt )
  *
  *************************************/
 
-static SCREEN_UPDATE( rotaryf )
+static SCREEN_UPDATE_RGB32( rotaryf )
 {
-	rotaryf_state *state = screen->machine().driver_data<rotaryf_state>();
+	rotaryf_state *state = screen.machine().driver_data<rotaryf_state>();
 	offs_t offs;
 
 	for (offs = 0; offs < state->m_videoram_size; offs++)
@@ -79,7 +79,7 @@ static SCREEN_UPDATE( rotaryf )
 		for (i = 0; i < 8; i++)
 		{
 			pen_t pen = (data & 0x01) ? RGB_WHITE : RGB_BLACK;
-			*BITMAP_ADDR32(bitmap, y, x) = pen;
+			bitmap.pix32(y, x) = pen;
 
 			data = data >> 1;
 			x = x + 1;
@@ -177,11 +177,10 @@ static MACHINE_CONFIG_START( rotaryf, rotaryf_state )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(32*8, 262)		/* vert size is a guess, taken from mw8080bw */
 	MCFG_SCREEN_VISIBLE_AREA(1*8, 30*8-1, 0*8, 32*8-1)
 	MCFG_SCREEN_REFRESH_RATE(60)
-	MCFG_SCREEN_UPDATE(rotaryf)
+	MCFG_SCREEN_UPDATE_STATIC(rotaryf)
 
 MACHINE_CONFIG_END
 

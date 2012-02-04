@@ -26,6 +26,8 @@ OBJDIRS += \
 	$(MACHINE) \
 	$(VIDEO) \
 
+DEFS += -DTINY_BUILD
+
 
 
 #-------------------------------------------------
@@ -35,6 +37,7 @@ OBJDIRS += \
 
 CPUS += Z80
 CPUS += M6502
+CPUS += I386
 CPUS += MCS48
 CPUS += MCS51
 CPUS += M6800
@@ -42,6 +45,7 @@ CPUS += M6809
 CPUS += M680X0
 CPUS += TMS9900
 CPUS += COP400
+CPUS += SH2
 
 
 
@@ -55,8 +59,16 @@ SOUNDS += DAC
 SOUNDS += DISCRETE
 SOUNDS += AY8910
 SOUNDS += YM2151
+SOUNDS += YM2203
+SOUNDS += YM2608
+SOUNDS += YM2610
+SOUNDS += YMF278B
+SOUNDS += YMZ280B
 SOUNDS += ASTROCADE
 SOUNDS += TMS5220
+ifneq ($(WINUI),)
+SOUNDS += VLM5030
+endif
 SOUNDS += OKIM6295
 SOUNDS += HC55516
 SOUNDS += YM3812
@@ -69,6 +81,9 @@ SOUNDS += CEM3394
 # for building all of the drivers referenced
 # in tiny.c
 #-------------------------------------------------
+
+DRVLIST += \
+	$(MAMEOBJ)/tiny.lst \
 
 DRVLIBS = \
 	$(EMUDRIVERS)/emudummy.o \
@@ -91,6 +106,40 @@ DRVLIBS = \
 	$(DRIVERS)/looping.o \
 	$(DRIVERS)/supertnk.o \
 
+DRVLIBS += \
+	$(MAMEOBJ)/psikyo.a \
+	$(MAMEOBJ)/misc.a \
+	$(MAMEOBJ)/shared.a \
+
+
+
+#-------------------------------------------------
+# the following files are general components and
+# shared across a number of drivers
+#-------------------------------------------------
+
+$(MAMEOBJ)/shared.a: \
+	$(MACHINE)/nmk112.o \
+
+
+
+#-------------------------------------------------
+# manufacturer-specific groupings for drivers
+#-------------------------------------------------
+
+$(MAMEOBJ)/psikyo.a: \
+	$(DRIVERS)/psikyo.o $(VIDEO)/psikyo.o \
+	$(DRIVERS)/psikyosh.o $(VIDEO)/psikyosh.o \
+
+
+
+#-------------------------------------------------
+# remaining drivers
+#-------------------------------------------------
+
+$(MAMEOBJ)/misc.a: \
+	$(DRIVERS)/cave.o $(VIDEO)/cave.o \
+
 
 
 #-------------------------------------------------
@@ -101,3 +150,16 @@ $(DRIVERS)/astrocde.o:	$(LAYOUT)/gorf.lh \
 						$(LAYOUT)/tenpindx.lh
 $(DRIVERS)/circus.o:	$(LAYOUT)/circus.lh \
 						$(LAYOUT)/crash.lh
+
+$(MAMEOBJ)/mamedriv.o:	$(LAYOUT)/pinball.lh
+
+#-------------------------------------------------
+# mamep: driver list dependencies
+#-------------------------------------------------
+
+#FXIXME
+$(MAMEOBJ)/%.lst:	$(MAMESRC)/%.lst
+	@echo Generating $@...
+	@echo #include "$<" > $@.h
+	$(CC) $(CDEFS) $(INCPATH) -I. -E $@.h -o $@
+

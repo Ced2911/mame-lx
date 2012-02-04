@@ -93,14 +93,14 @@ static WRITE8_HANDLER( fg_tile_w )
 {
 	jackie_state *state = space->machine().driver_data<jackie_state>();
 	state->m_fg_tile_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_fg_tilemap,offset);
+	state->m_fg_tilemap->mark_tile_dirty(offset);
 }
 
 static WRITE8_HANDLER( fg_color_w )
 {
 	jackie_state *state = space->machine().driver_data<jackie_state>();
 	state->m_fg_color_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_fg_tilemap,offset);
+	state->m_fg_tilemap->mark_tile_dirty(offset);
 }
 
 
@@ -117,7 +117,7 @@ static WRITE8_HANDLER( jackie_reel1_ram_w )
 {
 	jackie_state *state = space->machine().driver_data<jackie_state>();
 	state->m_reel1_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_reel1_tilemap,offset);
+	state->m_reel1_tilemap->mark_tile_dirty(offset);
 }
 
 static TILE_GET_INFO( get_jackie_reel1_tile_info )
@@ -133,7 +133,7 @@ static WRITE8_HANDLER( jackie_reel2_ram_w )
 {
 	jackie_state *state = space->machine().driver_data<jackie_state>();
 	state->m_reel2_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_reel2_tilemap,offset);
+	state->m_reel2_tilemap->mark_tile_dirty(offset);
 }
 
 static TILE_GET_INFO( get_jackie_reel2_tile_info )
@@ -148,7 +148,7 @@ static WRITE8_HANDLER( jackie_reel3_ram_w )
 {
 	jackie_state *state = space->machine().driver_data<jackie_state>();
 	state->m_reel3_ram[offset] = data;
-	tilemap_mark_tile_dirty(state->m_reel3_tilemap,offset);
+	state->m_reel3_tilemap->mark_tile_dirty(offset);
 }
 
 static TILE_GET_INFO( get_jackie_reel3_tile_info )
@@ -165,29 +165,29 @@ static VIDEO_START(jackie)
 	state->m_reel2_tilemap = tilemap_create(machine,get_jackie_reel2_tile_info,tilemap_scan_rows,8,32, 64, 8);
 	state->m_reel3_tilemap = tilemap_create(machine,get_jackie_reel3_tile_info,tilemap_scan_rows,8,32, 64, 8);
 
-	tilemap_set_scroll_cols(state->m_reel1_tilemap, 64);
-	tilemap_set_scroll_cols(state->m_reel2_tilemap, 64);
-	tilemap_set_scroll_cols(state->m_reel3_tilemap, 64);
+	state->m_reel1_tilemap->set_scroll_cols(64);
+	state->m_reel2_tilemap->set_scroll_cols(64);
+	state->m_reel3_tilemap->set_scroll_cols(64);
 
 	state->m_fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows,	8,  8,	64, 32);
-	tilemap_set_transparent_pen(state->m_fg_tilemap, 0);
+	state->m_fg_tilemap->set_transparent_pen(0);
 }
 
 
-static SCREEN_UPDATE(jackie)
+static SCREEN_UPDATE_IND16(jackie)
 {
-	jackie_state *state = screen->machine().driver_data<jackie_state>();
+	jackie_state *state = screen.machine().driver_data<jackie_state>();
 	int i,j;
 	int startclipmin = 0;
-	const rectangle &visarea = screen->visible_area();
+	const rectangle &visarea = screen.visible_area();
 
-	bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine()));
+	bitmap.fill(get_black_pen(screen.machine()), cliprect);
 
 	for (i=0;i < 0x40;i++)
 	{
-		tilemap_set_scrolly(state->m_reel1_tilemap, i, state->m_bg_scroll[i+0x000]);
-		tilemap_set_scrolly(state->m_reel2_tilemap, i, state->m_bg_scroll[i+0x040]);
-		tilemap_set_scrolly(state->m_reel3_tilemap, i, state->m_bg_scroll[i+0x080]);
+		state->m_reel1_tilemap->set_scrolly(i, state->m_bg_scroll[i+0x000]);
+		state->m_reel2_tilemap->set_scrolly(i, state->m_bg_scroll[i+0x040]);
+		state->m_reel3_tilemap->set_scrolly(i, state->m_bg_scroll[i+0x080]);
 	}
 
 	for (j=0; j < 0x100-1; j++)
@@ -196,22 +196,19 @@ static SCREEN_UPDATE(jackie)
 		int rowenable = state->m_bg_scroll2[j];
 
 		/* draw top of screen */
-		clip.min_x = visarea.min_x;
-		clip.max_x = visarea.max_x;
-		clip.min_y = startclipmin;
-		clip.max_y = startclipmin+1;
+		clip.set(visarea.min_x, visarea.max_x, startclipmin, startclipmin+1);
 
 		if (rowenable==0)
 		{
-			tilemap_draw(bitmap,&clip,state->m_reel1_tilemap,0,0);
+			state->m_reel1_tilemap->draw(bitmap, clip, 0,0);
 		}
 		else if (rowenable==1)
 		{
-			tilemap_draw(bitmap,&clip,state->m_reel2_tilemap,0,0);
+			state->m_reel2_tilemap->draw(bitmap, clip, 0,0);
 		}
 		else if (rowenable==2)
 		{
-			tilemap_draw(bitmap,&clip,state->m_reel3_tilemap,0,0);
+			state->m_reel3_tilemap->draw(bitmap, clip, 0,0);
 		}
 		else if (rowenable==3)
 		{
@@ -220,7 +217,7 @@ static SCREEN_UPDATE(jackie)
 		startclipmin+=1;
 	}
 
-	tilemap_draw(bitmap, cliprect, state->m_fg_tilemap, 0, 0);
+	state->m_fg_tilemap->draw(bitmap, cliprect, 0, 0);
 
 	return 0;
 }
@@ -574,10 +571,9 @@ static MACHINE_CONFIG_START( jackie, jackie_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(57)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0, 32*8-1)
-	MCFG_SCREEN_UPDATE(jackie)
+	MCFG_SCREEN_UPDATE_STATIC(jackie)
 
 	MCFG_GFXDECODE(jackie)
 	MCFG_PALETTE_LENGTH(2048)

@@ -283,7 +283,8 @@ static BOOL WINAPI control_handler(DWORD type);
 static int is_double_click_start(int argc);
 static DWORD WINAPI watchdog_thread_entry(LPVOID lpParameter);
 static LONG WINAPI exception_filter(struct _EXCEPTION_POINTERS *info);
-static void winui_output_error(void *param, const char *format, va_list argptr);
+static void winui_output_error(delegate_late_bind *__dummy, const char *format, va_list argptr);
+static void win_mame_file_output_callback(delegate_late_bind *param, const char *format, va_list argptr);
 
 
 
@@ -331,9 +332,9 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_FILTER ";d3dfilter;flt",              "1",        OPTION_BOOLEAN,    "enable bilinear filtering on screen output" },
 
 	// post-processing options
-	{ NULL,                                             		NULL,        OPTION_HEADER,     "DIRECT3D POST-PROCESSING OPTIONS" },
-	{ WINOPTION_HLSL_ENABLE";hlsl",         					"0",         OPTION_BOOLEAN,    "enable HLSL post-processing (PS3.0 required)" },
-	{ WINOPTION_HLSLPATH,                                   	"hlsl",      OPTION_STRING,     "path to hlsl files" },
+	{ NULL,                                              		NULL,        OPTION_HEADER,     "DIRECT3D POST-PROCESSING OPTIONS" },
+	{ WINOPTION_HLSL_ENABLE";hlsl",            					"0",       	 OPTION_BOOLEAN,    "enable HLSL post-processing (PS3.0 required)" },
+	{ WINOPTION_HLSLPATH,                                    	"hlsl",   	 OPTION_STRING,     "path to hlsl files" },
 	{ WINOPTION_HLSL_INI_READ,									"0",		 OPTION_BOOLEAN,	"enable HLSL INI reading" },
 	{ WINOPTION_HLSL_INI_WRITE,									"0",		 OPTION_BOOLEAN,	"enable HLSL INI writing" },
 	{ WINOPTION_HLSL_INI_NAME,      							"%g",        OPTION_STRING,     "HLSL INI file name for this game" },
@@ -341,23 +342,23 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_HLSL_PRESCALE_Y,        						"0",         OPTION_INTEGER,    "HLSL pre-scale override factor for Y (0 for auto)" },
 	{ WINOPTION_HLSL_PRESET";(-1-3)",                           "-1",        OPTION_INTEGER,    "HLSL preset to use (0-3)" },
 	{ WINOPTION_HLSL_WRITE,         					        NULL,        OPTION_STRING,     "enable HLSL AVI writing (huge disk bandwidth suggested)" },
-	{ WINOPTION_HLSL_SNAP_WIDTH,        					    "2048",      OPTION_STRING,     "HLSL upscaled-snapshot width" },
-	{ WINOPTION_HLSL_SNAP_HEIGHT,       					    "1536",      OPTION_STRING,     "HLSL upscaled-snapshot height" },
-	{ WINOPTION_SHADOW_MASK_ALPHA";fs_shadwa(0.0-1.0)",         "0.0",       OPTION_FLOAT,      "shadow mask alpha-blend value (1.0 is fully blended, 0.0 is no mask)" },
+	{ WINOPTION_HLSL_SNAP_WIDTH,         					    "2048",      OPTION_STRING,     "HLSL upscaled-snapshot width" },
+	{ WINOPTION_HLSL_SNAP_HEIGHT,         					    "1536",      OPTION_STRING,     "HLSL upscaled-snapshot height" },
+	{ WINOPTION_SHADOW_MASK_ALPHA";fs_shadwa(0.0-1.0)",         "0.0",     	 OPTION_FLOAT,    	"shadow mask alpha-blend value (1.0 is fully blended, 0.0 is no mask)" },
 	{ WINOPTION_SHADOW_MASK_TEXTURE";fs_shadwt(0.0-1.0)",       "aperture.png", OPTION_STRING,  "shadow mask texture name" },
 	{ WINOPTION_SHADOW_MASK_COUNT_X";fs_shadww",				"320",		 OPTION_INTEGER,	"shadow mask width, in phosphor dots" },
 	{ WINOPTION_SHADOW_MASK_COUNT_Y";fs_shadwh",				"240",		 OPTION_INTEGER,	"shadow mask height, in phosphor dots" },
 	{ WINOPTION_SHADOW_MASK_USIZE";fs_shadwu(0.0-1.0)",			"0.09375",	 OPTION_FLOAT,		"shadow mask texture size in U direction" },
 	{ WINOPTION_SHADOW_MASK_VSIZE";fs_shadwv(0.0-1.0)",			"0.109375",	 OPTION_FLOAT,		"shadow mask texture size in V direction" },
-	{ WINOPTION_CURVATURE";fs_curv(0.0-4.0)",           		"0.0",       OPTION_FLOAT,  	"screen curvature amount" },
+	{ WINOPTION_CURVATURE";fs_curv(0.0-4.0)",            		"0.0",       OPTION_FLOAT,    	"screen curvature amount" },
 	/* Beam-related values below this line*/
-	{ WINOPTION_PINCUSHION";fs_pin(0.0-4.0)",           		"0.0",       OPTION_FLOAT,  	"pincushion amount" },
-	{ WINOPTION_SCANLINE_AMOUNT";fs_scanam(0.0-4.0)",       	"0.0",       OPTION_FLOAT,  	"overall alpha scaling value for scanlines" },
-	{ WINOPTION_SCANLINE_SCALE";fs_scansc(0.0-4.0)",        	"1.0",       OPTION_FLOAT,  	"overall height scaling value for scanlines" },
+	{ WINOPTION_PINCUSHION";fs_pin(0.0-4.0)",            		"0.0",       OPTION_FLOAT,    	"pincushion amount" },
+	{ WINOPTION_SCANLINE_AMOUNT";fs_scanam(0.0-4.0)",       	"0.0",       OPTION_FLOAT,    	"overall alpha scaling value for scanlines" },
+	{ WINOPTION_SCANLINE_SCALE";fs_scansc(0.0-4.0)",        	"1.0",       OPTION_FLOAT,    	"overall height scaling value for scanlines" },
 	{ WINOPTION_SCANLINE_HEIGHT";fs_scanh(0.0-4.0)",        	"0.7",       OPTION_FLOAT,  	"individual height scaling value for scanlines" },
 	{ WINOPTION_SCANLINE_BRIGHT_SCALE";fs_scanbs(0.0-2.0)", 	"1.0",       OPTION_FLOAT,  	"overall brightness scaling value for scanlines (multiplicative)" },
 	{ WINOPTION_SCANLINE_BRIGHT_OFFSET";fs_scanbo(0.0-1.0)",	"0.0",       OPTION_FLOAT,  	"overall brightness offset value for scanlines (additive)" },
-	{ WINOPTION_SCANLINE_OFFSET";fs_scanjt(0.0-4.0)",       	"0.0",       OPTION_FLOAT,  	"overall interlace jitter scaling value for scanlines" },
+	{ WINOPTION_SCANLINE_OFFSET";fs_scanjt(0.0-4.0)",       	"0.0",       OPTION_FLOAT,    	"overall interlace jitter scaling value for scanlines" },
 	{ WINOPTION_DEFOCUS";fs_focus",				            	"0.0,0.0",   OPTION_STRING,     "overall defocus value in screen-relative coords" },
 	{ WINOPTION_CONVERGE_X";fs_convx",      					"0.0,0.0,0.0",OPTION_STRING,	"convergence in screen-relative X direction" },
 	{ WINOPTION_CONVERGE_Y";fs_convy",      					"0.0,0.0,0.0",OPTION_STRING,	"convergence in screen-relative Y direction" },
@@ -374,7 +375,7 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_FLOOR";fs_floor",           					"0.0,0.0,0.0",OPTION_STRING,    "signal floor level" },
 	{ WINOPTION_PHOSPHOR";fs_phosphor",         				"0.0,0.0,0.0",OPTION_STRING,    "phosphorescence decay rate (0.0 is instant, 1.0 is forever)" },
 	/* NTSC simulation below this line */
-	{ WINOPTION_YIQ_ENABLE";yiq",           					"0",    	 OPTION_BOOLEAN,    "enable YIQ-space HLSL post-processing" },
+	{ WINOPTION_YIQ_ENABLE";yiq",            					"0",       	 OPTION_BOOLEAN,    "enable YIQ-space HLSL post-processing" },
 	{ WINOPTION_YIQ_CCVALUE";yiqcc",							"3.59754545",OPTION_FLOAT,		"Color Carrier frequency for NTSC signal processing" },
 	{ WINOPTION_YIQ_AVALUE";yiqa",								"0.5",		 OPTION_FLOAT,		"A value for NTSC signal processing" },
 	{ WINOPTION_YIQ_BVALUE";yiqb",								"0.5",  	 OPTION_FLOAT,		"B value for NTSC signal processing" },
@@ -419,17 +420,30 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_TRIPLEBUFFER ";tb",                   "0",        OPTION_BOOLEAN,    "enable triple buffering" },
 	{ WINOPTION_SWITCHRES,                            "0",        OPTION_BOOLEAN,    "enable resolution switching" },
 	{ WINOPTION_FULLSCREENBRIGHTNESS ";fsb(0.1-2.0)", "1.0",      OPTION_FLOAT,      "brightness value in full screen mode" },
-	{ WINOPTION_FULLSCREENCONTRAST ";fsc(0.1-2.0)",   "1.0",      OPTION_FLOAT,      "contrast value in full screen mode" },
+	{ WINOPTION_FULLSCREENCONTRAST ";fsc(0.1-2.0)",  "1.0",      OPTION_FLOAT,      "contrast value in full screen mode" },
 	{ WINOPTION_FULLSCREENGAMMA ";fsg(0.1-3.0)",      "1.0",      OPTION_FLOAT,      "gamma value in full screen mode" },
 
 	// sound options
 	{ NULL,                                           NULL,       OPTION_HEADER,     "WINDOWS SOUND OPTIONS" },
 	{ WINOPTION_AUDIO_LATENCY "(1-5)",                "2",        OPTION_INTEGER,    "set audio latency (increase to reduce glitches)" },
+#ifdef USE_AUDIO_SYNC
+	{ "audio_sync",                                   "0",        OPTION_BOOLEAN,    "enable audio sync" },
+#endif /* USE_AUDIO_SYNC */
 
 	// input options
 	{ NULL,                                           NULL,       OPTION_HEADER,     "INPUT DEVICE OPTIONS" },
 	{ WINOPTION_HIDE_CURSOR ";hc",                    "1",        OPTION_BOOLEAN,    "hide cursor in full screen or if mouse is enabled" },
 	{ WINOPTION_DUAL_LIGHTGUN ";dual",                "0",        OPTION_BOOLEAN,    "enable dual lightgun input" },
+#ifdef JOYSTICK_ID
+	{ "joyid1(0-7)",                                  "0",        OPTION_INTEGER,    "set joystick ID (Player1)" },
+	{ "joyid2(0-7)",                                  "1",        OPTION_INTEGER,    "set joystick ID (Player2)" },
+	{ "joyid3(0-7)",                                  "2",        OPTION_INTEGER,    "set joystick ID (Player3)" },
+	{ "joyid4(0-7)",                                  "3",        OPTION_INTEGER,    "set joystick ID (Player4)" },
+	{ "joyid5(0-7)",                                  "4",        OPTION_INTEGER,    "set joystick ID (Player5)" },
+	{ "joyid6(0-7)",                                  "5",        OPTION_INTEGER,    "set joystick ID (Player6)" },
+	{ "joyid7(0-7)",                                  "6",        OPTION_INTEGER,    "set joystick ID (Player7)" },
+	{ "joyid8(0-7)",                                  "7",        OPTION_INTEGER,    "set joystick ID (Player8)" },
+#endif /* JOYSTICK_ID */
 
 	{ NULL }
 };
@@ -467,11 +481,22 @@ int main(int argc, char *argv[])
 	if (win_is_gui_application() || is_double_click_start(argc))
 	{
 		// if we are a GUI app, output errors to message boxes
-		mame_set_output_channel(OUTPUT_CHANNEL_ERROR, winui_output_error, NULL, NULL, NULL);
+		mame_set_output_channel(OUTPUT_CHANNEL_ERROR, output_delegate(FUNC(winui_output_error), (delegate_late_bind *)0));
 
 		// make sure any console window that opened on our behalf is nuked
 		FreeConsole();
 	}
+	else
+		mame_set_output_channel(OUTPUT_CHANNEL_ERROR, output_delegate(FUNC(win_mame_file_output_callback), (delegate_late_bind *)stderr));
+
+	mame_set_output_channel(OUTPUT_CHANNEL_WARNING, output_delegate(FUNC(win_mame_file_output_callback), (delegate_late_bind *)stderr));
+	mame_set_output_channel(OUTPUT_CHANNEL_INFO, output_delegate(FUNC(win_mame_file_output_callback), (delegate_late_bind *)stdout));
+	mame_set_output_channel(OUTPUT_CHANNEL_DEBUG, output_delegate(FUNC(win_mame_file_output_callback), (delegate_late_bind *)stdout));
+	mame_set_output_channel(OUTPUT_CHANNEL_VERBOSE, output_delegate(FUNC(win_mame_file_output_callback), (delegate_late_bind *)stdout));
+	mame_set_output_channel(OUTPUT_CHANNEL_LOG, output_delegate(FUNC(win_mame_file_output_callback), (delegate_late_bind *)stderr));
+
+	// set up language for windows
+	assign_msg_catategory(UI_MSG_OSD0, "windows");
 
 	// parse config and cmdline options
 	DWORD result = 0;
@@ -484,6 +509,7 @@ int main(int argc, char *argv[])
 
 	// free symbols
 	symbols = NULL;
+	ui_lang_shutdown();
 	return result;
 }
 
@@ -539,7 +565,7 @@ static BOOL WINAPI control_handler(DWORD type)
 //  winui_output_error
 //============================================================
 
-static void winui_output_error(void *param, const char *format, va_list argptr)
+static void winui_output_error(delegate_late_bind *param, const char *format, va_list argptr)
 {
 	char buffer[1024];
 
@@ -633,7 +659,7 @@ void windows_osd_interface::init(running_machine &machine)
 		osd_num_processors = atoi(stemp);
 		if (osd_num_processors < 1)
 		{
-			mame_printf_warning("Warning: numprocessors < 1 doesn't make much sense. Assuming auto ...\n");
+			mame_printf_warning(_WINDOWS("Warning: numprocessors < 1 doesn't make much sense. Assuming auto ...\n"));
 			osd_num_processors = 0;
 		}
 	}
@@ -690,8 +716,8 @@ void windows_osd_interface::init(running_machine &machine)
 	}
 
 	// initialize sockets
-	win_init_sockets();
-
+	win_init_sockets();	
+	
 	// note the existence of a machine
 	g_current_machine = &machine;
 }
@@ -708,7 +734,7 @@ void windows_osd_interface::osd_exit(running_machine &machine)
 
 	// cleanup sockets
 	win_cleanup_sockets();
-
+	
 	#ifdef USE_NETWORK
 	winnetdev_deinit(machine);
 	#endif
@@ -744,6 +770,22 @@ void windows_osd_interface::osd_exit(running_machine &machine)
 
 	// one last pass at events
 	winwindow_process_events(machine, 0);
+}
+
+
+//============================================================
+//  win_mame_file_output_callback
+//============================================================
+
+static void win_mame_file_output_callback(delegate_late_bind *param, const char *format, va_list argptr)
+{
+	char buf[5000];
+	CHAR *s;
+
+	vsnprintf(buf, ARRAY_LENGTH(buf), format, argptr);
+	s = astring_from_utf8(buf);
+	fputs(s, (FILE *)param);
+	osd_free(s);
 }
 
 
@@ -832,7 +874,7 @@ void windows_osd_interface::font_close(osd_font font)
 //  pixel of a black & white font
 //-------------------------------------------------
 
-bitmap_t *windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs)
+bool windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chnum, bitmap_argb32 &bitmap, INT32 &width, INT32 &xoffs, INT32 &yoffs)
 {
 	// create a dummy DC to work with
 	HDC dummyDC = CreateCompatibleDC(NULL);
@@ -871,7 +913,7 @@ bitmap_t *windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chn
 	info.bmiHeader.biClrUsed = 0;
 	info.bmiHeader.biClrImportant = 0;
 	RGBQUAD col1 = info.bmiColors[0];
-	RGBQUAD col2 = info.bmiColors[1];
+	RGBQUAD col2 = info.bmiColors[1];	
 	col1.rgbBlue = col1.rgbGreen = col1.rgbRed = 0x00;
 	col2.rgbBlue = col2.rgbGreen = col2.rgbRed = 0xff;
 
@@ -938,17 +980,16 @@ bitmap_t *windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chn
 	}
 
 	// allocate a new bitmap
-	bitmap_t *bitmap = NULL;
 	if (actbounds.max_x >= actbounds.min_x && actbounds.max_y >= actbounds.min_y)
 	{
-		bitmap = auto_alloc(machine(), bitmap_t(actbounds.max_x + 1 - actbounds.min_x, actbounds.max_y + 1 - actbounds.min_y, BITMAP_FORMAT_ARGB32));
+		bitmap.allocate(actbounds.max_x + 1 - actbounds.min_x, actbounds.max_y + 1 - actbounds.min_y);
 
 		// copy the bits into it
-		for (int y = 0; y < bitmap->height; y++)
+		for (int y = 0; y < bitmap.height(); y++)
 		{
-			UINT32 *dstrow = BITMAP_ADDR32(bitmap, y, 0);
+			UINT32 *dstrow = &bitmap.pix32(y);
 			UINT8 *srcrow = &bits[(y + actbounds.min_y) * rowbytes];
-			for (int x = 0; x < bitmap->width; x++)
+			for (int x = 0; x < bitmap.width(); x++)
 			{
 				int effx = x + actbounds.min_x;
 				dstrow[x] = ((srcrow[effx / 8] << (effx % 8)) & 0x80) ? MAKE_ARGB(0xff,0xff,0xff,0xff) : MAKE_ARGB(0x00,0xff,0xff,0xff);
@@ -965,7 +1006,7 @@ bitmap_t *windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chn
 	DeleteObject(dib);
 	SelectObject(dummyDC, oldfont);
 	DeleteDC(dummyDC);
-	return bitmap;
+	return bitmap.valid();
 }
 
 

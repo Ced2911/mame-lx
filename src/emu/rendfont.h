@@ -67,12 +67,14 @@ public:
 	// size queries
 	INT32 pixel_height() const { return m_height; }
 	float char_width(float height, float aspect, unicode_char ch);
+	//mamep: to render as fixed-width font
+	float char_width_no_margin(float height, float aspect, unicode_char ch);
 	float string_width(float height, float aspect, const char *string);
 	float utf8string_width(float height, float aspect, const char *utf8string);
 
 	// texture/bitmap queries
 	render_texture *get_char_texture_and_bounds(float height, float aspect, unicode_char ch, render_bounds &bounds);
-	void get_scaled_bitmap_and_bounds(bitmap_t &dest, float height, float aspect, unicode_char chnum, rectangle &bounds);
+	void get_scaled_bitmap_and_bounds(bitmap_argb32 &dest, float height, float aspect, unicode_char chnum, rectangle &bounds);
 
 private:
 	// a glyph describes a single glyph
@@ -83,8 +85,12 @@ private:
 		INT32				xoffs, yoffs;		// X and Y offset from baseline to top,left of bitmap
 		INT32				bmwidth, bmheight;	// width and height of bitmap
 		const char *		rawdata;			// pointer to the raw data for this one
-		bitmap_t *			bitmap;				// pointer to the bitmap containing the raw data
+		bitmap_argb32		bitmap;				// pointer to the bitmap containing the raw data
 		render_texture *	texture;			// pointer to a texture for rendering and sizing
+#ifdef UI_COLOR_DISPLAY
+		//mamep: for color glyph
+		int			color;
+#endif /* UI_COLOR_DISPLAY */
 	};
 
 	// internal format
@@ -102,6 +108,7 @@ private:
 	bool load_cached_bdf(const char *filename);
 	bool load_bdf();
 	bool load_cached(emu_file &file, UINT32 hash);
+	bool load_cached_cmd(emu_file &file, UINT32 hash);
 	bool save_cached(const char *filename, UINT32 hash);
 
 	// internal state
@@ -114,12 +121,24 @@ private:
 	const char *		m_rawdata;			// pointer to the raw data for the font
 	UINT64				m_rawsize;			// size of the raw font data
 	osd_font			m_osdfont;			// handle to the OSD font
+	//mamep: for command glyph
+	int					m_height_cmd;		// height of the font, from ascent to descent
+	int					m_yoffs_cmd;		// y offset from baseline to descent
+	glyph *				m_glyphs_cmd[256];	// array of glyph subtables
+	const char *		m_rawdata_cmd;		// pointer to the raw data for the font
+
+	//mamep: allocate command glyph font
+	void render_font_command_glyph();
 
 	// constants
 	static const int CACHED_CHAR_SIZE		= 12;
 	static const int CACHED_HEADER_SIZE		= 16;
 	static const int CACHED_BDF_HASH_SIZE	= 1024;
 };
+
+
+//mamep: convert command glyph
+void convert_command_glyph(char *s, int buflen);
 
 
 #endif	/* __RENDFONT_H__ */

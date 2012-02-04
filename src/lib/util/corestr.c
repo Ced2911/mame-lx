@@ -149,6 +149,34 @@ char *core_strdup(const char *str)
 }
 
 
+#ifdef DRIVER_SWITCH
+/*-------------------------------------------------
+    core_strtrim - for get individual driver name
+-------------------------------------------------*/
+
+char *core_strtrim(const char *str)
+{
+	const char *start = str;
+	int len;
+	char *s;
+
+	/* strip spaces, move to corestr.c */
+	while (isspace(*start))
+		start++;
+
+	for (len = strlen(start); len > 0; len--)
+		if (!isspace(start[len - 1]))
+			break;
+
+	s = (char *)osd_malloc(len + 1);
+	strncpy(s, start, len);
+	s[len] = '\0';
+
+	return s;
+}
+#endif /* DRIVER_SWITCH */
+
+
 /*-------------------------------------------------
     core_i64_hex_format - i64 format printf helper
 -------------------------------------------------*/

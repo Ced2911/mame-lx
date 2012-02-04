@@ -117,3 +117,29 @@ const void *osd_get_slider_list() {
     // nothing to slide in mini OSD
     return NULL;
 }
+
+
+//============================================================
+//  set_osdcore_acp
+//============================================================
+int acp = 0;
+
+void set_osdcore_acp(int cp)
+{
+    acp=cp;
+}
+
+
+//============================================================
+//  get_osdcore_acp
+//============================================================
+
+int get_osdcore_acp(void)
+{
+    return acp;
+}
+
+int osd_get_default_codepage(void)
+{
+    return 0;
+}

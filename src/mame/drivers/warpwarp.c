@@ -214,7 +214,7 @@ static WRITE8_HANDLER( geebee_out7_w )
 			break;
 		case 5:
 			if( state->m_geebee_bgw != (data & 1) )
-				tilemap_mark_all_tiles_dirty_all(space->machine());
+				space->machine().tilemap().mark_all_dirty();
 			state->m_geebee_bgw = data & 1;
 			break;
 		case 6:
@@ -742,9 +742,8 @@ static MACHINE_CONFIG_START( geebee, warpwarp_state )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 384, 0, 272, 264, 0, 224)
-	MCFG_SCREEN_UPDATE(geebee)
+	MCFG_SCREEN_UPDATE_STATIC(geebee)
 
 	MCFG_GFXDECODE(1k)
 	MCFG_PALETTE_LENGTH(4*2)
@@ -778,9 +777,8 @@ static MACHINE_CONFIG_START( bombbee, warpwarp_state )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 384, 0, 272, 264, 0, 224)
-	MCFG_SCREEN_UPDATE(geebee)
+	MCFG_SCREEN_UPDATE_STATIC(geebee)
 
 	MCFG_GFXDECODE(color)
 	MCFG_PALETTE_LENGTH(2*256+1)

@@ -117,6 +117,9 @@
 #include "validity.h"
 #include "unzip.h"
 #include "debug/debugcon.h"
+#ifdef USE_HISCORE
+#include "hiscore.h"
+#endif /* USE_HISCORE */
 
 #include <time.h>
 
@@ -146,13 +149,10 @@ running_machine::running_machine(const machine_config &_config, osd_interface &o
 	  pens(NULL),
 	  colortable(NULL),
 	  shadow_table(NULL),
-	  priority_bitmap(NULL),
 	  debug_flags(0),
 	  memory_data(NULL),
 	  palette_data(NULL),
-	  tilemap_data(NULL),
 	  romload_data(NULL),
-	  input_data(NULL),
 	  input_port_data(NULL),
 	  ui_input_data(NULL),
 	  debugcpu_data(NULL),
@@ -171,8 +171,8 @@ running_machine::running_machine(const machine_config &_config, osd_interface &o
 	  m_input(NULL),
 	  m_sound(NULL),
 	  m_video(NULL),
+	  m_tilemap(NULL),
 	  m_debug_view(NULL),
-	  m_driver_device(NULL),
 	  m_current_phase(MACHINE_PHASE_PREINIT),
 	  m_paused(false),
 	  m_hard_reset_pending(false),
@@ -181,7 +181,7 @@ running_machine::running_machine(const machine_config &_config, osd_interface &o
 	  m_new_driver_pending(NULL),
 	  m_soft_reset_timer(NULL),
 	  m_rand_seed(0x9d14abd7),
-      m_ui_active(false),
+	  m_ui_active(false),
 	  m_basename(_config.gamedrv().name),
 	  m_sample_rate(_config.options().sample_rate()),
 	  m_logfile(NULL),
@@ -195,21 +195,27 @@ running_machine::running_machine(const machine_config &_config, osd_interface &o
 	memset(&m_base_time, 0, sizeof(m_base_time));
 
 	// set the machine on all devices
-	const_cast<device_list &>(devicelist()).set_machine_all(*this);
-
-	// find the driver device config and tell it which game
-	m_driver_device = device<driver_device>("root");
-	if (m_driver_device == NULL)
-		throw emu_fatalerror("Machine configuration missing driver_device");
+	device_iterator iter(root_device());
+	for (device_t *device = iter.first(); device != NULL; device = iter.next())
+		device->set_machine(*this);
 
 	// find devices
-	primary_screen = downcast<screen_device *>(devicelist().first(SCREEN));
-	for (device_t *device = devicelist().first(); device != NULL; device = device->next())
+	for (device_t *device = iter.first(); device != NULL; device = iter.next())
 		if (dynamic_cast<cpu_device *>(device) != NULL)
 		{
 			firstcpu = downcast<cpu_device *>(device);
 			break;
 		}
+#ifdef USE_HISCORE
+	int cpunum = 0;
+	execute_interface_iterator execiter(root_device());
+	for (device_execute_interface *device = execiter.first(); device != NULL; device = execiter.next())
+		if (cpunum < 8)
+			cpu[cpunum++] = &device->device();
+#endif /* USE_HISCORE */
+
+	screen_device_iterator screeniter(root_device());
+	primary_screen = screeniter.first();
 
 	// fetch core options
 	if (options().debug())
@@ -306,7 +312,7 @@ void running_machine::start()
 
 	// initialize image devices
 	image_init(*this);
-	tilemap_init(*this);
+	m_tilemap = auto_alloc(*this, tilemap_manager(*this));
 	crosshair_init(*this);
 	network_init(*this);
 
@@ -317,10 +323,14 @@ void running_machine::start()
 	// call the game driver's init function
 	// this is where decryption is done and memory maps are altered
 	// so this location in the init order is important
-	ui_set_startup_text(*this, "Initializing...", true);
+	ui_set_startup_text(*this, _("Initializing..."), true);
 
-	// start up the devices
-	const_cast<device_list &>(devicelist()).start_all();
+	// register callbacks for the devices, then start them
+	add_notifier(MACHINE_NOTIFY_RESET, machine_notify_delegate(FUNC(running_machine::reset_all_devices), this));
+	add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(running_machine::stop_all_devices), this));
+	save().register_presave(save_prepost_delegate(FUNC(running_machine::presave_all_devices), this));
+	save().register_postload(save_prepost_delegate(FUNC(running_machine::postload_all_devices), this));
+	start_all_devices();
 
 	// if we're coming in with a savegame request, process it now
 	const char *savegame = options().state();
@@ -334,6 +344,11 @@ void running_machine::start()
 	// set up the cheat engine
 	m_cheat = auto_alloc(*this, cheat_manager(*this));
 
+#ifdef USE_HISCORE
+	//MKCHAMP - INITIALIZING THE HISCORE ENGINE
+ 	hiscore_init(*this);
+#endif /* USE_HISCORE */
+
 	// disallow save state registrations starting here
 	m_save.allow_registration(false);
 }
@@ -345,25 +360,15 @@ void running_machine::start()
 
 device_t &running_machine::add_dynamic_device(device_t &owner, device_type type, const char *tag, UINT32 clock)
 {
-	// allocate and append this device
-	astring fulltag;
-	owner.subtag(fulltag, tag);
-	device_t &device = const_cast<device_list &>(devicelist()).append(fulltag, *type(m_config, fulltag, &owner, clock));
+	// add the device in a standard manner
+	device_t *device = const_cast<machine_config &>(m_config).device_add(&owner, tag, type, clock);
 
-	// append any machine config additions from new devices
-	for (device_t *curdevice = devicelist().first(); curdevice != NULL; curdevice = curdevice->next())
-		if (!curdevice->configured())
-		{
-			machine_config_constructor machconfig = curdevice->machine_config_additions();
-			if (machconfig != NULL)
-		    	(*machconfig)(const_cast<machine_config &>(m_config), curdevice);
-		}
-
-	// notify any new devices that their configurations are complete
-	for (device_t *curdevice = devicelist().first(); curdevice != NULL; curdevice = curdevice->next())
-		if (!curdevice->configured())
-			curdevice->config_complete();
-	return device;
+	// notify this device and all its subdevices that they are now configured
+	device_iterator iter(root_device());
+	for (device_t *device = iter.first(); device != NULL; device = iter.next())
+		if (!device->configured())
+			device->config_complete();
+	return *device;
 }
 
 
@@ -431,6 +436,8 @@ int running_machine::run(bool firstrun)
 		// save the NVRAM and configuration
 		sound().ui_mute(true);
 		nvram_save(*this);
+		// mamep: dont save settings during playback
+		if (!has_playback_file(*this))
 		config_save_settings(*this);
 	}
 	catch (emu_fatalerror &fatal)
@@ -450,6 +457,10 @@ int running_machine::run(bool firstrun)
 		mame_printf_error("Out of memory!\n");
 		error = MAMERR_FATALERROR;
 	}
+
+	// make sure our phase is set properly before cleaning up,
+	// in case we got here via exception
+	m_current_phase = MACHINE_PHASE_EXIT;
 
 	// call all exit callbacks registered
 	call_notifiers(MACHINE_NOTIFY_EXIT);
@@ -630,9 +641,10 @@ void running_machine::resume()
 
 memory_region *running_machine::region_alloc(const char *name, UINT32 length, UINT8 width, endianness_t endian)
 {
-    // make sure we don't have a region of the same name; also find the end of the list
-    memory_region *info = m_regionlist.find(name);
-    if (info != NULL)
+	mame_printf_verbose("Region '%s' created\n", name);
+	// make sure we don't have a region of the same name; also find the end of the list
+	memory_region *info = m_regionlist.find(name);
+	if (info != NULL)
 		fatalerror("region_alloc called with duplicate region name \"%s\"\n", name);
 
 	// allocate the region
@@ -687,7 +699,6 @@ void running_machine::add_logerror_callback(logerror_callback callback)
 
 void CLIB_DECL running_machine::logerror(const char *format, ...)
 {
-#ifndef XENON 
 	// process only if there is a target
 	if (m_logerror_list.first() != NULL)
 	{
@@ -696,7 +707,6 @@ void CLIB_DECL running_machine::logerror(const char *format, ...)
 		vlogerror(format, arg);
 		va_end(arg);
 	}
-#endif
 }
 
 
@@ -706,7 +716,6 @@ void CLIB_DECL running_machine::logerror(const char *format, ...)
 
 void CLIB_DECL running_machine::vlogerror(const char *format, va_list args)
 {
-#ifndef XENON 
 	// process only if there is a target
 	if (m_logerror_list.first() != NULL)
 	{
@@ -721,7 +730,6 @@ void CLIB_DECL running_machine::vlogerror(const char *format, va_list args)
 
 		g_profiler.stop();
 	}
-#endif
 }
 
 
@@ -782,8 +790,8 @@ void running_machine::call_notifiers(machine_notification which)
 void running_machine::handle_saveload()
 {
 	UINT32 openflags = (m_saveload_schedule == SLS_LOAD) ? OPEN_FLAG_READ : (OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
-	const char *opnamed = (m_saveload_schedule == SLS_LOAD) ? "loaded" : "saved";
-	const char *opname = (m_saveload_schedule == SLS_LOAD) ? "load" : "save";
+	const char *opnamed = (m_saveload_schedule == SLS_LOAD) ? _("loaded") : _("saved");
+	const char *opname = (m_saveload_schedule == SLS_LOAD) ? _("load") : _("save");
 	file_error filerr = FILERR_NONE;
 
 	// if no name, bail
@@ -798,7 +806,7 @@ void running_machine::handle_saveload()
 		// if more than a second has passed, we're probably screwed
 		if ((this->time() - m_saveload_schedule_time) > attotime::from_seconds(1))
 		{
-			popmessage("Unable to %s due to pending anonymous timers. See error.log for details.", opname);
+			popmessage(_("Unable to %s due to pending anonymous timers. See error.log for details."), opname);
 			goto cancel;
 		}
 		return;
@@ -815,30 +823,30 @@ void running_machine::handle_saveload()
 		switch (saverr)
 		{
 			case STATERR_ILLEGAL_REGISTRATIONS:
-				popmessage("Error: Unable to %s state due to illegal registrations. See error.log for details.", opname);
+				popmessage(_("Error: Unable to %s state due to illegal registrations. See error.log for details."), opname);
 				break;
 
 			case STATERR_INVALID_HEADER:
-				popmessage("Error: Unable to %s state due to an invalid header. Make sure the save state is correct for this game.", opname);
+				popmessage(_("Error: Unable to %s state due to an invalid header. Make sure the save state is correct for this game."), opname);
 				break;
 
 			case STATERR_READ_ERROR:
-				popmessage("Error: Unable to %s state due to a read error (file is likely corrupt).", opname);
+				popmessage(_("Error: Unable to %s state due to a read error (file is likely corrupt)."), opname);
 				break;
 
 			case STATERR_WRITE_ERROR:
-				popmessage("Error: Unable to %s state due to a write error. Verify there is enough disk space.", opname);
+				popmessage(_("Error: Unable to %s state due to a write error. Verify there is enough disk space."), opname);
 				break;
 
 			case STATERR_NONE:
 				if (!(m_system.flags & GAME_SUPPORTS_SAVE))
-					popmessage("State successfully %s.\nWarning: Save states are not officially supported for this game.", opnamed);
+					popmessage(_("State successfully %s.\nWarning: Save states are not officially supported for this game."), opnamed);
 				else
-					popmessage("State successfully %s.", opnamed);
+					popmessage(_("State successfully %s."), opnamed);
 				break;
 
 			default:
-				popmessage("Error: Unknown error during state %s.", opnamed);
+				popmessage(_("Error: Unknown error during state %s."), opnamed);
 				break;
 		}
 
@@ -847,7 +855,7 @@ void running_machine::handle_saveload()
 			file.remove_on_close();
 	}
 	else
-		popmessage("Error: Failed to open file for %s operation.", opname);
+		popmessage(_("Error: Failed to open file for %s operation."), opname);
 
 	// unschedule the operation
 cancel:
@@ -887,6 +895,113 @@ void running_machine::logfile_callback(running_machine &machine, const char *buf
 	if (machine.m_logfile != NULL)
 		machine.m_logfile->puts(buffer);
 }
+
+
+//-------------------------------------------------
+//  start_all_devices - start any unstarted devices
+//-------------------------------------------------
+
+void running_machine::start_all_devices()
+{
+	// iterate through the devices
+	int last_failed_starts = -1;
+	while (last_failed_starts != 0)
+	{
+		// iterate over all devices
+		int failed_starts = 0;
+		device_iterator iter(root_device());
+		for (device_t *device = iter.first(); device != NULL; device = iter.next())
+			if (!device->started())
+			{
+				// attempt to start the device, catching any expected exceptions
+				try
+				{
+					// if the device doesn't have a machine yet, set it first
+					if (device->m_machine == NULL)
+						device->set_machine(*this);
+
+					// now start the device
+					mame_printf_verbose("Starting %s '%s'\n", device->name(), device->tag());
+					device->start();
+				}
+
+				// handle missing dependencies by moving the device to the end
+				catch (device_missing_dependencies &)
+				{
+					// if we're the end, fail
+					mame_printf_verbose("  (missing dependencies; rescheduling)\n");
+					failed_starts++;
+				}
+			}
+		
+		// each iteration should reduce the number of failed starts; error if
+		// this doesn't happen
+		if (failed_starts == last_failed_starts)
+			throw emu_fatalerror("Circular dependency in device startup!");
+		last_failed_starts = failed_starts;
+	}
+}
+
+
+//-------------------------------------------------
+//  reset_all_devices - reset all devices in the
+//  hierarchy
+//-------------------------------------------------
+
+void running_machine::reset_all_devices()
+{
+	// reset the root and it will reset children
+	root_device().reset();
+}
+
+
+//-------------------------------------------------
+//  stop_all_devices - stop all the devices in the
+//  hierarchy
+//-------------------------------------------------
+
+void running_machine::stop_all_devices()
+{
+	// first let the debugger save comments
+	if ((debug_flags & DEBUG_FLAG_ENABLED) != 0)
+		debug_comment_save(*this);
+
+	// iterate over devices and stop them
+	device_iterator iter(root_device());
+	for (device_t *device = iter.first(); device != NULL; device = iter.next())
+		device->stop();
+
+	// then nuke the device tree
+//	global_free(m_root_device);
+}
+
+
+//-------------------------------------------------
+//  presave_all_devices - tell all the devices we 
+//  are about to save
+//-------------------------------------------------
+
+void running_machine::presave_all_devices()
+{
+	device_iterator iter(root_device());
+	for (device_t *device = iter.first(); device != NULL; device = iter.next())
+		device->pre_save();
+}
+
+
+//-------------------------------------------------
+//  postload_all_devices - tell all the devices we 
+//  just completed a load
+//-------------------------------------------------
+
+void running_machine::postload_all_devices()
+{
+	device_iterator iter(root_device());
+	for (device_t *device = iter.first(); device != NULL; device = iter.next())
+		device->post_load();
+}
+
+
 
 /***************************************************************************
     MEMORY REGIONS
@@ -1115,27 +1230,6 @@ void driver_device::video_reset()
 
 
 //-------------------------------------------------
-//  video_update - default implementation which
-//  calls to the legacy video_update function
-//-------------------------------------------------
-
-bool driver_device::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
-{
-	return 0;
-}
-
-
-//-------------------------------------------------
-//  video_eof - default implementation which
-//  calls to the legacy video_eof function
-//-------------------------------------------------
-
-void driver_device::screen_eof()
-{
-}
-
-
-//-------------------------------------------------
 //  device_rom_region - return a pointer to the
 //  game's ROMs
 //-------------------------------------------------
@@ -1165,8 +1259,10 @@ ioport_constructor driver_device::device_input_ports() const
 void driver_device::device_start()
 {
 	// reschedule ourselves to be last
-	if (next() != NULL)
-		throw device_missing_dependencies();
+	device_iterator iter(*this);
+	for (device_t *test = iter.first(); test != NULL; test = iter.next())
+		if (test != this && !test->started())
+			throw device_missing_dependencies();
 
 	// call the game-specific init
 	if (m_system->driver_init != NULL)
@@ -1188,11 +1284,12 @@ void driver_device::device_start()
 
 
 //-------------------------------------------------
-//  device_reset - device override which calls
-//  the various helpers
+//  device_reset_after_children - device override 
+//  which calls the various helpers; must happen
+//  after all child devices are reset
 //-------------------------------------------------
 
-void driver_device::device_reset()
+void driver_device::device_reset_after_children()
 {
 	// reset each piece
 	driver_reset();

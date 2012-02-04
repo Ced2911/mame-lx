@@ -4,12 +4,6 @@
 
 CPU_DISASSEMBLE( i960  );
 
-#ifdef _MSC_VER
-/* logb prototype is different for MS Visual C */
-#include <float.h>
-#define logb _logb
-#endif
-
 #ifdef XENON
 extern "C"
 double logb(double x);

@@ -188,14 +188,15 @@ void decrypt_kof10th(running_machine &machine)
 	int i, j;
 	UINT8 *dst = auto_alloc_array(machine, UINT8, 0x900000);
 	UINT8 *src = machine.region( "maincpu" )->base();
+	UINT16 *mem16 = (UINT16 *)machine.region( "maincpu" )->base();
 
-	memcpy(dst + 0x000000, src + 0x700000, 0x100000); // Correct (Verified in Uni-bios)
-	memcpy(dst + 0x100000, src + 0x000000, 0x800000);
+		memcpy(dst + 0x000000, src + 0x700000, 0x100000); // Correct (Verified in Uni-bios)
+		memcpy(dst + 0x100000, src + 0x000000, 0x800000);
 
-	for (i = 0; i < 0x900000; i++) {
-		j = BITSWAP24(i,23,22,21,20,19,18,17,16,15,14,13,12,11,2,9,8,7,1,5,4,3,10,6,0);
-		src[j] = dst[i];
-	}
+		for (i = 0; i < 0x900000; i++) {
+			j = BITSWAP24(i,23,22,21,20,19,18,17,16,15,14,13,12,11,2,9,8,7,1,5,4,3,10,6,0);
+			src[j] = dst[i];
+		}
 
 	auto_free(machine, dst);
 
@@ -206,6 +207,11 @@ void decrypt_kof10th(running_machine &machine)
 	((UINT16*)src)[0x8bf4/2] = 0x4ef9; // Run code to change "S" data
 	((UINT16*)src)[0x8bf6/2] = 0x000d;
 	((UINT16*)src)[0x8bf8/2] = 0xf980;
+
+	// Thanks to IQ_132 for the patch
+	mem16[0x053162C/2] = 0x7425; // Fix System
+	mem16[0x053163A/2] = 0x8084; // Fix Region
+	mem16[0x0531648/2] = 0x3641; // Fix some dips
 }
 
 
@@ -240,6 +246,15 @@ void decrypt_kf10thep(running_machine &machine)
 		if (rom[i+0] == 0x4ef9 && rom[i+1] == 0x0000) rom[i+1] = 0x000F; // correct JMP in moved code
 	}
 	rom[0x00342/2] = 0x000f;
+
+	// Thanks to IQ_132 for the patch
+	rom[0x000126/2] = 0x0010; // Allow Region change
+	rom[0x000228/2] = 0x4E71; // Allow System change
+	rom[0x00022A/2] = 0x4E71;
+	rom[0x00022C/2] = 0x4E71;
+	rom[0x000234/2] = 0x4E71; // bne
+	rom[0x000236/2] = 0x4E71; // bne
+
 	auto_free(machine, dst);
 
 	for (i=0;i<0x20000;i++)
@@ -293,9 +308,17 @@ static void kf2k5uni_mx_decrypt( running_machine &machine )
 
 void decrypt_kf2k5uni( running_machine &machine )
 {
+	UINT16 *mem16 = (UINT16 *)machine.region( "maincpu" )->base();
+
 	kf2k5uni_px_decrypt(machine);
 	kf2k5uni_sx_decrypt(machine);
 	kf2k5uni_mx_decrypt(machine);
+
+	// Thanks to IQ_132 for the patch
+	mem16[0xDF6B0/2] = 0x4e71;
+	mem16[0xDF6BC/2] = 0x4e71;
+	mem16[0xDF6BE/2] = 0x4e71;
+	mem16[0xDF6CA/2] = 0x4e71;
 }
 
 
@@ -567,6 +590,51 @@ void decrypt_ct2k3sp( running_machine &machine )
 	memcpy(romdata-0x10000,romdata,0x10000);
 	ct2k3sp_sx_decrypt(machine);
 	cthd2003_c(machine, 0);
+}
+
+
+#define MATRIMBLFIX(i) (i^(BITSWAP8(i&0x3,4,3,1,2,0,7,6,5)<<8))
+void decrypt_matrimbl(running_machine &machine)
+{
+	neogeo_state *state = machine.driver_data<neogeo_state>();
+	UINT8 *src2 = machine.region("audiocpu")->base()+0x10000;
+	UINT8 *dst2 = global_alloc_array(UINT8, 0x20000);
+	int i, j=0;
+	memcpy(dst2,src2,0x20000);
+	for(i=0x00000;i<0x20000;i++)
+	{
+		if (i&0x10000)
+		{
+			if (i&0x800)
+			{
+				j=MATRIMBLFIX(i);
+				j=j^0x10000;
+			}
+			else
+			{
+				j=MATRIMBLFIX((i^0x01));
+			}
+		}
+		else
+		{
+			if (i&0x800)
+			{
+				j=MATRIMBLFIX((i^0x01));
+				j=j^0x10000;
+			}
+			else
+			{
+				j=MATRIMBLFIX(i);
+			}
+		}
+		src2[j]=dst2[i];
+	}
+	auto_free(machine, dst2);
+	memcpy(src2-0x10000,src2,0x10000);
+	kof2002_decrypt_68k(machine);
+	cthd2003_c(machine, 0);
+	neogeo_sfix_decrypt(machine);
+	state->m_fixed_layer_bank_type = 2;
 }
 
 
@@ -1074,6 +1142,88 @@ void samsho5b_vx_decrypt( running_machine &machine )
 	for( i = 0; i < vx_size; i++ )
 		rom[ i ] = BITSWAP8( rom[ i ], 0, 1, 5, 4, 3, 2, 6, 7 );
 }
+
+
+void kof96ep_px_decrypt(running_machine &machine)
+{
+	int i,j;
+	UINT8 *rom = machine.region("maincpu")->base();
+	for ( i=0; i < 0x080000; i++ )
+	{
+		j=i+0x300000;
+		if (rom[j] - rom[i] == 8) rom[j]=rom[i];
+	}
+	memcpy(rom, rom+0x300000, 0x080000);
+}
+
+void kf2k1pa_sx_decrypt(running_machine &machine)
+{
+	UINT8 *rom = machine.region("fixed")->base();
+	int i;
+
+	for (i = 0; i < 0x20000; i++)
+		rom[i] = BITSWAP8(rom[i], 3, 2, 4, 5, 1, 6, 0, 7);
+}
+
+void cthd2k3a_px_decrypt(running_machine &machine)
+{
+	INT32 i;
+	UINT8 nBank[] = {
+		0x06, 0x02, 0x04, 0x05, 0x01, 0x03, 0x00, 0x07,
+		0x27, 0x0E, 0x1C, 0x15, 0x1B, 0x17, 0x0A, 0x0F,
+		0x16, 0x14, 0x23, 0x0B, 0x22, 0x26, 0x08, 0x24,
+		0x21, 0x13, 0x1A, 0x0C, 0x19, 0x1D, 0x25, 0x10,
+		0x09, 0x20, 0x18, 0x1F, 0x1E, 0x12, 0x0D, 0x11
+	};
+
+	UINT8 *src = (UINT8*)machine.region("maincpu")->base();
+	UINT8 *dst = (UINT8*)malloc(0x500000);
+
+	if (dst)
+	{
+		for (i = 0; i < 0x500000 / 0x20000; i++) 
+		{
+			memcpy (dst + i * 0x20000, src + nBank[i] * 0x20000, 0x20000);
+		}
+		memcpy (src, dst, 0x500000);
+		free (dst);
+	}
+}
+
+void kf2k2mp_px_decrypt(running_machine &machine)
+{
+	unsigned char *src = machine.region("maincpu")->base();
+	unsigned char *dst = (unsigned char*)malloc(0x80);
+	int i, j;
+
+	if (dst)
+	{
+		for (i = 0; i < 0x500000; i+=0x80)
+		{
+			for (j = 0; j < 0x80 / 2; j++)
+			{
+				int ofst = BITSWAP8( j, 6, 7, 2, 3, 4, 5, 0, 1 );
+				memcpy(dst + j * 2, src + i + ofst * 2, 2);
+			}
+			memcpy(src + i, dst, 0x80);
+		}
+	}
+	auto_free(machine, dst);
+}
+
+void cthd2003_AES_protection(running_machine &machine)
+{
+	// Thanks to IQ_132 for the patch
+	UINT16 *mem16 = (UINT16 *)machine.region("maincpu")->base();
+
+	// Game sets itself to MVS & English mode, patch this out
+	mem16[0xED00E/2] = 0x4E71;
+	mem16[0xED394/2] = 0x4E71;
+
+	// Fix for AES mode (stop loop that triggers Watchdog)
+	mem16[0xA2B7E/2] = 0x4E71;
+}
+
 
 
 /* Matrimelee / Shin Gouketsuji Ichizoku Toukon (bootleg) */

@@ -99,23 +99,23 @@ WRITE16_HANDLER( esd16_vram_0_w )
 {
 	esd16_state *state = space->machine().driver_data<esd16_state>();
 	COMBINE_DATA(&state->m_vram_0[offset]);
-	tilemap_mark_tile_dirty(state->m_tilemap_0, offset);
-	tilemap_mark_tile_dirty(state->m_tilemap_0_16x16, offset);
+	state->m_tilemap_0->mark_tile_dirty(offset);
+	state->m_tilemap_0_16x16->mark_tile_dirty(offset);
 }
 
 WRITE16_HANDLER( esd16_vram_1_w )
 {
 	esd16_state *state = space->machine().driver_data<esd16_state>();
 	COMBINE_DATA(&state->m_vram_1[offset]);
-	tilemap_mark_tile_dirty(state->m_tilemap_1, offset);
-	tilemap_mark_tile_dirty(state->m_tilemap_1_16x16, offset);
+	state->m_tilemap_1->mark_tile_dirty(offset);
+	state->m_tilemap_1_16x16->mark_tile_dirty(offset);
 }
 
 WRITE16_HANDLER( esd16_tilemap0_color_w )
 {
 	esd16_state *state = space->machine().driver_data<esd16_state>();
 	state->m_tilemap0_color = data & 3;
-	tilemap_mark_all_tiles_dirty(state->m_tilemap_0);
+	state->m_tilemap_0->mark_all_dirty();
 
 	flip_screen_set(space->machine(), data & 0x80);
 }
@@ -143,13 +143,13 @@ VIDEO_START( esd16 )
 	/* hedpanic changes tilemap 1 to 16x16 at various times */
 	state->m_tilemap_1_16x16 = tilemap_create(machine, get_tile_info_1_16x16, tilemap_scan_rows, 16,16, 0x40, 0x40);
 
-	tilemap_set_scrolldx(state->m_tilemap_0, -0x60 + 2, -0x60);
-	tilemap_set_scrolldx(state->m_tilemap_1, -0x60, -0x60 + 2);
-	tilemap_set_scrolldx(state->m_tilemap_0_16x16, -0x60 + 2, -0x60);
-	tilemap_set_scrolldx(state->m_tilemap_1_16x16, -0x60, -0x60 + 2);
+	state->m_tilemap_0->set_scrolldx(-0x60 + 2, -0x60);
+	state->m_tilemap_1->set_scrolldx(-0x60, -0x60 + 2);
+	state->m_tilemap_0_16x16->set_scrolldx(-0x60 + 2, -0x60);
+	state->m_tilemap_1_16x16->set_scrolldx(-0x60, -0x60 + 2);
 
-	tilemap_set_transparent_pen(state->m_tilemap_1, 0x00);
-	tilemap_set_transparent_pen(state->m_tilemap_1_16x16, 0x00);
+	state->m_tilemap_1->set_transparent_pen(0x00);
+	state->m_tilemap_1_16x16->set_transparent_pen(0x00);
 }
 
 
@@ -183,7 +183,7 @@ VIDEO_START( esd16 )
 
 ***************************************************************************/
 
-static void esd16_draw_sprites( running_machine &machine, bitmap_t *bitmap, const rectangle *cliprect )
+static void esd16_draw_sprites( running_machine &machine, bitmap_ind16 &bitmap, const rectangle &cliprect )
 {
 	esd16_state *state = machine.driver_data<esd16_state>();
 	int offs;
@@ -247,7 +247,7 @@ static void esd16_draw_sprites( running_machine &machine, bitmap_t *bitmap, cons
 }
 
 /* note, check if i can re-merge this with the other or if its really different */
-static void hedpanic_draw_sprites( running_machine &machine, bitmap_t *bitmap, const rectangle *cliprect )
+static void hedpanic_draw_sprites( running_machine &machine, bitmap_ind16 &bitmap, const rectangle &cliprect )
 {
 	esd16_state *state = machine.driver_data<esd16_state>();
 	int offs;
@@ -323,54 +323,54 @@ static void hedpanic_draw_sprites( running_machine &machine, bitmap_t *bitmap, c
 
 ***************************************************************************/
 
-SCREEN_UPDATE( esd16 )
+SCREEN_UPDATE_IND16( esd16 )
 {
-	esd16_state *state = screen->machine().driver_data<esd16_state>();
+	esd16_state *state = screen.machine().driver_data<esd16_state>();
 	int layers_ctrl = -1;
 
-	bitmap_fill(screen->machine().priority_bitmap, cliprect, 0);
+	screen.machine().priority_bitmap.fill(0, cliprect);
 
-	tilemap_set_scrollx(state->m_tilemap_0, 0, state->m_scroll_0[0]);
-	tilemap_set_scrolly(state->m_tilemap_0, 0, state->m_scroll_0[1]);
+	state->m_tilemap_0->set_scrollx(0, state->m_scroll_0[0]);
+	state->m_tilemap_0->set_scrolly(0, state->m_scroll_0[1]);
 
-	tilemap_set_scrollx(state->m_tilemap_1, 0, state->m_scroll_1[0]);
-	tilemap_set_scrolly(state->m_tilemap_1, 0, state->m_scroll_1[1]);
+	state->m_tilemap_1->set_scrollx(0, state->m_scroll_1[0]);
+	state->m_tilemap_1->set_scrolly(0, state->m_scroll_1[1]);
 
 #ifdef MAME_DEBUG
-if (screen->machine().input().code_pressed(KEYCODE_Z))
+if (screen.machine().input().code_pressed(KEYCODE_Z))
 {
 	int msk = 0;
-	if (screen->machine().input().code_pressed(KEYCODE_Q))	msk |= 1;
-	if (screen->machine().input().code_pressed(KEYCODE_W))	msk |= 2;
-	if (screen->machine().input().code_pressed(KEYCODE_A))	msk |= 4;
+	if (screen.machine().input().code_pressed(KEYCODE_Q))	msk |= 1;
+	if (screen.machine().input().code_pressed(KEYCODE_W))	msk |= 2;
+	if (screen.machine().input().code_pressed(KEYCODE_A))	msk |= 4;
 	if (msk != 0) layers_ctrl &= msk;
 }
 #endif
 
-	if (layers_ctrl & 1)	tilemap_draw(bitmap, cliprect, state->m_tilemap_0, 0, 0);
-	else					bitmap_fill(bitmap, cliprect, 0);
+	if (layers_ctrl & 1)	state->m_tilemap_0->draw(bitmap, cliprect, 0, 0);
+	else					bitmap.fill(0, cliprect);
 
-	if (layers_ctrl & 2)	tilemap_draw(bitmap, cliprect, state->m_tilemap_1, 0, 1);
+	if (layers_ctrl & 2)	state->m_tilemap_1->draw(bitmap, cliprect, 0, 1);
 
-	if (layers_ctrl & 4)	esd16_draw_sprites(screen->machine(), bitmap, cliprect);
+	if (layers_ctrl & 4)	esd16_draw_sprites(screen.machine(), bitmap, cliprect);
 	return 0;
 }
 
 
-SCREEN_UPDATE( hedpanic )
+SCREEN_UPDATE_IND16( hedpanic )
 {
-	esd16_state *state = screen->machine().driver_data<esd16_state>();
+	esd16_state *state = screen.machine().driver_data<esd16_state>();
 	int layers_ctrl = -1;
 
-	bitmap_fill(screen->machine().priority_bitmap, cliprect, 0);
+	screen.machine().priority_bitmap.fill(0, cliprect);
 
 #ifdef MAME_DEBUG
-if (screen->machine().input().code_pressed(KEYCODE_Z))
+if (screen.machine().input().code_pressed(KEYCODE_Z))
 {
 	int msk = 0;
-	if (screen->machine().input().code_pressed(KEYCODE_Q))	msk |= 1;
-	if (screen->machine().input().code_pressed(KEYCODE_W))	msk |= 2;
-	if (screen->machine().input().code_pressed(KEYCODE_A))	msk |= 4;
+	if (screen.machine().input().code_pressed(KEYCODE_Q))	msk |= 1;
+	if (screen.machine().input().code_pressed(KEYCODE_W))	msk |= 2;
+	if (screen.machine().input().code_pressed(KEYCODE_A))	msk |= 4;
 	if (msk != 0) layers_ctrl &= msk;
 }
 #endif
@@ -379,20 +379,20 @@ if (screen->machine().input().code_pressed(KEYCODE_Z))
 	{
 		if (state->m_head_layersize[0] & 0x0001)
 		{
-			tilemap_set_scrollx(state->m_tilemap_0_16x16, 0, state->m_scroll_0[0]);
-			tilemap_set_scrolly(state->m_tilemap_0_16x16, 0, state->m_scroll_0[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_0_16x16, 0, 0);
+			state->m_tilemap_0_16x16->set_scrollx(0, state->m_scroll_0[0]);
+			state->m_tilemap_0_16x16->set_scrolly(0, state->m_scroll_0[1]);
+			state->m_tilemap_0_16x16->draw(bitmap, cliprect, 0, 0);
 		}
 		else
 		{
-			tilemap_set_scrollx(state->m_tilemap_0, 0, state->m_scroll_0[0]);
-			tilemap_set_scrolly(state->m_tilemap_0, 0, state->m_scroll_0[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_0, 0, 0);
+			state->m_tilemap_0->set_scrollx(0, state->m_scroll_0[0]);
+			state->m_tilemap_0->set_scrolly(0, state->m_scroll_0[1]);
+			state->m_tilemap_0->draw(bitmap, cliprect, 0, 0);
 		}
 	}
 	else
 	{
-		bitmap_fill(bitmap, cliprect, 0);
+		bitmap.fill(0, cliprect);
 	}
 
 
@@ -400,40 +400,40 @@ if (screen->machine().input().code_pressed(KEYCODE_Z))
 	{
 		if (state->m_head_layersize[0] & 0x0002)
 		{
-			tilemap_set_scrollx(state->m_tilemap_1_16x16, 0, state->m_scroll_1[0]);
-			tilemap_set_scrolly(state->m_tilemap_1_16x16, 0, state->m_scroll_1[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_1_16x16, 0, 1);
+			state->m_tilemap_1_16x16->set_scrollx(0, state->m_scroll_1[0]);
+			state->m_tilemap_1_16x16->set_scrolly(0, state->m_scroll_1[1]);
+			state->m_tilemap_1_16x16->draw(bitmap, cliprect, 0, 1);
 		}
 		else
 		{
-			tilemap_set_scrollx(state->m_tilemap_1, 0, state->m_scroll_1[0]);
-			tilemap_set_scrolly(state->m_tilemap_1, 0, state->m_scroll_1[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_1, 0, 1);
+			state->m_tilemap_1->set_scrollx(0, state->m_scroll_1[0]);
+			state->m_tilemap_1->set_scrolly(0, state->m_scroll_1[1]);
+			state->m_tilemap_1->draw(bitmap, cliprect, 0, 1);
 		}
 
 	}
 
-	if (layers_ctrl & 4)	hedpanic_draw_sprites(screen->machine(),bitmap,cliprect);
+	if (layers_ctrl & 4)	hedpanic_draw_sprites(screen.machine(),bitmap,cliprect);
 
 //  popmessage("%04x %04x %04x %04x %04x",head_unknown1[0],head_layersize[0],head_unknown3[0],head_unknown4[0],head_unknown5[0]);
 	return 0;
 }
 
 // uses older style sprites
-SCREEN_UPDATE( hedpanio )
+SCREEN_UPDATE_IND16( hedpanio )
 {
-	esd16_state *state = screen->machine().driver_data<esd16_state>();
+	esd16_state *state = screen.machine().driver_data<esd16_state>();
 	int layers_ctrl = -1;
 
-	bitmap_fill(screen->machine().priority_bitmap,cliprect,0);
+	screen.machine().priority_bitmap.fill(0, cliprect);
 
 #ifdef MAME_DEBUG
-if ( screen->machine().input().code_pressed(KEYCODE_Z) )
+if ( screen.machine().input().code_pressed(KEYCODE_Z) )
 {
 	int msk = 0;
-	if (screen->machine().input().code_pressed(KEYCODE_Q))	msk |= 1;
-	if (screen->machine().input().code_pressed(KEYCODE_W))	msk |= 2;
-	if (screen->machine().input().code_pressed(KEYCODE_A))	msk |= 4;
+	if (screen.machine().input().code_pressed(KEYCODE_Q))	msk |= 1;
+	if (screen.machine().input().code_pressed(KEYCODE_W))	msk |= 2;
+	if (screen.machine().input().code_pressed(KEYCODE_A))	msk |= 4;
 	if (msk != 0) layers_ctrl &= msk;
 }
 #endif
@@ -442,20 +442,20 @@ if ( screen->machine().input().code_pressed(KEYCODE_Z) )
 	{
 		if (state->m_head_layersize[0] & 0x0001)
 		{
-			tilemap_set_scrollx(state->m_tilemap_0_16x16, 0, state->m_scroll_0[0]);
-			tilemap_set_scrolly(state->m_tilemap_0_16x16, 0, state->m_scroll_0[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_0_16x16, 0, 0);
+			state->m_tilemap_0_16x16->set_scrollx(0, state->m_scroll_0[0]);
+			state->m_tilemap_0_16x16->set_scrolly(0, state->m_scroll_0[1]);
+			state->m_tilemap_0_16x16->draw(bitmap, cliprect, 0, 0);
 		}
 		else
 		{
-			tilemap_set_scrollx(state->m_tilemap_0, 0, state->m_scroll_0[0]);
-			tilemap_set_scrolly(state->m_tilemap_0, 0, state->m_scroll_0[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_0, 0, 0);
+			state->m_tilemap_0->set_scrollx(0, state->m_scroll_0[0]);
+			state->m_tilemap_0->set_scrolly(0, state->m_scroll_0[1]);
+			state->m_tilemap_0->draw(bitmap, cliprect, 0, 0);
 		}
 	}
 	else
 	{
-		bitmap_fill(bitmap, cliprect, 0);
+		bitmap.fill(0, cliprect);
 	}
 
 
@@ -463,20 +463,20 @@ if ( screen->machine().input().code_pressed(KEYCODE_Z) )
 	{
 		if (state->m_head_layersize[0] & 0x0002)
 		{
-			tilemap_set_scrollx(state->m_tilemap_1_16x16, 0, state->m_scroll_1[0]);
-			tilemap_set_scrolly(state->m_tilemap_1_16x16, 0, state->m_scroll_1[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_1_16x16, 0, 1);
+			state->m_tilemap_1_16x16->set_scrollx(0, state->m_scroll_1[0]);
+			state->m_tilemap_1_16x16->set_scrolly(0, state->m_scroll_1[1]);
+			state->m_tilemap_1_16x16->draw(bitmap, cliprect, 0, 1);
 		}
 		else
 		{
-			tilemap_set_scrollx(state->m_tilemap_1, 0, state->m_scroll_1[0]);
-			tilemap_set_scrolly(state->m_tilemap_1, 0, state->m_scroll_1[1]);
-			tilemap_draw(bitmap, cliprect, state->m_tilemap_1, 0, 1);
+			state->m_tilemap_1->set_scrollx(0, state->m_scroll_1[0]);
+			state->m_tilemap_1->set_scrolly(0, state->m_scroll_1[1]);
+			state->m_tilemap_1->draw(bitmap, cliprect, 0, 1);
 		}
 
 	}
 
-	if (layers_ctrl & 4)	esd16_draw_sprites(screen->machine(),bitmap,cliprect);
+	if (layers_ctrl & 4)	esd16_draw_sprites(screen.machine(),bitmap,cliprect);
 
 //  popmessage("%04x %04x %04x %04x %04x",head_unknown1[0],head_layersize[0],head_unknown3[0],head_unknown4[0],head_unknown5[0]);
 	return 0;

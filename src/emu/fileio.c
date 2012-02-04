@@ -372,6 +372,29 @@ file_error emu_file::open_next()
 			filerr = attempt_zipped();
 			if (filerr == FILERR_NONE)
 				break;
+
+//FIXME
+#if 0
+			// mamep: load zipped inp file
+			{
+				astring zipped_fullname;
+				int offset = 0;
+				int n = m_filename.rchr(offset, '.');
+    
+				if (n > 0)
+					offset = n;
+    
+				zipped_fullname.cpy(m_filename, offset);
+				zipped_fullname.cat(PATH_SEPARATOR);
+				zipped_fullname.cat(m_filename);
+    
+				filerr = fopen_attempt_zipped(m_filename, crc, openflags, &m_file);
+
+				if (filerr == FILERR_NONE)
+					break;
+			}
+#endif
+
 		}
 	}
 	return filerr;

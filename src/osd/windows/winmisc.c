@@ -45,6 +45,7 @@
 #include <tchar.h>
 
 // MAME headers
+#include "emucore.h"
 #include "osdcore.h"
 
 // MAMEOS headers
@@ -188,4 +189,14 @@ void osd_break_into_debugger(const char *message)
 	}
 	else if (s_debugger_stack_crawler != NULL)
 		(*s_debugger_stack_crawler)();
+}
+
+
+//============================================================
+//  osd_get_default_codepage
+//============================================================
+
+int osd_get_default_codepage(void)
+{
+	return GetOEMCP();
 }

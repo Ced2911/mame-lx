@@ -262,38 +262,6 @@ void generic_video_init(running_machine &machine)
 
 
 /***************************************************************************
-    GENERIC VIDEO START/UPDATE
-***************************************************************************/
-
-/*-------------------------------------------------
-    VIDEO_START( generic_bitmapped ) - general video
-    system with a bitmap
--------------------------------------------------*/
-
-VIDEO_START( generic_bitmapped )
-{
-	/* allocate the temporary bitmap */
-	machine.generic.tmpbitmap = machine.primary_screen->alloc_compatible_bitmap();
-
-	/* ensure the contents of the bitmap are saved */
-	machine.save().save_item(NAME(*machine.generic.tmpbitmap));
-}
-
-
-/*-------------------------------------------------
-    SCREEN_UPDATE( generic_bitmapped ) - blast the
-    generic bitmap to the screen
--------------------------------------------------*/
-
-SCREEN_UPDATE( generic_bitmapped )
-{
-	copybitmap(bitmap, screen->machine().generic.tmpbitmap, 0, 0, 0, 0, cliprect);
-	return 0;
-}
-
-
-
-/***************************************************************************
     GENERIC SPRITE BUFFERING
 ***************************************************************************/
 
@@ -416,7 +384,7 @@ static void updateflip(running_machine &machine)
 	attoseconds_t period = machine.primary_screen->frame_period().attoseconds;
 	rectangle visarea = machine.primary_screen->visible_area();
 
-	tilemap_set_flip_all(machine,(TILEMAP_FLIPX & state->flip_screen_x) | (TILEMAP_FLIPY & state->flip_screen_y));
+	machine.tilemap().set_flip_all((TILEMAP_FLIPX & state->flip_screen_x) | (TILEMAP_FLIPY & state->flip_screen_y));
 
 	if (state->flip_screen_x)
 	{

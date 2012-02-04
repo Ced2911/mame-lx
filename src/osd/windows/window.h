@@ -78,7 +78,7 @@ public:
 
 	// window handle and info
 	HWND				hwnd;
-	char				title[256];
+	char				title[512];
 	RECT				non_fullscreen_bounds;
 	int					startmaximized;
 	int					isminimized;

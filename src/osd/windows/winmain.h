@@ -102,7 +102,7 @@
 #define WINOPTION_SCANLINE_SCALE			"scanline_size"
 #define WINOPTION_SCANLINE_HEIGHT			"scanline_height"
 #define WINOPTION_SCANLINE_BRIGHT_SCALE 	"scanline_bright_scale"
-#define WINOPTION_SCANLINE_BRIGHT_OFFSET	"scanline_bright_offset"
+#define WINOPTION_SCANLINE_BRIGHT_OFFSET 	"scanline_bright_offset"
 #define WINOPTION_SCANLINE_OFFSET			"scanline_jitter"
 #define WINOPTION_DEFOCUS					"defocus"
 #define WINOPTION_CONVERGE_X				"converge_x"
@@ -146,10 +146,24 @@
 
 // sound options
 #define WINOPTION_AUDIO_LATENCY			"audio_latency"
+#ifdef USE_AUDIO_SYNC
+#define WINOPTION_AUDIO_SYNC			"audio_sync"
+#endif /* USE_AUDIO_SYNC */
 
 // input options
 #define WINOPTION_HIDE_CURSOR			"hide_cursor"
 #define WINOPTION_DUAL_LIGHTGUN			"dual_lightgun"
+
+#ifdef JOYSTICK_ID
+#define WINOPTION_JOYID1			"joyid1"
+#define WINOPTION_JOYID2			"joyid2"
+#define WINOPTION_JOYID3			"joyid3"
+#define WINOPTION_JOYID4			"joyid4"
+#define WINOPTION_JOYID5			"joyid5"
+#define WINOPTION_JOYID6			"joyid6"
+#define WINOPTION_JOYID7			"joyid7"
+#define WINOPTION_JOYID8			"joyid8"
+#endif /* JOYSTICK_ID */
 
 
 
@@ -321,7 +335,7 @@ public:
 	// font overridables
 	virtual osd_font font_open(const char *name, int &height);
 	virtual void font_close(osd_font font);
-	virtual bitmap_t *font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs);
+	virtual bool font_get_bitmap(osd_font font, unicode_char chnum, bitmap_argb32 &bitmap, INT32 &width, INT32 &xoffs, INT32 &yoffs);
 
 private:
 	static void osd_exit(running_machine &machine);

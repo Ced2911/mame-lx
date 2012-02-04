@@ -76,7 +76,7 @@ static VIDEO_START( discoboy )
 {
 }
 
-static void draw_sprites( running_machine &machine, bitmap_t *bitmap, const rectangle *cliprect )
+static void draw_sprites( running_machine &machine, bitmap_ind16 &bitmap, const rectangle &cliprect )
 {
 	discoboy_state *state = machine.driver_data<discoboy_state>();
 	int flipscreen = 0;
@@ -124,9 +124,9 @@ static void draw_sprites( running_machine &machine, bitmap_t *bitmap, const rect
 }
 
 
-static SCREEN_UPDATE( discoboy )
+static SCREEN_UPDATE_IND16( discoboy )
 {
-	discoboy_state *state = screen->machine().driver_data<discoboy_state>();
+	discoboy_state *state = screen.machine().driver_data<discoboy_state>();
 	UINT16 x, y;
 	int i;
 	int count = 0;
@@ -141,7 +141,7 @@ static SCREEN_UPDATE( discoboy )
 		g = ((pal >> 4) & 0xf) << 4;
 		r = ((pal >> 8) & 0xf) << 4;
 
-		palette_set_color(screen->machine(), i / 2, MAKE_RGB(r, g, b));
+		palette_set_color(screen.machine(), i / 2, MAKE_RGB(r, g, b));
 	}
 
 	for (i = 0; i < 0x800; i += 2)
@@ -154,10 +154,10 @@ static SCREEN_UPDATE( discoboy )
 		g = ((pal >> 4) & 0xf) << 4;
 		r = ((pal >> 8) & 0xf) << 4;
 
-		palette_set_color(screen->machine(), (i / 2) + 0x400, MAKE_RGB(r, g, b));
+		palette_set_color(screen.machine(), (i / 2) + 0x400, MAKE_RGB(r, g, b));
 	}
 
-	bitmap_fill(bitmap, cliprect, 0x3ff);
+	bitmap.fill(0x3ff, cliprect);
 
 	for (y = 0; y < 32; y++)
 	{
@@ -173,12 +173,12 @@ static SCREEN_UPDATE( discoboy )
 					tileno = 0x2000 + (tileno & 0x1fff) + 0x0000;
 			}
 
-			drawgfx_opaque(bitmap, cliprect, screen->machine().gfx[1], tileno, state->m_ram_att[count / 2], 0, 0, x*8, y*8);
+			drawgfx_opaque(bitmap, cliprect, screen.machine().gfx[1], tileno, state->m_ram_att[count / 2], 0, 0, x*8, y*8);
 			count += 2;
 		}
 	}
 
-	draw_sprites(screen->machine(), bitmap, cliprect);
+	draw_sprites(screen.machine(), bitmap, cliprect);
 
 	return 0;
 }
@@ -503,12 +503,11 @@ static MACHINE_CONFIG_START( discoboy, discoboy_state )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 	MCFG_SCREEN_SIZE(512, 256)
 	MCFG_SCREEN_VISIBLE_AREA(8*8, 512-1-8*8, 0+8, 256-1-8)
-	MCFG_SCREEN_UPDATE(discoboy)
+	MCFG_SCREEN_UPDATE_STATIC(discoboy)
 
 	MCFG_GFXDECODE(discoboy)
 	MCFG_PALETTE_LENGTH(0x1000)

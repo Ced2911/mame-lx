@@ -193,6 +193,9 @@ private:
 	void copyfrom(const core_options &src);
 	bool validate_and_set_data(entry &curentry, const char *newdata, int priority, astring &error_string);
 
+	// mamep: translate description
+	const char *translate_description(const char *description);
+
 	// internal state
 	entry *					m_entrylist;			// head of list of entries
 	entry **				m_entrylist_tailptr;	// pointer to tail of entry list

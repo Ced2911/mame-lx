@@ -16,6 +16,9 @@
 #include "harddisk.h"
 #include "config.h"
 #include "ui.h"
+#ifdef USE_IPS
+#include "ips.h"
+#endif /* USE_IPS */
 
 
 #define LOG_LOAD 0
@@ -34,15 +37,39 @@
     TYPE DEFINITIONS
 ***************************************************************************/
 
-typedef struct _open_chd open_chd;
-struct _open_chd
+#if 0 //mamep: moved to romload.h
+class open_chd
 {
-	open_chd *			next;					/* pointer to next in the list */
-	const char *		region;					/* disk region we came from */
-	chd_file *			origchd;				/* handle to the original CHD */
-	emu_file *			origfile;				/* file handle to the original CHD file */
-	chd_file *			diffchd;				/* handle to the diff CHD */
-	emu_file *			difffile;				/* file handle to the diff CHD file */
+	friend class simple_list<open_chd>;
+
+public:
+	open_chd(const char *region, emu_file &file, chd_file &chdfile, emu_file *difffile = NULL, chd_file *diffchd = NULL)
+		: m_next(NULL),
+		  m_region(region),
+		  m_origchd(&chdfile),
+		  m_origfile(&file),
+		  m_diffchd(diffchd),
+		  m_difffile(difffile) { }
+
+	~open_chd()
+	{
+		if (m_diffchd != NULL) chd_close(m_diffchd);
+		global_free(m_difffile);
+		chd_close(m_origchd);
+		global_free(m_origfile);
+	}
+
+	open_chd *next() const { return m_next; }
+	const char *region() const { return m_region; }
+	chd_file *chd() const { return (m_diffchd != NULL) ? m_diffchd : m_origchd; }
+
+private:
+	open_chd *			m_next;					/* pointer to next in the list */
+	astring				m_region;				/* disk region we came from */
+	chd_file *			m_origchd;				/* handle to the original CHD */
+	emu_file *			m_origfile;				/* file handle to the original CHD file */
+	chd_file *			m_diffchd;				/* handle to the diff CHD */
+	emu_file *			m_difffile;				/* file handle to the diff CHD file */
 };
 
 
@@ -65,13 +92,16 @@ struct _romload_private
 	UINT32			romstotalsize;		/* total size of ROMs to read */
 
 	emu_file *		file;				/* current file */
-	open_chd *		chd_list;			/* disks */
-	open_chd **		chd_list_tailptr;
+#ifdef USE_IPS
+	void *			patch;				/* current ips */
+#endif /* USE_IPS */
+	simple_list<open_chd> chd_list;		/* disks */
 
 	memory_region *	region;				/* info about current region */
 
 	astring			errorstring;		/* error string */
 };
+#endif
 
 
 /***************************************************************************
@@ -132,27 +162,10 @@ file_error common_process_file(emu_options &options, const char *location, bool 
 
 chd_file *get_disk_handle(running_machine &machine, const char *region)
 {
-	open_chd *curdisk;
-
-	for (curdisk = machine.romload_data->chd_list; curdisk != NULL; curdisk = curdisk->next)
-		if (strcmp(curdisk->region, region) == 0)
-			return (curdisk->diffchd != NULL) ? curdisk->diffchd : curdisk->origchd;
+ 	for (open_chd *curdisk = machine.romload_data->chd_list.first(); curdisk != NULL; curdisk = curdisk->next())
+		if (strcmp(curdisk->region(), region) == 0)
+			return curdisk->chd();
 	return NULL;
-}
-
-
-/*-------------------------------------------------
-    add_disk_handle - add a disk to the to the
-    list of CHD files
--------------------------------------------------*/
-
-static void add_disk_handle(running_machine &machine, open_chd *chd)
-{
-	romload_private *romload_data = machine.romload_data;
-
-	*romload_data->chd_list_tailptr = auto_alloc(machine, open_chd);
-	**romload_data->chd_list_tailptr = *chd;
-	romload_data->chd_list_tailptr = &(*romload_data->chd_list_tailptr)->next;
 }
 
 
@@ -163,15 +176,7 @@ static void add_disk_handle(running_machine &machine, open_chd *chd)
 
 void set_disk_handle(running_machine &machine, const char *region, emu_file &file, chd_file &chdfile)
 {
-	open_chd chd = { 0 };
-
-	/* note the region we are in */
-	chd.region = region;
-	chd.origchd = &chdfile;
-	chd.origfile = &file;
-
-	/* we're okay, add to the list of disks */
-	add_disk_handle(machine, &chd);
+	machine.romload_data->chd_list.append(*global_alloc(open_chd(region, file, chdfile)));
 }
 
 
@@ -188,7 +193,8 @@ void set_disk_handle(running_machine &machine, const char *region, emu_file &fil
 const rom_source *rom_first_source(const machine_config &config)
 {
 	/* look through devices */
-	for (const device_t *device = config.devicelist().first(); device != NULL; device = device->next())
+	device_iterator iter(config.root_device());
+	for (const device_t *device = iter.first(); device != NULL; device = iter.next())
 		if (device->rom_region() != NULL)
 			return device;
 
@@ -204,9 +210,16 @@ const rom_source *rom_first_source(const machine_config &config)
 const rom_source *rom_next_source(const rom_source &previous)
 {
 	/* look for further devices with ROM definitions */
-	for (const device_t *device = previous.next(); device != NULL; device = device->next())
+// fixme: this is awful
+	device_iterator iter(previous.mconfig().root_device());
+	const device_t *device;
+	for (device = iter.first(); device != NULL; device = iter.next())
+		if (device == &previous)
+			break;
+
+	for (device = iter.next(); device != NULL; device = iter.next())
 		if (device->rom_region() != NULL)
-			return (rom_source *)device;
+			return device;
 
 	return NULL;
 }
@@ -273,7 +286,7 @@ const rom_entry *rom_next_file(const rom_entry *romp)
 
 astring &rom_region_name(astring &result, const game_driver *drv, const rom_source *source, const rom_entry *romp)
 {
-	return source->subtag(result, ROMREGION_GETTAG(romp));
+	return source->subtag(result, ROM_GETNAME(romp));
 }
 
 
@@ -432,21 +445,21 @@ static void handle_missing_file(rom_load_data *romdata, const rom_entry *romp)
 	/* optional files are okay */
 	if (ROM_ISOPTIONAL(romp))
 	{
-		romdata->errorstring.catprintf("OPTIONAL %s NOT FOUND\n", ROM_GETNAME(romp));
+		romdata->errorstring.catprintf(_("OPTIONAL %s NOT FOUND\n"), ROM_GETNAME(romp));
 		romdata->warnings++;
 	}
 
 	/* no good dumps are okay */
 	else if (hash_collection(ROM_GETHASHDATA(romp)).flag(hash_collection::FLAG_NO_DUMP))
 	{
-		romdata->errorstring.catprintf("%s NOT FOUND (NO GOOD DUMP KNOWN)\n", ROM_GETNAME(romp));
+		romdata->errorstring.catprintf(_("%s NOT FOUND (NO GOOD DUMP KNOWN)\n"), ROM_GETNAME(romp));
 		romdata->knownbad++;
 	}
 
 	/* anything else is bad */
 	else
 	{
-		romdata->errorstring.catprintf("%s NOT FOUND\n", ROM_GETNAME(romp));
+		romdata->errorstring.catprintf(_("%s NOT FOUND\n"), ROM_GETNAME(romp));
 		romdata->errors++;
 	}
 }
@@ -489,7 +502,7 @@ static void verify_length_and_hash(rom_load_data *romdata, const char *name, UIN
 	UINT32 actlength = romdata->file->size();
 	if (explength != actlength)
 	{
-		romdata->errorstring.catprintf("%s WRONG LENGTH (expected: %08x found: %08x)\n", name, explength, actlength);
+		romdata->errorstring.catprintf(_("%s WRONG LENGTH (expected: %08x found: %08x)\n"), name, explength, actlength);
 		romdata->warnings++;
 	}
 
@@ -498,21 +511,21 @@ static void verify_length_and_hash(rom_load_data *romdata, const char *name, UIN
 	hash_collection &acthashes = romdata->file->hashes(hashes.hash_types(tempstr));
 	if (hashes.flag(hash_collection::FLAG_NO_DUMP))
 	{
-		romdata->errorstring.catprintf("%s NO GOOD DUMP KNOWN\n", name);
+		romdata->errorstring.catprintf(_("%s NO GOOD DUMP KNOWN\n"), name);
 		romdata->knownbad++;
 	}
 	/* verify checksums */
 	else if (hashes != acthashes)
 	{
 		/* otherwise, it's just bad */
-		romdata->errorstring.catprintf("%s WRONG CHECKSUMS:\n", name);
+		romdata->errorstring.catprintf(_("%s WRONG CHECKSUMS:\n"), name);
 		dump_wrong_and_correct_checksums(romdata, hashes, acthashes);
 		romdata->warnings++;
 	}
 	/* If it matches, but it is actually a bad dump, write it */
 	else if (hashes.flag(hash_collection::FLAG_BAD_DUMP))
 	{
-		romdata->errorstring.catprintf("%s ROM NEEDS REDUMP\n",name);
+		romdata->errorstring.catprintf(_("%s ROM NEEDS REDUMP\n"),name);
 		romdata->knownbad++;
 	}
 }
@@ -530,9 +543,9 @@ static void display_loading_rom_message(rom_load_data *romdata, const char *name
 	// 2010-04, FP - FIXME: in MESS, load_software_part_region sometimes calls this with romstotalsize = 0!
 	// as a temp workaround, I added a check for romstotalsize !=0.
 	if (name != NULL && romdata->romstotalsize)
-		sprintf(buffer, "Loading (%d%%)", (UINT32)(100 * (UINT64)romdata->romsloadedsize / (UINT64)romdata->romstotalsize));
+		sprintf(buffer, _("Loading (%d%%)"), (UINT32)(100 * (UINT64)romdata->romsloadedsize / (UINT64)romdata->romstotalsize));
 	else
-		sprintf(buffer, "Loading Complete");
+		sprintf(buffer, _("Loading Complete"));
 
 	ui_set_startup_text(romdata->machine(), buffer, FALSE);
 }
@@ -553,15 +566,15 @@ static void display_rom_load_results(rom_load_data *romdata)
 	{
 		/* create the error message and exit fatally */
 		mame_printf_error("%s", romdata->errorstring.cstr());
-		fatalerror_exitcode(romdata->machine(), MAMERR_MISSING_FILES, "ERROR: required files are missing, the %s cannot be run.",emulator_info::get_gamenoun());
+		fatalerror_exitcode(romdata->machine(), MAMERR_MISSING_FILES, _("ERROR: required files are missing, the %s cannot be run."),emulator_info::get_gamenoun());
 	}
 
 	/* if we had warnings, output them, but continue */
 	if ((romdata-> warnings) || (romdata->knownbad))
 	{
-		romdata->errorstring.cat("WARNING: the ");
+		romdata->errorstring.cat(_("WARNING: the "));
 		romdata->errorstring.cat(emulator_info::get_gamenoun());
-		romdata->errorstring.cat(" might not run correctly.");
+		romdata->errorstring.cat(_(" might not run correctly."));
 		mame_printf_warning("%s\n", romdata->errorstring.cstr());
 	}
 }
@@ -629,7 +642,17 @@ static int open_rom_file(rom_load_data *romdata, const char *regiontag, const ro
      attempts any kind of load by checksum supported by the archives. */
 	romdata->file = NULL;
 	for (int drv = driver_list::find(romdata->machine().system()); romdata->file == NULL && drv != -1; drv = driver_list::clone(drv))
+#ifdef USE_IPS
+	{
+#endif /* USE_IPS */
 		filerr = common_process_file(romdata->machine().options(), driver_list::driver(drv).name, has_crc, crc, romp, &romdata->file);
+
+#ifdef USE_IPS
+		romdata->patch = assign_ips_patch(romp);
+		if (romdata->patch)
+			LOG(("ROM %s: has ips\n", ROM_GETNAME(romp)));
+	}
+#endif /* USE_IPS */
 
 	/* if the region is load by name, load the ROM from there */
 	if (romdata->file == NULL && regiontag != NULL)
@@ -713,15 +736,22 @@ static int open_rom_file(rom_load_data *romdata, const char *regiontag, const ro
 
 static int rom_fread(rom_load_data *romdata, UINT8 *buffer, int length, const rom_entry *parent_region)
 {
+	int result = length;
+
 	/* files just pass through */
 	if (romdata->file != NULL)
-		return romdata->file->read(buffer, length);
+		result = romdata->file->read(buffer, length);
 
 	/* otherwise, fill with randomness unless it was already specifically erased */
 	else if (!ROMREGION_ISERASE(parent_region))
 		fill_random(romdata->machine(), buffer, length);
 
-	return length;
+#ifdef USE_IPS
+	if (romdata->patch)
+		apply_ips_patch(romdata->patch, buffer, length);
+#endif /* USE_IPS */
+
+	return result;
 }
 
 
@@ -1216,25 +1246,23 @@ static void process_disk_entries(rom_load_data *romdata, const char *regiontag, 
 		if (ROMENTRY_ISFILE(romp))
 		{
 			hash_collection hashes(ROM_GETHASHDATA(romp));
-			open_chd chd = { 0 };
 			chd_header header;
 			chd_error err;
-
-			/* note the region we are in */
-			chd.region = regiontag;
 
 			/* make the filename of the source */
 			astring filename(ROM_GETNAME(romp), ".chd");
 
 			/* first open the source drive */
+			chd_file *origchd;
+			emu_file *origfile;
 			LOG(("Opening disk image: %s\n", filename.cstr()));
-			err = open_disk_image(romdata->machine().options(), &romdata->machine().system(), romp, &chd.origfile, &chd.origchd, locationtag);
+			err = open_disk_image(romdata->machine().options(), &romdata->machine().system(), romp, &origfile, &origchd, locationtag);
 			if (err != CHDERR_NONE)
 			{
 				if (err == CHDERR_FILE_NOT_FOUND)
-					romdata->errorstring.catprintf("%s NOT FOUND\n", filename.cstr());
+					romdata->errorstring.catprintf(_("%s NOT FOUND\n"), filename.cstr());
 				else
-					romdata->errorstring.catprintf("%s CHD ERROR: %s\n", filename.cstr(), chd_error_string(err));
+					romdata->errorstring.catprintf(_("%s CHD ERROR: %s\n"), filename.cstr(), chd_error_string(err));
 
 				/* if this is NO_DUMP, keep going, though the system may not be able to handle it */
 				if (hashes.flag(hash_collection::FLAG_NO_DUMP))
@@ -1247,31 +1275,33 @@ static void process_disk_entries(rom_load_data *romdata, const char *regiontag, 
 			}
 
 			/* get the header and extract the SHA1 */
-			header = *chd_get_header(chd.origchd);
+			header = *chd_get_header(origchd);
 			hash_collection acthashes;
 			acthashes.add_from_buffer(hash_collection::HASH_SHA1, header.sha1, sizeof(header.sha1));
 
 			/* verify the hash */
 			if (hashes != acthashes)
 			{
-				romdata->errorstring.catprintf("%s WRONG CHECKSUMS:\n", filename.cstr());
+				romdata->errorstring.catprintf(_("%s WRONG CHECKSUMS:\n"), filename.cstr());
 				dump_wrong_and_correct_checksums(romdata, hashes, acthashes);
 				romdata->warnings++;
 			}
 			else if (hashes.flag(hash_collection::FLAG_BAD_DUMP))
 			{
-				romdata->errorstring.catprintf("%s CHD NEEDS REDUMP\n", filename.cstr());
+				romdata->errorstring.catprintf(_("%s CHD NEEDS REDUMP\n"), filename.cstr());
 				romdata->knownbad++;
 			}
 
 			/* if not read-only, make the diff file */
+			chd_file *diffchd = NULL;
+			emu_file *difffile = NULL;
 			if (!DISK_ISREADONLY(romp))
 			{
 				/* try to open or create the diff */
-				err = open_disk_diff(romdata->machine().options(), romp, chd.origchd, &chd.difffile, &chd.diffchd);
+				err = open_disk_diff(romdata->machine().options(), romp, origchd, &difffile, &diffchd);
 				if (err != CHDERR_NONE)
 				{
-					romdata->errorstring.catprintf("%s DIFF CHD ERROR: %s\n", filename.cstr(), chd_error_string(err));
+					romdata->errorstring.catprintf(_("%s DIFF CHD ERROR: %s\n"), filename.cstr(), chd_error_string(err));
 					romdata->errors++;
 					continue;
 				}
@@ -1279,7 +1309,7 @@ static void process_disk_entries(rom_load_data *romdata, const char *regiontag, 
 
 			/* we're okay, add to the list of disks */
 			LOG(("Assigning to handle %d\n", DISK_GETINDEX(romp)));
-			add_disk_handle(romdata->machine(), &chd);
+			romdata->machine().romload_data->chd_list.append(*global_alloc(open_chd(regiontag, *origfile, *origchd, difffile, diffchd)));
 		}
 	}
 }
@@ -1494,7 +1524,7 @@ static void process_region_list(rom_load_data *romdata)
 				process_rom_entries(romdata, (source->shortname()!=NULL) ? source->shortname() : NULL, region, region + 1);
 			}
 			else if (ROMREGION_ISDISKDATA(region))
-				process_disk_entries(romdata, ROMREGION_GETTAG(region), region, region + 1, NULL);
+				process_disk_entries(romdata, regiontag, region, region + 1, NULL);
 		}
 
 	/* now go back and post-process all the regions */
@@ -1514,6 +1544,9 @@ static void process_region_list(rom_load_data *romdata)
 void rom_init(running_machine &machine)
 {
 	rom_load_data *romdata;
+#ifdef USE_IPS
+	const char *patchname = machine.options().value(OPTION_IPS);
+#endif /* USE_IPS */
 
 	/* allocate private data */
 	machine.romload_data = romdata = auto_alloc_clear(machine, romload_private);
@@ -1531,11 +1564,32 @@ void rom_init(running_machine &machine)
 	count_roms(romdata);
 
 	/* reset the disk list */
-	romdata->chd_list = NULL;
-	romdata->chd_list_tailptr = &machine.romload_data->chd_list;
+	romdata->chd_list.reset();
+
+#ifdef USE_IPS
+	if (patchname && *patchname)
+	{
+		if (!open_ips_entry(machine, patchname, romdata, machine.system().rom))
+		{
+			display_rom_load_results(romdata);
+//			return;
+		}
+	}
+#endif /* USE_IPS */
 
 	/* process the ROM entries we were passed */
 	process_region_list(romdata);
+
+#ifdef USE_IPS
+	if (patchname && *patchname)
+	{
+		if (!close_ips_entry(romdata))
+		{
+			display_rom_load_results(romdata);
+			return;
+		}
+	}
+#endif /* USE_IPS */
 
 	/* display the results and exit */
 	display_rom_load_results(romdata);
@@ -1548,20 +1602,6 @@ void rom_init(running_machine &machine)
 
 static void rom_exit(running_machine &machine)
 {
-	open_chd *curchd;
-
-	/* close all hard drives */
-	for (curchd = machine.romload_data->chd_list; curchd != NULL; curchd = curchd->next)
-	{
-		if (curchd->diffchd != NULL)
-			chd_close(curchd->diffchd);
-		if (curchd->difffile != NULL)
-			global_free(curchd->difffile);
-		if (curchd->origchd != NULL)
-			chd_close(curchd->origchd);
-		if (curchd->origfile != NULL)
-			global_free(curchd->origfile);
-	}
 }
 
 

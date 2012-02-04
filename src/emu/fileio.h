@@ -169,15 +169,15 @@ private:
 	bool zip_header_is_path(const zip_file_header &header);
 
 	// internal state
-	astring			m_filename;						// original filename provided
-	astring			m_fullpath;						// full filename
-	core_file *		m_file;							// core file pointer
+	astring			m_filename;					// original filename provided
+	astring			m_fullpath;					// full filename
+	core_file *		m_file;						// core file pointer
 	path_iterator	m_iterator;						// iterator for paths
-	UINT32			m_crc;							// iterator for paths
+	UINT32			m_crc;						// iterator for paths
 	UINT32			m_openflags;					// flags we used for the open
 	hash_collection m_hashes;						// collection of hashes
-	zip_file *		m_zipfile;						// ZIP file pointer
-	UINT8 *			m_zipdata;						// ZIP file data
+	zip_file *		m_zipfile;					// ZIP file pointer
+	UINT8 *			m_zipdata;					// ZIP file data
 	UINT64			m_ziplength;					// ZIP file length
 	bool			m_remove_on_close;				// flag: remove the file when closing
 };

@@ -152,24 +152,7 @@ static xe_tex *create_texture(render_primitive *prim) {
     j = 0;
     switch (flag) {
             // screen tex
-        case TEXFORMAT_RGB15:
-        {
-            if (newTex->surface == NULL) {
-                newTex->surface = CreateSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
-            }
-            //            newTex->surface = GetScreenSurface(width, height, XE_FMT_8888 | XE_FMT_ARGB);
-
-            u32 * xe_dest = (u32*) Xe_Surface_LockRect(g_pVideoDevice, newTex->surface, 0, 0, 0, 0, XE_LOCK_WRITE);
-            u32 * dst;
-
-            for (int y = 0; y < rawheight; y++) {
-                dst = xe_dest + ((y * newTex->surface->wpitch / 4));
-                copyline_rgb15((UINT32 *) dst, (UINT16 *) prim->texture.base + y * prim->texture.rowpixels, prim->texture.width, prim->texture.palette, 2);
-            }
-
-            Xe_Surface_Unlock(g_pVideoDevice, newTex->surface);
-            break;
-        }
+       
         case TEXFORMAT_PALETTEA16:
         {
             if (newTex->surface == NULL) {

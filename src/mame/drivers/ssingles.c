@@ -209,7 +209,7 @@ static MC6845_UPDATE_ROW( ssingles_update_row )
 
 		for(x=7;x>=0;--x)
 		{
-			*BITMAP_ADDR32(bitmap, y, (cx<<3)|(x)) = state->m_pens[palette+((b1&1)|((b0&1)<<1))];
+			bitmap.pix32(y, (cx<<3)|(x)) = state->m_pens[palette+((b1&1)|((b0&1)<<1))];
 			b0>>=1;
 			b1>>=1;
 		}
@@ -247,7 +247,7 @@ static MC6845_UPDATE_ROW( atamanot_update_row )
 
 		for(x=7;x>=0;--x)
 		{
-			*BITMAP_ADDR32(bitmap, y, (cx<<3)|(x)) = state->m_pens[palette+((b1&1)|((b0&1)<<1))];
+			bitmap.pix32(y, (cx<<3)|(x)) = state->m_pens[palette+((b1&1)|((b0&1)<<1))];
 			b0>>=1;
 			b1>>=1;
 		}
@@ -311,15 +311,6 @@ static VIDEO_START(ssingles)
 			state->m_pens[i]=MAKE_RGB(ssingles_colors[3*i], ssingles_colors[3*i+1], ssingles_colors[3*i+2]);
 		}
 	}
-}
-
-
-static SCREEN_UPDATE( ssingles )
-{
-	mc6845_device *mc6845 = screen->machine().device<mc6845_device>("crtc");
-	mc6845->update(bitmap, cliprect);
-
-	return 0;
 }
 
 
@@ -578,9 +569,8 @@ static MACHINE_CONFIG_START( ssingles, ssingles_state )
 	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(4000000, 256, 0, 256, 256, 0, 256)	/* temporary, CRTC will configure screen */
-	MCFG_SCREEN_UPDATE(ssingles)
+	MCFG_SCREEN_UPDATE_DEVICE("crtc", mc6845_device, screen_update)
 
 	MCFG_PALETTE_LENGTH(4) //guess
 
